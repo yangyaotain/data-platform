@@ -1,0 +1,929 @@
+/* 数据中台 V4.0 - 元数据搜索页面（首页 + 结果页） */
+
+/* ============================================================
+   元数据检索 - 结果页主体
+   ============================================================ */
+.page-meta-search {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+}
+
+/* ---- 顶部搜索区（搜索首页仍使用） ---- */
+.ms-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.ms-search-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.ms-quick-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.qt-label { color: var(--text-light); }
+
+.qt-tag {
+  padding: 2px 10px;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 12px;
+}
+
+.qt-tag:hover { color: var(--primary); border-color: var(--primary); background: #f0f7ff; }
+
+/* ---- 主体区 ---- */
+.ms-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ---- 左侧资源目录 ---- */
+.ms-catalog {
+  width: 240px;
+  flex-shrink: 0;
+  border-right: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  background: #fafbfc;
+}
+
+.ms-catalog-tabs {
+  display: flex;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+}
+
+.ms-ctab {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: var(--transition);
+}
+
+.ms-ctab:hover { color: var(--primary); }
+.ms-ctab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+.ms-catalog-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 6px;
+}
+
+.ms-catalog-tree::-webkit-scrollbar { width: 4px; }
+.ms-catalog-tree::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
+
+/* ---- 目录树 ---- */
+.ms-tree { padding: 0; }
+.ms-tree ul { list-style: none; padding-left: 16px; }
+
+.ms-tnode {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: background 0.15s;
+}
+
+.ms-tnode:hover { background: #eef3fa; }
+.ms-tnode.active { background: var(--primary-light); color: var(--primary); }
+
+.ms-toggle {
+  width: 16px;
+  text-align: center;
+  font-size: 10px;
+  color: #aaa;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.ms-ticon { font-size: 13px; color: #faad14; margin-right: 4px; flex-shrink: 0; }
+.ms-ticon-leaf { font-size: 12px; color: var(--primary); margin-right: 4px; margin-left: 16px; flex-shrink: 0; }
+
+.ms-ttext {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ms-tchildren { width: 100%; display: none; }
+.ms-tnode.open > .ms-tchildren { display: block; }
+
+/* ---- 右侧内容 ---- */
+.ms-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+/* ---- 视图切换栏 ---- */
+.ms-view-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.ms-view-info { font-size: 13px; color: var(--text-secondary); }
+.ms-view-info b { color: var(--primary); }
+.ms-view-sep { margin: 0 8px; color: #ddd; }
+
+.ms-view-actions { display: flex; gap: 4px; }
+
+.ms-view-btn.active { color: var(--primary); border-color: var(--primary); background: #f0f7ff; }
+
+/* ---- 列表视图 ---- */
+.ms-list-view {
+  flex: 1;
+  overflow: auto;
+}
+
+/* ---- 卡片视图 ---- */
+.ms-card-view {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+.ms-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.ms-asset-card {
+  border: 1px solid #e8ecf0;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fff;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.ms-asset-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 16px rgba(0,120,255,0.08);
+  transform: translateY(-2px);
+}
+
+.ac-header { font-size: 13px; color: var(--primary); font-weight: 600; margin-bottom: 4px; }
+.ac-header i { margin-right: 4px; }
+.ac-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+.ac-meta { display: flex; gap: 12px; font-size: 12px; color: var(--text-light); margin-bottom: 8px; }
+.ac-meta i { margin-right: 2px; }
+.ac-stats { display: flex; gap: 16px; font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+.ac-stats b { color: var(--primary); }
+.ac-footer { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-light); border-top: 1px solid #f0f0f0; padding-top: 8px; }
+.ac-footer i { margin-right: 3px; }
+
+/* ---- 详情面板 ---- */
+.ms-detail-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ms-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+  background: #fafbfc;
+}
+
+.ms-detail-title {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ms-detail-acts { display: flex; gap: 6px; }
+
+.ms-detail-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 0 16px;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.ms-dtab {
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.ms-dtab:hover { color: var(--primary); }
+.ms-dtab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+.ms-detail-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+}
+
+.ms-tab-content {
+  display: none;
+  padding: 16px;
+}
+
+.ms-tab-content.active { display: block; }
+
+/* ---- 元数据详情信息网格 ---- */
+.ms-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0;
+}
+
+.ms-info-item {
+  display: flex;
+  padding: 10px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.info-label {
+  width: 100px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--text-light);
+}
+
+.info-value {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ---- 数据预览 ---- */
+.ms-preview-toolbar {
+  margin-bottom: 10px;
+}
+
+.ms-preview-info {
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+/* ---- 血缘关系图 ---- */
+.ms-lineage-diagram {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 20px;
+  justify-content: center;
+}
+
+.lineage-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 160px;
+}
+
+.lineage-title {
+  font-size: 12px;
+  color: var(--text-light);
+  text-align: center;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.lineage-node {
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  text-align: center;
+  font-weight: 500;
+  border: 1px solid;
+}
+
+.ln-src { background: #f6ffed; color: #389e0d; border-color: #b7eb8f; }
+.ln-cur { background: #e6f4ff; color: #0958d9; border-color: #91caff; font-size: 14px; font-weight: 700; padding: 14px 20px; }
+.ln-dst { background: #fff7e6; color: #d48806; border-color: #ffe58f; }
+
+.lineage-arrows {
+  display: flex;
+  align-items: center;
+  padding-top: 40px;
+  font-size: 24px;
+  color: #bbb;
+}
+
+/* ---- 质量/安全子tab ---- */
+.ms-quality-sub-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.ms-qtab {
+  padding: 5px 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.ms-qtab:hover { color: var(--primary); border-color: var(--primary); }
+.ms-qtab.active { color: #fff; background: var(--primary); border-color: var(--primary); }
+
+/* ============================================================
+   元数据搜索 - 首页
+   ============================================================ */
+.page-meta-home {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+/* ---- 指标卡片行 ---- */
+.mh-stats-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.mh-stat-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px 18px;
+  box-shadow: 0 1px 6px rgba(0,0,0,.06);
+  transition: box-shadow .25s, transform .25s;
+}
+
+.mh-stat-card:hover {
+  box-shadow: 0 4px 16px rgba(0,120,255,.12);
+  transform: translateY(-2px);
+}
+
+.mh-stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.mh-stat-card:nth-child(1) .mh-stat-icon { background: linear-gradient(135deg, #0078FF, #3ea5ff); }
+.mh-stat-card:nth-child(2) .mh-stat-icon { background: linear-gradient(135deg, #00b894, #55efc4); }
+.mh-stat-card:nth-child(3) .mh-stat-icon { background: linear-gradient(135deg, #6c5ce7, #a29bfe); }
+.mh-stat-card:nth-child(4) .mh-stat-icon { background: linear-gradient(135deg, #e17055, #fab1a0); }
+.mh-stat-card:nth-child(5) .mh-stat-icon { background: linear-gradient(135deg, #fdcb6e, #f9ca24); }
+
+.mh-stat-num {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a1a2e;
+  line-height: 1.1;
+}
+
+.mh-stat-label {
+  font-size: 13px;
+  color: #8a8fb5;
+  margin-top: 2px;
+}
+
+/* ---- 搜索区 ---- */
+.mh-search-area {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.mh-search-box {
+  display: flex;
+  align-items: stretch;
+  max-width: 820px;
+  height: 56px;
+  margin: 0 auto 16px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 18px rgba(0,120,255,.12);
+  overflow: hidden;
+  border: 2px solid var(--primary);
+}
+
+.mh-search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  padding: 0 22px;
+  font-size: 16px;
+  color: #333;
+  background: transparent;
+  height: 100%;
+}
+
+.mh-search-input::placeholder { color: #b0b5c9; }
+
+.mh-search-btn {
+  padding: 0 26px;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 0;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  height: 100%;
+  transition: background .2s;
+}
+
+.mh-search-btn.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.mh-search-btn.btn-primary:hover { background: #005ed6; }
+
+.mh-search-btn.btn-outline {
+  background: #f0f4ff;
+  color: var(--primary);
+  border-left: 1px solid #e0e6f0;
+}
+
+.mh-search-btn.btn-outline:hover { background: #e0ecff; }
+
+.mh-hot-tags {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mh-hot-tags .qt-label { color: #999; font-size: 13px; }
+
+.mh-hot-tags .qt-tag {
+  font-size: 13px;
+  color: #666;
+  cursor: pointer;
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: #f5f6fa;
+  transition: all .2s;
+}
+
+.mh-hot-tags .qt-tag:hover { background: var(--primary); color: #fff; }
+
+/* ---- TAB区 ---- */
+.mh-tabs-area { margin-top: 10px; }
+
+.mh-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #eef1f8;
+  margin-bottom: 24px;
+}
+
+.mh-tab {
+  padding: 10px 28px;
+  font-size: 15px;
+  color: #666;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all .2s;
+  text-decoration: none;
+}
+
+.mh-tab:hover { color: var(--primary); }
+
+.mh-tab.active {
+  color: var(--primary);
+  font-weight: 600;
+  border-bottom-color: var(--primary);
+}
+
+.mh-tab-content { display: none; }
+.mh-tab-content.active { display: block; }
+
+/* ---- 卡片网格 ---- */
+.mh-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+.mh-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 1px 6px rgba(0,0,0,.05);
+  cursor: pointer;
+  transition: box-shadow .25s, transform .25s;
+  border: 1px solid #eef1f8;
+}
+
+.mh-card:hover {
+  box-shadow: 0 6px 20px rgba(0,120,255,.12);
+  transform: translateY(-3px);
+  border-color: var(--primary);
+}
+
+.mh-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.mh-card-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mh-card-tag.tag-blue  { background: #e6f0ff; color: #0078FF; }
+.mh-card-tag.tag-yellow { background: #fff8e1; color: #e6a000; }
+.mh-card-tag.tag-green  { background: #e6faf3; color: #00b894; }
+.mh-card-tag.tag-purple { background: #f0ecff; color: #6c5ce7; }
+
+.mh-card-count {
+  font-size: 12px;
+  color: #999;
+}
+
+.mh-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 8px;
+}
+
+.mh-card-desc {
+  font-size: 13px;
+  color: #888;
+  line-height: 1.5;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mh-card-meta {
+  display: flex;
+  gap: 18px;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.mh-card-meta i { margin-right: 4px; }
+
+/* ---- 资源/数据源目录卡片 ---- */
+.mh-card-folder, .mh-card-db {
+  text-align: center;
+  padding: 28px 20px;
+}
+
+.mh-card-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+}
+
+.mh-card-folder .mh-card-icon { color: #fdcb6e; }
+.mh-card-db .mh-card-icon { color: var(--primary); }
+
+.mh-card-folder .mh-card-title,
+.mh-card-db .mh-card-title { margin-bottom: 6px; }
+
+.mh-card-folder .mh-card-desc,
+.mh-card-db .mh-card-desc { margin-bottom: 0; }
+
+/* ============================================================
+   搜索结果页 v2  extras（精简头部、搜索/筛选/排序）
+   ============================================================ */
+
+/* ---- 搜索结果页精简头部 ---- */
+.ms-header-slim {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.ms-home-btn {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 4px;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ms-home-btn:hover { color: var(--primary); background: #f0f4ff; }
+
+/* ---- 右侧搜索/筛选/排序区 ---- */
+.ms-content-header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+/* ---- 搜索结果页 v2 搜索栏 ---- */
+.ms-search-bar-v2 {
+  display: flex;
+  align-items: stretch;
+  height: 40px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--primary);
+  background: #f5f7fb;
+  margin-bottom: 8px;
+}
+
+.ms-search-bar-v2 .ms-search-type-btn + .ms-search-type-btn {
+  margin-left: -1px;
+}
+
+.ms-search-bar-v2 .ms-search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  padding: 0 14px;
+  font-size: 13px;
+  color: #333;
+  background: #fff;
+  height: 100%;
+}
+
+.ms-search-bar-v2 .ms-search-input::placeholder { color: #b0b5c9; }
+.ms-search-bar-v2 .ms-search-input:focus { box-shadow: none; }
+
+.ms-search-type-btn {
+  padding: 0 18px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 0;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+  height: 100%;
+  transition: background .2s, color .2s;
+  background: #f5f7fb;
+  color: var(--text-secondary);
+}
+
+.ms-search-type-btn:first-of-type {
+  border-left: 1px solid rgba(0,120,255,.2);
+}
+
+.ms-search-type-btn:hover { background: #e8f0ff; color: var(--primary); }
+
+.ms-search-type-btn.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.ms-search-type-btn.active:hover { background: #005ed6; }
+
+/* ---- 筛选条件区 ---- */
+.ms-filter-section {
+  margin-top: 10px;
+  border: 1px solid #f0f2f7;
+  border-radius: 6px;
+  background: #fafbfd;
+  padding: 0;
+}
+
+.ms-filter-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 14px;
+  border-bottom: 1px solid #f0f2f7;
+}
+
+.ms-filter-row:last-child { border-bottom: none; }
+
+.ms-filter-label {
+  flex-shrink: 0;
+  width: 72px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 26px;
+}
+
+.ms-filter-tags-wrap {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+  position: relative;
+}
+
+.ms-filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  flex: 1;
+  overflow: hidden;
+  max-height: 30px;
+  transition: max-height .3s ease;
+}
+
+.ms-filter-tags.expanded {
+  max-height: 500px;
+}
+
+.ms-filter-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: #fff;
+  border: 1px solid #e4e8ee;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+  line-height: 18px;
+  height: 26px;
+}
+
+.ms-filter-tag:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: #f0f7ff;
+}
+
+.ms-filter-tag.active {
+  color: #fff;
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.ms-filter-expand {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--primary);
+  cursor: pointer;
+  padding: 4px 8px;
+  white-space: nowrap;
+  transition: all .2s;
+  line-height: 18px;
+  height: 26px;
+}
+
+.ms-filter-expand:hover {
+  background: #f0f4ff;
+  border-radius: 4px;
+}
+
+.ms-filter-expand i {
+  font-size: 12px;
+  transition: transform .25s;
+}
+
+.ms-filter-expand.expanded i {
+  transform: rotate(180deg);
+}
+
+/* ---- 排序栏 ---- */
+.ms-sort-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 0;
+}
+
+.ms-sort-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.ms-sort-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border: 1px solid #e4e8ee;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all .2s;
+  background: #fff;
+}
+
+.ms-sort-item:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.ms-sort-item.active {
+  color: #fff;
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.ms-sort-item > i:first-child { font-size: 12px; }
+
+/* 排序箭头 */
+.ms-sort-arrows {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1;
+  margin-left: 2px;
+  gap: 0;
+}
+
+.ms-sort-arrows i {
+  font-size: 8px;
+  opacity: 0.35;
+  line-height: 1;
+  transition: opacity .2s;
+}
+
+.ms-sort-arrows i.ms-arrow-active {
+  opacity: 1;
+}
+
+.ms-sort-item.active .ms-sort-arrows i { opacity: 0.45; }
+.ms-sort-item.active .ms-sort-arrows i.ms-arrow-active { opacity: 1; }
+
+/* ============================================================
+   响应式 - 元数据搜索
+   ============================================================ */
+@media (max-width: 1100px) {
+  .ms-catalog { width: 200px; }
+  .mh-cards-grid { grid-template-columns: repeat(3, 1fr); }
+  .mh-stats-row { flex-wrap: wrap; }
+  .mh-stat-card { min-width: 180px; }
+}
