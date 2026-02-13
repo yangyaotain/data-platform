@@ -159,12 +159,12 @@ ul, li { list-style: none; }
   line-height: 1;
 }
 
-/* —— 分隔线 —— */
+/* —— 分隔线（隐藏，仅保留间距） —— */
 .nav-divider {
-  width: 1px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.2);
-  margin: 0 20px;
+  width: 0;
+  height: 0;
+  background: transparent;
+  margin: 0 32px;
   flex-shrink: 0;
 }
 
@@ -256,6 +256,7 @@ ul, li { list-style: none; }
   transition: width 0.25s ease;
   position: relative;
   z-index: 100;
+  overflow: visible;
 }
 
 .sidebar.collapsed {
@@ -386,7 +387,7 @@ ul, li { list-style: none; }
   height: 38px;
   line-height: 38px;
   font-size: 13px;
-  color: var(--text-light);
+  color: #555;
   border-radius: 6px;
   transition: var(--transition);
   white-space: nowrap;
@@ -1477,6 +1478,128 @@ ul, li { list-style: none; }
 /* ============================================================
    响应式
    ============================================================ */
+/* ========================================
+   数据开发 - 项目/环境选择器
+   ======================================== */
+.dev-project-selector {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef1f8;
+  position: relative;
+  z-index: 20;
+}
+.dev-proj-current {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f5f7fb;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .2s;
+  border: 1px solid #e8ecf4;
+}
+.dev-proj-current:hover { background: #edf0fa; border-color: var(--primary); }
+.dev-proj-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dev-proj-arrow {
+  font-size: 12px;
+  color: #999;
+  transition: transform .25s;
+}
+.dev-project-selector.open .dev-proj-arrow { transform: rotate(180deg); }
+
+.dev-proj-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 2px;
+  background: #fff;
+  border: 1px solid #e0e4ee;
+  border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.12);
+  z-index: 9999;
+}
+.dev-project-selector.open .dev-proj-dropdown { display: block; }
+
+.dev-proj-search {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #eef1f8;
+  gap: 8px;
+}
+.dev-proj-search i { color: #bbb; font-size: 13px; flex-shrink: 0; }
+.dev-proj-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: #333;
+  background: transparent;
+}
+.dev-proj-search-input::placeholder { color: #bbb; }
+
+.dev-proj-panel {
+  display: flex;
+  min-width: 340px;
+}
+
+/* 左侧项目列表 */
+.dev-proj-left {
+  min-width: 180px;
+  border-right: 1px solid #eef1f8;
+  padding: 8px 0;
+  background: #fafbfd;
+}
+.dev-proj-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 16px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition: all .15s;
+}
+.dev-proj-item i { font-size: 12px; color: #bbb; }
+.dev-proj-item:hover,
+.dev-proj-item.active {
+  background: #fff;
+  color: var(--primary);
+  font-weight: 500;
+}
+.dev-proj-item.active i { color: var(--primary); }
+
+/* 右侧环境列表 */
+.dev-proj-right {
+  min-width: 120px;
+  padding: 8px 0;
+}
+.dev-env-group { display: none; }
+.dev-env-group.active { display: block; }
+
+.dev-proj-env {
+  padding: 11px 24px;
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all .15s;
+}
+.dev-proj-env:hover { background: #f0f4ff; color: var(--primary); }
+.dev-proj-env.active {
+  color: var(--primary);
+  font-weight: 600;
+  background: #e8f0ff;
+}
+
 /* ========================================
    元数据搜索首页
    ======================================== */

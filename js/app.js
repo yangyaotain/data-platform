@@ -812,13 +812,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ---- 顶部导航切换 ---- */
   const navItems = document.querySelectorAll('.nav-item');
+  const menuGroups = document.querySelectorAll('.menu-group');
 
   const navNames = {
     workbench: '控制台', governance: '数据资产', develop: '数据开发',
-    monitor: '运维监控', permission: '权限管理',
-    share: '协同共享', analysis: '数据分析',
-    datamap: '数据地图', panorama: '全景视图', help: '帮助文档',
+    explore: '数据探索', service: '数据服务',
+    permission: '权限管理', analysis: '数据分析',
+    monitor: '运维监控', datamap: '数据地图',
+    panorama: '全景视图', help: '帮助文档',
   };
+
+  // 菜单组与顶部导航的映射
+  const menuGroupMap = {
+    workbench: 'menuWorkbench',
+    governance: 'menuGovernance',
+    develop: 'menuDevelop',
+    explore: 'menuExplore',
+    service: 'menuService',
+    monitor: 'menuMonitor',
+    permission: 'menuPermission',
+    analysis: 'menuAnalysis',
+    datamap: 'menuDatamap',
+    panorama: 'menuPanorama',
+    help: 'menuHelp',
+  };
+
+  // 菜单组附带的额外组件（如项目选择器）
+  const menuGroupExtraMap = {
+    develop: 'devProjectSelector',
+    explore: 'devProjectSelector',
+  };
+
+  function switchMenuGroup(page) {
+    // 隐藏所有菜单组
+    menuGroups.forEach(g => g.style.display = 'none');
+    // 隐藏所有额外组件
+    document.querySelectorAll('.menu-group-extra').forEach(e => e.style.display = 'none');
+    // 显示对应菜单组
+    const targetId = menuGroupMap[page];
+    if (targetId) {
+      const target = document.getElementById(targetId);
+      if (target) target.style.display = 'block';
+    }
+    // 显示对应额外组件
+    const extraId = menuGroupExtraMap[page];
+    if (extraId) {
+      const extra = document.getElementById(extraId);
+      if (extra) extra.style.display = 'block';
+    }
+    // 清除所有菜单激活状态
+    document.querySelectorAll('.menu-link.active').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.sub-menu li a.active').forEach(el => el.classList.remove('active'));
+    // 关闭展开的子菜单
+    document.querySelectorAll('.menu-item.open').forEach(el => el.classList.remove('open'));
+  }
 
   navItems.forEach(item => {
     item.addEventListener('click', () => {
@@ -826,14 +873,46 @@ document.addEventListener('DOMContentLoaded', () => {
       item.classList.add('active');
       const page = item.dataset.page;
       const name = navNames[page] || page;
+
+      // 切换菜单组
+      switchMenuGroup(page);
+
       if (page === 'governance') {
-        document.querySelectorAll('.menu-link.active').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.sub-menu li a.active').forEach(el => el.classList.remove('active'));
         const dsLink = document.querySelector('[data-menu="datasource"]');
         if (dsLink) dsLink.classList.add('active');
         showPage('datasource');
       } else {
-        showPlaceholder(name);
+        // 通用逻辑：激活第一个菜单项，若有子菜单则展开并选中第一个子项
+        const groupId = menuGroupMap[page];
+        if (groupId) {
+          const group = document.getElementById(groupId);
+          if (group) {
+            const firstItem = group.querySelector('.menu-item');
+            if (firstItem && firstItem.classList.contains('has-sub')) {
+              // 展开第一个有子菜单的项
+              firstItem.classList.add('open');
+              const firstSub = firstItem.querySelector('.sub-menu li a');
+              if (firstSub) {
+                firstSub.classList.add('active');
+                showPlaceholder(firstSub.textContent);
+              } else {
+                showPlaceholder(name);
+              }
+            } else if (firstItem) {
+              const firstLink = firstItem.querySelector('.menu-link');
+              if (firstLink) {
+                firstLink.classList.add('active');
+                showPlaceholder(firstLink.querySelector('span')?.textContent || name);
+              }
+            } else {
+              showPlaceholder(name);
+            }
+          } else {
+            showPlaceholder(name);
+          }
+        } else {
+          showPlaceholder(name);
+        }
       }
     });
   });
@@ -1127,6 +1206,65 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     }
+  }
+
+  /* ============================================================
+     数据开发 - 项目/环境选择器交互
+     ============================================================ */
+  const devProjCurrent = document.getElementById('devProjCurrent');
+  const devProjSelector = document.getElementById('devProjectSelector');
+
+  if (devProjCurrent && devProjSelector) {
+    // 展开/收起下拉
+    devProjCurrent.addEventListener('click', () => {
+      devProjSelector.classList.toggle('open');
+    });
+
+    // 点击外部关闭
+    document.addEventListener('click', (e) => {
+      if (!devProjSelector.contains(e.target)) {
+        devProjSelector.classList.remove('open');
+      }
+    });
+
+    // 左侧项目 hover → 切换右侧环境面板
+    devProjSelector.querySelectorAll('.dev-proj-item').forEach(item => {
+      item.addEventListener('mouseenter', () => {
+        devProjSelector.querySelectorAll('.dev-proj-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        const projName = item.dataset.proj;
+        devProjSelector.querySelectorAll('.dev-env-group').forEach(g => g.classList.remove('active'));
+        const target = devProjSelector.querySelector(`.dev-env-group[data-proj="${projName}"]`);
+        if (target) target.classList.add('active');
+      });
+    });
+
+    // 搜索过滤项目
+    const devSearchInput = document.getElementById('devProjSearchInput');
+    if (devSearchInput) {
+      devSearchInput.addEventListener('input', () => {
+        const keyword = devSearchInput.value.trim().toLowerCase();
+        devProjSelector.querySelectorAll('.dev-proj-item').forEach(item => {
+          const name = (item.querySelector('span')?.textContent || '').toLowerCase();
+          item.style.display = name.includes(keyword) ? 'flex' : 'none';
+        });
+        // 自动激活第一个可见项目
+        const firstVisible = devProjSelector.querySelector('.dev-proj-item[style*="flex"], .dev-proj-item:not([style*="none"])');
+        if (firstVisible) firstVisible.dispatchEvent(new Event('mouseenter'));
+      });
+    }
+
+    // 环境选择
+    devProjSelector.querySelectorAll('.dev-proj-env').forEach(env => {
+      env.addEventListener('click', () => {
+        devProjSelector.querySelectorAll('.dev-proj-env').forEach(e => e.classList.remove('active'));
+        env.classList.add('active');
+        const projName = env.closest('.dev-env-group').dataset.proj;
+        const envName = env.dataset.env;
+        document.querySelector('.dev-proj-text').textContent = projName + ' / ' + envName;
+        devProjSelector.classList.remove('open');
+      });
+    });
   }
 
   // 初始化数据源页面（默认显示）
