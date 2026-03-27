@@ -1,0 +1,1091 @@
+/* ============================================================
+   数据中台 V4.0 - 数据开发页面
+   左侧面板（Tab + 目录树） | 右侧面板（流程画布 / 编辑器）
+   ============================================================ */
+
+.page-data-develop {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--top-nav-height));
+  overflow: hidden;
+  background: #fff;
+}
+
+/* 占位 - 左侧面板、右侧面板、流程视图的样式放到文件末尾以确保优先级 */
+
+/* ---- 顶部：Tab + 搜索 + 操作按钮 ---- */
+.dd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid #e8edf3;
+  flex-shrink: 0;
+  background: #fff;
+  min-height: 46px;
+}
+.dd-tabs {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  gap: 0;
+}
+.dd-tab {
+  padding: 12px 18px;
+  font-size: 14px;
+  color: #6b7d8e;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color .2s, border-color .2s;
+}
+.dd-tab:hover { color: var(--primary); }
+.dd-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+.dd-header-center {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #6b7d8e;
+}
+.dd-search-mini {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #d9dfe6;
+  border-radius: 4px;
+  padding: 3px 8px;
+  background: #fff;
+}
+.dd-search-mini input {
+  border: none;
+  outline: none;
+  width: 96px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+.dd-search-mini span { color: #999; font-size: 12px; }
+.dd-search-nav {
+  display: flex;
+  gap: 2px;
+}
+.dd-search-nav i {
+  cursor: pointer;
+  font-size: 14px;
+  color: #999;
+  padding: 2px;
+}
+.dd-search-nav i:hover { color: var(--primary); }
+/* 画布内右上角搜索 */
+.dd-canvas-search {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+}
+
+.dd-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dd-actions .btn {
+  font-size: 13px;
+  padding: 5px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid #d9dfe6;
+  background: #fff;
+  color: var(--text-primary);
+  transition: all .2s;
+}
+.dd-actions .btn:hover { border-color: var(--primary); color: var(--primary); }
+.dd-actions .btn-primary {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.dd-actions .btn-primary:hover { background: var(--primary-dark); color: #fff; border-color: var(--primary-dark); }
+.dd-actions .btn-success {
+  background: #52c41a;
+  color: #fff;
+  border-color: #52c41a;
+}
+.dd-actions .btn-success:hover { background: #3fad09; color: #fff; border-color: #3fad09; }
+
+/* ---- 主体（左树 + 右内容） ---- */
+.dd-body {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 水平 resize 手柄（左右拖动） */
+.dd-resize-col {
+  width: 4px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: #e8edf3;
+  transition: background .15s;
+  z-index: 3;
+}
+.dd-resize-col:hover,
+.dd-resize-col.dragging { background: var(--primary); }
+
+/* ---- 左侧树面板 ---- */
+.dd-tree-panel {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e8edf3;
+  background: #fff;
+}
+.dd-tree-search {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f2f5;
+  gap: 6px;
+}
+.dd-tree-search input {
+  flex: 1;
+  border: 1px solid #d9dfe6;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 13px;
+  outline: none;
+}
+.dd-tree-search input:focus { border-color: var(--primary); }
+.dd-tree-search i { color: #999; font-size: 14px; cursor: pointer; }
+
+.dd-tree-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+  font-size: 13px;
+}
+.dd-tree-content::-webkit-scrollbar { width: 4px; }
+.dd-tree-content::-webkit-scrollbar-thumb { background: #d6dbe0; border-radius: 4px; }
+
+/* 树节点 */
+.dd-tree-node {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  cursor: pointer;
+  color: var(--text-primary);
+  white-space: nowrap;
+  transition: background .15s;
+  user-select: none;
+}
+.dd-tree-node:hover { background: #f0f6ff; }
+.dd-tree-node.active { background: var(--primary-light); color: var(--primary); }
+.dd-tree-node .dd-tree-arrow {
+  width: 16px;
+  text-align: center;
+  font-size: 10px;
+  color: #999;
+  flex-shrink: 0;
+  transition: transform .2s;
+}
+.dd-tree-node .dd-tree-arrow.open { transform: rotate(90deg); }
+.dd-tree-node .dd-tree-icon {
+  margin-right: 4px;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.dd-tree-node .dd-tree-icon.folder { color: #f5a623; }
+.dd-tree-node .dd-tree-icon.file { color: var(--primary); }
+.dd-tree-node .dd-tree-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dd-tree-children { display: none; }
+.dd-tree-children.open { display: block; }
+
+/* ---- 中间画布面板 ---- */
+.dd-canvas-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #f7f9fc;
+  position: relative;
+  overflow: hidden;
+}
+.dd-canvas {
+  flex: 1;
+  position: relative;
+  overflow: auto;
+  background:
+    radial-gradient(circle, #dde1e6 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+.dd-canvas svg.dd-connections {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+.dd-connections path {
+  fill: none;
+  stroke: #6cb8f5;
+  stroke-width: 2;
+}
+.dd-connections marker path {
+  fill: #6cb8f5;
+  stroke: none;
+}
+
+/* 流程视图顶部 tab（流程监制 / 执行记录） */
+.dd-flow-top-tabs {
+  display: flex;
+  align-items: center;
+}
+.dd-flow-top-tabs .dd-tab {
+  padding: 0 14px;
+  font-size: 13px;
+  line-height: 46px;
+}
+
+/* 流程节点 */
+.dd-node {
+  position: absolute;
+  z-index: 2;
+  cursor: grab;
+  border-radius: 20px;
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+  transition: outline-color .15s;
+}
+.dd-node:active { cursor: grabbing; }
+.dd-node.selected {
+  outline-color: var(--primary);
+}
+
+/* 开始 / 结束节点 */
+.dd-node-start,
+.dd-node-end {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.dd-node-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.dd-node-start .dd-node-dot { background: var(--primary); }
+.dd-node-end .dd-node-dot   { background: #5a6a7a; }
+
+/* 端口圆点（连线锚点） */
+.dd-node-port {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid #6cb8f5;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+/* 任务节点（胶囊形） */
+.dd-node-task {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 34px;
+  border-radius: 17px;
+  border: 1.5px solid #e0e6ed;
+  background: #fff;
+  font-size: 12px;
+  color: var(--text-primary);
+  padding: 0 4px;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  transition: border-color .2s, box-shadow .2s;
+}
+.dd-node-task:hover {
+  border-color: #6cb8f5;
+  box-shadow: 0 2px 8px rgba(0,120,255,.12);
+}
+.dd-node-task .dd-node-port { margin: 0 -1px; }
+.dd-node-task .dd-node-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+.dd-node-task .dd-node-text {
+  padding: 0 6px 0 2px;
+}
+
+/* ---- 右侧属性面板（竖排tab + 内容面板） ---- */
+.dd-props-panel {
+  width: 420px;
+  flex-shrink: 0;
+  background: #fff;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+.dd-props-strip {
+  display: flex;
+  flex-direction: column;
+  background: #f0f2f5;
+  flex-shrink: 0;
+  border-left: 1px solid #e8edf3;
+}
+.dd-props-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+}
+.dd-props-tab-content { display: none; }
+.dd-props-tab-content.active { display: block; }
+.dd-props-body::-webkit-scrollbar { width: 4px; }
+.dd-props-body::-webkit-scrollbar-thumb { background: #d6dbe0; border-radius: 4px; }
+
+/* 参数设置 / 版本管理 组件 */
+.dd-sb-heading {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin: 16px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #eee;
+}
+.dd-sb-heading:first-child { margin-top: 0; }
+.dd-sb-field {
+  font-size: 13px;
+  color: #555;
+  margin: 10px 0 6px;
+  line-height: 1.6;
+}
+.dd-sb-field-label {
+  font-weight: 600;
+  color: #333;
+  margin-right: 6px;
+}
+.dd-sb-radios {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 12px;
+  margin-bottom: 10px;
+}
+.dd-sb-radios label {
+  font-size: 12px;
+  color: #555;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  cursor: pointer;
+  line-height: 1.5;
+}
+.dd-sb-radios input[type="radio"] { margin-top: 3px; flex-shrink: 0; }
+.dd-sb-pagination {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 14px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.dd-sb-pagination a {
+  color: var(--primary);
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.dd-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  border: 1px solid #d9dfe6;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #555;
+  cursor: pointer;
+}
+.dd-page.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.dd-page:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+.text-danger { color: #ff4d4f !important; }
+
+.dd-prop-group {
+  margin-bottom: 16px;
+}
+.dd-prop-label {
+  font-size: 13px;
+  color: #6b7d8e;
+  margin-bottom: 6px;
+}
+.dd-prop-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dd-prop-input {
+  width: 100%;
+  border: 1px solid #d9dfe6;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  outline: none;
+  color: var(--text-primary);
+}
+.dd-prop-input:focus { border-color: var(--primary); }
+textarea.dd-prop-input {
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+}
+.dd-prop-select {
+  width: 100%;
+  border: 1px solid #d9dfe6;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  outline: none;
+  color: var(--text-primary);
+  background: #fff;
+  appearance: auto;
+}
+.dd-prop-btn-sm {
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.dd-prop-btn-sm:hover { background: var(--primary-light); }
+.dd-prop-info {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+.dd-prop-info .status-running {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+/* ---- 右键菜单 ---- */
+.dd-ctx-menu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 168px;
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  padding: 4px 0;
+  display: none;
+  font-size: 13px;
+}
+.dd-ctx-menu.show { display: block; }
+.dd-ctx-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: background .15s;
+  white-space: nowrap;
+}
+.dd-ctx-menu-item:hover { background: #f0f6ff; }
+.dd-ctx-menu-item.danger { color: #e74c3c; }
+.dd-ctx-menu-item.danger:hover { background: #fff1f0; }
+.dd-ctx-menu-item i { font-size: 14px; width: 16px; text-align: center; }
+.dd-ctx-menu-item .sub-arrow {
+  margin-left: auto;
+  font-size: 10px;
+  color: #999;
+}
+.dd-ctx-divider {
+  height: 1px;
+  background: #f0f2f5;
+  margin: 4px 0;
+}
+
+/* ============================================================
+   编辑器视图（子流程详情页 – SQL 编辑器）
+   ============================================================ */
+
+.dd-editor-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* 编辑器左侧（header + 代码 + 底部执行结果） */
+.dd-editor-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ---- 代码区域（深色主题） ---- */
+.dd-code-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #1e2a3a;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 编辑器内部工具栏 */
+.dd-code-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #252f3e;
+  border-bottom: 1px solid #2a3a4e;
+  flex-shrink: 0;
+  z-index: 5;
+}
+.dd-ct-sel {
+  background: #374354;
+  color: #cdd6e0;
+  border: 1px solid #4a5568;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+.dd-ct-sel:focus { border-color: #69b1ff; }
+.dd-ct-sel-sm { width: 72px; }
+.dd-ct-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #374354;
+  color: #cdd6e0;
+  border: 1px solid #4a5568;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  white-space: nowrap;
+}
+.dd-ct-btn:hover { background: #4a5a6e; border-color: #69b1ff; color: #fff; }
+.dd-ct-btn i { font-size: 13px; }
+
+/* 搜索替换栏 */
+.dd-code-searchbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #252f3e;
+  border-bottom: 1px solid #2a3a4e;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.dd-cs-input {
+  background: #1e2a3a;
+  color: #e0e0e0;
+  border: 1px solid #4a5568;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 12px;
+  outline: none;
+  width: 120px;
+}
+.dd-cs-input:focus { border-color: #69b1ff; }
+.dd-cs-btn {
+  background: #374354;
+  color: #cdd6e0;
+  border: 1px solid #4a5568;
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.dd-cs-btn:hover { background: #4a5a6e; color: #fff; }
+.dd-cs-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #8a9bb0;
+  font-size: 12px;
+  cursor: pointer;
+}
+.dd-cs-close {
+  margin-left: auto;
+  cursor: pointer;
+  color: #8a9bb0;
+  font-size: 16px;
+  padding: 2px;
+}
+.dd-cs-close:hover { color: #fff; }
+
+/* 编辑器主体（行号 + 代码） */
+.dd-code-editor-wrap {
+  flex: 1;
+  display: flex;
+  overflow: auto;
+  min-height: 0;
+}
+.dd-code-editor-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+.dd-code-editor-wrap::-webkit-scrollbar-thumb { background: #3a4a5a; border-radius: 4px; }
+.dd-code-editor-wrap::-webkit-scrollbar-corner { background: #1e2a3a; }
+
+/* 行号列 */
+.dd-code-gutter {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  flex-shrink: 0;
+  min-width: 36px;
+  padding: 12px 10px 12px 14px;
+  text-align: right;
+  color: #5a6a7a;
+  background: #1e2a3a;
+  user-select: none;
+  border-right: 1px solid #2a3a4e;
+}
+.dd-code-gutter div { height: 1.6em; }
+
+/* 代码内容（可编辑） */
+.dd-code-content {
+  flex: 1;
+  padding: 12px 16px;
+  margin: 0;
+  white-space: pre;
+  outline: none;
+  min-width: 0;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: #e0e0e0;
+  background: transparent;
+  border: none;
+  caret-color: #fff;
+  tab-size: 2;
+}
+
+/* SQL 语法高亮（暗色默认） */
+.sql-keyword { color: #569cd6; font-weight: 600; }
+.sql-string  { color: #ce9178; }
+.sql-comment { color: #6a9955; font-style: italic; }
+.sql-var     { color: #dcdcaa; }
+
+/* ---- 亮色主题 ---- */
+.dd-code-area.theme-light {
+  background: #fafbfc;
+}
+.dd-code-area.theme-light .dd-code-toolbar {
+  background: #f0f2f5;
+  border-bottom-color: #dce0e6;
+}
+.dd-code-area.theme-light .dd-ct-sel {
+  background: #fff;
+  color: #333;
+  border-color: #c8cdd4;
+}
+.dd-code-area.theme-light .dd-ct-sel:focus { border-color: #4096ff; }
+.dd-code-area.theme-light .dd-ct-btn {
+  background: #fff;
+  color: #333;
+  border-color: #c8cdd4;
+}
+.dd-code-area.theme-light .dd-ct-btn:hover {
+  background: #e8f0fe;
+  border-color: #4096ff;
+  color: #1a1a1a;
+}
+.dd-code-area.theme-light .dd-code-searchbar {
+  background: #f0f2f5;
+  border-bottom-color: #dce0e6;
+}
+.dd-code-area.theme-light .dd-cs-input {
+  background: #fff;
+  color: #333;
+  border-color: #c8cdd4;
+}
+.dd-code-area.theme-light .dd-cs-input:focus { border-color: #4096ff; }
+.dd-code-area.theme-light .dd-cs-btn {
+  background: #fff;
+  color: #333;
+  border-color: #c8cdd4;
+}
+.dd-code-area.theme-light .dd-cs-btn:hover { background: #e8f0fe; color: #1a1a1a; }
+.dd-code-area.theme-light .dd-cs-check { color: #666; }
+.dd-code-area.theme-light .dd-cs-close { color: #999; }
+.dd-code-area.theme-light .dd-cs-close:hover { color: #333; }
+.dd-code-area.theme-light .dd-code-editor-wrap::-webkit-scrollbar-thumb { background: #c8cdd4; }
+.dd-code-area.theme-light .dd-code-editor-wrap::-webkit-scrollbar-corner { background: #fafbfc; }
+.dd-code-area.theme-light .dd-code-gutter {
+  color: #999;
+  background: #fafbfc;
+  border-right-color: #e8edf3;
+}
+.dd-code-area.theme-light .dd-code-content {
+  color: #1e1e1e;
+  caret-color: #333;
+}
+.dd-code-area.theme-light .sql-keyword { color: #0000ff; }
+.dd-code-area.theme-light .sql-string  { color: #a31515; }
+.dd-code-area.theme-light .sql-comment { color: #008000; }
+.dd-code-area.theme-light .sql-var     { color: #795e26; }
+
+/* ---- 右侧 Sidebar（竖排Tab + 内容面板） ---- */
+.dd-editor-sidebar {
+  display: flex;
+  flex-direction: row;
+  flex-shrink: 0;
+  border-left: 1px solid #e8edf3;
+}
+.dd-sidebar-strip {
+  display: flex;
+  flex-direction: column;
+  background: #f0f2f5;
+  flex-shrink: 0;
+}
+.dd-sidebar-tab {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  padding: 14px 8px;
+  font-size: 12px;
+  color: #6b7d8e;
+  cursor: pointer;
+  text-align: center;
+  border-bottom: 1px solid #e8edf3;
+  transition: background .15s, color .15s;
+  letter-spacing: 3px;
+  white-space: nowrap;
+}
+.dd-sidebar-tab:hover { background: #e0e7ef; color: var(--primary); }
+.dd-sidebar-tab.active {
+  background: #fff;
+  color: var(--primary);
+  font-weight: 600;
+  border-left: 2px solid var(--primary);
+}
+
+/* 侧边栏内容面板 */
+.dd-sidebar-content {
+  width: 320px;
+  background: #fff;
+  border-left: 1px solid #e8edf3;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.dd-sidebar-content::-webkit-scrollbar { width: 4px; }
+.dd-sidebar-content::-webkit-scrollbar-thumb { background: #d6dbe0; border-radius: 4px; }
+.dd-sidebar-panel { display: none; padding: 16px; }
+.dd-sidebar-panel.active { display: block; }
+
+/* 侧边栏通用组件 */
+.dd-sb-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.dd-sb-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+}
+.dd-sb-note {
+  font-size: 12px;
+  color: #999;
+  margin-top: 10px;
+}
+.dd-sb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.dd-sb-table th {
+  background: #fafbfd;
+  font-weight: 600;
+  color: #333;
+  padding: 8px 6px;
+  border: 1px solid #e8edf3;
+  text-align: left;
+  white-space: nowrap;
+}
+.dd-sb-table td {
+  padding: 7px 6px;
+  border: 1px solid #e8edf3;
+  color: #555;
+  word-break: break-all;
+}
+.dd-sb-table .text-danger { color: #ff4d4f; cursor: pointer; }
+.dd-sb-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 8px;
+}
+.dd-sb-section-label { font-size: 13px; font-weight: 500; color: #333; }
+.dd-sb-link { font-size: 12px; color: var(--primary); cursor: pointer; }
+.dd-sb-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.dd-sb-sel { flex: 1; min-width: 0; font-size: 12px; }
+
+/* 血缘关系图 */
+.dd-lineage-diagram {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e8edf3;
+}
+.dd-lineage-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.dd-lineage-sources,
+.dd-lineage-targets { display: flex; flex-direction: column; gap: 8px; }
+.dd-lineage-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1.5px solid #b8d4f0;
+  border-radius: 6px;
+  background: #f0f7ff;
+  font-size: 12px;
+  color: #333;
+  white-space: nowrap;
+}
+.dd-lineage-node.target {
+  background: #e8f4ff;
+  border-color: #69b1ff;
+}
+.dd-lineage-node i { color: var(--primary); }
+.dd-lineage-db { font-size: 11px; color: #999; margin-left: auto; padding-left: 4px; }
+.dd-lineage-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  color: #999;
+}
+.dd-lineage-process { font-size: 11px; color: #666; white-space: nowrap; }
+.dd-lineage-arrow i { font-size: 16px; color: var(--primary); }
+
+/* ---- 编辑器底部面板（执行结果） ---- */
+.dd-editor-bottom {
+  height: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 2px solid #e8edf3;
+  background: #fff;
+}
+.dd-editor-resize {
+  height: 4px;
+  background: #e8edf3;
+  cursor: ns-resize;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.dd-editor-resize:hover { background: var(--primary); }
+
+.dd-editor-bottom-tabs {
+  display: flex;
+  border-bottom: 1px solid #e8edf3;
+  flex-shrink: 0;
+  background: #fafbfc;
+}
+.dd-bottom-tab {
+  padding: 8px 18px;
+  font-size: 13px;
+  color: #6b7d8e;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color .2s;
+  text-decoration: none;
+}
+.dd-bottom-tab:hover { color: var(--primary); }
+.dd-bottom-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 500;
+}
+
+.dd-editor-output {
+  flex: 1;
+  overflow: auto;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-family: Consolas, 'Courier New', monospace;
+  line-height: 1.8;
+  color: var(--text-primary);
+}
+.dd-editor-output::-webkit-scrollbar { width: 4px; }
+.dd-editor-output::-webkit-scrollbar-thumb { background: #d6dbe0; border-radius: 4px; }
+.dd-editor-output .out-cmd  { color: #e67e22; }
+.dd-editor-output .out-ok   { color: #27ae60; }
+.dd-editor-output .out-err  { color: #e74c3c; }
+.dd-editor-output .out-time { color: #999; }
+.dd-editor-output .out-sql  { color: #3498db; word-break: break-all; }
+
+/* ---- 编辑器模式 Header 中间控件 ---- */
+.dd-header-editor .dd-header-center {
+  gap: 8px;
+}
+.dd-header-editor .dd-header-center label {
+  color: #6b7d8e;
+  white-space: nowrap;
+}
+.dd-hdr-sel {
+  border: 1px solid #d9dfe6;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: #fff;
+  outline: none;
+}
+.dd-hdr-sel:focus { border-color: var(--primary); }
+.dd-hdr-sel-sm { width: 60px; }
+
+/* ---- 编辑器右键菜单 – 标题 & 子菜单 ---- */
+.dd-ctx-menu-title {
+  padding: 6px 16px;
+  font-size: 12px;
+  color: #999;
+  font-weight: 500;
+}
+.dd-ctx-submenu-wrap {
+  position: relative;
+}
+.dd-ctx-submenu-wrap:hover > .dd-ctx-submenu {
+  display: block;
+}
+.dd-ctx-submenu {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  min-width: 120px;
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  padding: 4px 0;
+  z-index: 10000;
+}
+
+/* ============================================================
+   布局覆盖 — 使用双 class 确保优先级高于 .dd-tree-panel
+   ============================================================ */
+
+/* 左侧面板 */
+.dd-tree-panel.dd-left-panel {
+  width: 240px;
+  background: #f7f9fc;
+  border-right: 2px solid #dae1e9;
+  box-shadow: 2px 0 10px rgba(0,0,0,.06);
+  z-index: 2;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dd-left-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: auto;
+  border-bottom: 1px solid #e8edf3;
+  flex-shrink: 0;
+  padding: 0;
+  background: #fff;
+}
+.dd-left-tabs .dd-tab {
+  padding: 0 14px;
+  font-size: 13px;
+  line-height: 46px;
+}
+
+/* 右侧面板 */
+.dd-right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* 流程视图容器 */
+.dd-flow-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.dd-header.dd-flow-header {
+  justify-content: space-between;
+}
+.dd-flow-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}

@@ -19,6 +19,9 @@ DP.showPage = function (menuKey, opts) {
   } else if (menuKey === 'project-mgr') {
     c.innerHTML = DP.pages.projectMgr.html;
     DP.pages.projectMgr.init();
+  } else if (menuKey === '数据开发') {
+    c.innerHTML = DP.pages.dataDevelop.html;
+    DP.pages.dataDevelop.init();
   } else if (menuKey === '元数据搜索') {
     c.innerHTML = DP.pages.metaSearchHome.html;
     DP.pages.metaSearchHome.init();

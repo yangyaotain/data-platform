@@ -10,7 +10,9 @@
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/pages/datasource.css">
   <link rel="stylesheet" href="css/pages/meta-search.css">
+  <link rel="stylesheet" href="css/pages/data-develop.css">
   <link rel="stylesheet" href="css/pages/project-mgr.css">
+  <link rel="stylesheet" href="css/pages/ai-assistant.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body>
@@ -46,6 +48,7 @@
       </div>
       <!-- 右侧：用户信息 -->
       <div class="top-nav-right">
+        <a class="ai-assistant-btn" id="aiAssistantBtn" title="AI 助手"><i class="bi bi-robot"></i><span>AI助手</span></a>
         <div class="msg-icon" title="消息通知">
           <i class="bi bi-bell"></i>
           <span class="msg-badge">3</span>
@@ -467,12 +470,107 @@
 
   </div>
 
+  <!-- AI 助手遮罩（放在 main-wrapper 外面，避免 overflow:hidden 裁剪） -->
+  <div class="ai-overlay" id="aiOverlay"></div>
+  <!-- 最小化后的右下角浮条 -->
+  <div class="ai-minimized-dock" id="aiMinimizedDock" title="点击展开 AI 助手">
+    <span class="ai-dock-icon"><i class="bi bi-robot"></i></span>
+    <span class="ai-dock-text">AI 助手</span>
+    <i class="bi bi-arrows-angle-expand ai-dock-expand"></i>
+  </div>
+  <!-- AI 助手面板 -->
+  <div class="ai-panel" id="aiPanel">
+    <div class="ai-panel-width-handle" id="aiPanelWidthHandle" title="拖动调整面板宽度"></div>
+    <!-- 最大化模式：左侧历史栏 -->
+    <div class="ai-history-sidebar" id="aiHistorySidebar">
+      <div class="ai-hist-resize-handle" id="aiHistResizeHandle" title="拖动调整宽度"></div>
+      <div class="ai-history-header">
+        <span>历史会话记录</span>
+        <div class="ai-history-search"><input type="text" placeholder="搜索历史记录" class="ai-history-input"><i class="bi bi-search"></i></div>
+      </div>
+      <div class="ai-history-list" id="aiHistoryList">
+        <a class="ai-history-item active" href="javascript:;">人员信息表包含哪些内容？</a>
+        <a class="ai-history-item" href="javascript:;">用户邮箱在那张表中？</a>
+        <a class="ai-history-item" href="javascript:;">SQL生成基于dwd.wh_etd_create_ord__di表，统计2025年1月1日至2025年3月31日每个spu的销售额、销量、数量、卖家数量、买家数量</a>
+        <a class="ai-history-item" href="javascript:;">生成注释，每个字段添加注释</a>
+        <a class="ai-history-item" href="javascript:;">解释一下这个SQL xxxx</a>
+        <a class="ai-history-item" href="javascript:;">SQL改写，修改SQL，将其结果从列转置为行</a>
+        <a class="ai-history-item" href="javascript:;">代码优化，优化下这段SQL</a>
+        <a class="ai-history-item" href="javascript:;">项目主数据表调用接口？</a>
+        <a class="ai-history-item" href="javascript:;">帮我添加一个数据源...</a>
+        <a class="ai-history-item" href="javascript:;">帮我同步一个数据源...</a>
+        <a class="ai-history-item" href="javascript:;">根据我上传的数仓实施规范文档，规划下数仓架构...</a>
+        <a class="ai-history-item" href="javascript:;">按照当前人事主题域划分，以考勤相关业务，创建下相关的业务模型</a>
+        <a class="ai-history-item" href="javascript:;">帮我建立采集任务，把HR系统以下10张表...采集到数仓表中...每天00:00:00执行...</a>
+        <a class="ai-history-item" href="javascript:;">帮我建立一个SQL数据清洗任务，清洗一下这些表的空值数据...</a>
+        <a class="ai-history-item" href="javascript:;">帮我查下人事考勤表的采集任务报错，查看下日志，是什么问题...</a>
+        <a class="ai-history-item" href="javascript:;">帮我把出勤情况分析表发布一个查询接口...</a>
+        <a class="ai-history-item" href="javascript:;">帮我创建一个考勤人员的原子指标</a>
+        <a class="ai-history-item" href="javascript:;">帮我以出勤考勤分析数据集，生成一个柱状图...</a>
+        <a class="ai-history-item" href="javascript:;">帮我分析下人事考勤表的质量情况，并帮我创建质量检查任务</a>
+        <a class="ai-history-item" href="javascript:;">现在中台添加多少数据源，创建了多少项目...?</a>
+        <a class="ai-history-item" href="javascript:;">我想做人员考勤分析，当前有哪些表可以使用?</a>
+        <a class="ai-history-item" href="javascript:;">人员考勤表包括哪些明细信息...当前有多少条记录?</a>
+      </div>
+    </div>
+    <!-- 主聊天区 -->
+    <div class="ai-main-wrap" id="aiMainWrap">
+      <div class="ai-panel-header">
+        <span class="ai-panel-title">AI 助手</span>
+        <div class="ai-panel-actions">
+          <i class="bi bi-plus-lg" id="aiNewChat" title="新对话"></i>
+          <i class="bi bi-dash-lg" id="aiMinimize" title="最小化"></i>
+          <i class="bi bi-arrows-fullscreen" id="aiMaximize" title="最大化"></i>
+          <i class="bi bi-x-lg" id="aiClose" title="关闭"></i>
+        </div>
+      </div>
+      <div class="ai-chat-area" id="aiChatArea">
+        <div class="ai-welcome" id="aiWelcome">
+          <div class="ai-welcome-hero">
+            <div class="ai-welcome-icon" aria-hidden="true"><i class="bi bi-robot"></i></div>
+            <h3>你好，我是<br><strong>数据中台 AI 助手</strong></h3>
+            <p>作为你的智能伙伴，我能为你答疑解惑、探索数据中台。</p>
+          </div>
+          <div class="ai-welcome-section">
+            <span class="ai-section-label">可尝试问我：</span>
+            <div class="ai-suggest-list">
+              <a class="ai-suggest-item" href="javascript:;">帮我添加/同步一个数据源...</a>
+              <a class="ai-suggest-item" href="javascript:;">帮我查询人员信息表在哪个库，包括哪些信息...</a>
+              <a class="ai-suggest-item" href="javascript:;">帮我创建采集流程，采集以下10张表，增量字段为...</a>
+              <a class="ai-suggest-item" href="javascript:;">帮我创建一个SQL统计分析任务，统计近7天...</a>
+              <a class="ai-suggest-item" href="javascript:;">帮我发布一个接口...</a>
+              <a class="ai-suggest-item" href="javascript:;">帮我查下当前中台添加多少数据源，创建了多项目，开发了多少流程，发布多少接口...</a>
+            </div>
+          </div>
+        </div>
+        <div class="ai-messages" id="aiMessages" style="display:none;"></div>
+      </div>
+      <div class="ai-input-area" id="aiInputArea">
+        <div class="ai-attachments" id="aiAttachments" aria-live="polite"></div>
+        <div class="ai-input-box">
+          <textarea class="ai-input" id="aiInput" rows="1" placeholder="可以问我任何问题......（Shift+回车 换行）" autocomplete="off" title="支持 Ctrl+V 粘贴图片或文件"></textarea>
+          <input type="file" id="aiFileImage" accept="image/*" multiple hidden>
+          <input type="file" id="aiFileDoc" multiple hidden>
+          <div class="ai-input-footer">
+            <div class="ai-input-tools">
+              <button type="button" class="ai-tool-btn" id="aiUploadImg" title="上传图片"><i class="bi bi-image"></i></button>
+              <button type="button" class="ai-tool-btn" id="aiUploadFile" title="上传文件"><i class="bi bi-paperclip"></i></button>
+            </div>
+            <button type="button" class="ai-send-btn" id="aiSendBtn" title="发送"><i class="bi bi-send-fill"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- JS 模块化加载（顺序重要） -->
   <script src="js/config.js"></script>
   <script src="js/pages/datasource.js"></script>
   <script src="js/pages/meta-search-home.js"></script>
   <script src="js/pages/meta-search-result.js"></script>
+  <script src="js/pages/data-develop.js"></script>
   <script src="js/pages/project-mgr.js"></script>
+  <script src="js/ai-assistant.js"></script>
   <script src="js/sidebar.js"></script>
   <script src="js/router.js"></script>
   <script src="js/app.js"></script>

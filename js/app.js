@@ -39,6 +39,10 @@ document.addEventListener('DOMContentLoaded', function () {
         var pmLink = document.querySelector('[data-menu="project-mgr"]');
         if (pmLink) pmLink.classList.add('active');
         DP.showPage('project-mgr');
+      } else if (page === 'develop') {
+        var devLink = document.querySelector('[data-menu="dev-develop"]');
+        if (devLink) devLink.classList.add('active');
+        DP.showPage('数据开发');
       } else {
         // 通用逻辑：激活第一个菜单项
         var groupId = DP.menuGroupMap[page];
@@ -80,6 +84,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ---- 初始化项目选择器 ---- */
   DP.initProjectSelector();
+
+  /* ---- 初始化 AI 助手 ---- */
+  DP.initAiAssistant();
 
   /* ---- 加载默认页面（数据资产 - 数据源） ---- */
   DP.showPage('datasource');
