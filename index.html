@@ -13,6 +13,9 @@
   <link rel="stylesheet" href="css/pages/data-develop.css">
   <link rel="stylesheet" href="css/pages/project-mgr.css">
   <link rel="stylesheet" href="css/pages/ai-assistant.css">
+  <link rel="stylesheet" href="css/pages/governance-overview.css">
+  <link rel="stylesheet" href="css/pages/governance-plan.css">
+  <link rel="stylesheet" href="css/pages/meta-audit.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body>
@@ -35,6 +38,7 @@
         <nav class="main-nav">
           <a class="nav-item" data-page="workbench">控制台</a>
           <a class="nav-item active" data-page="governance">数据资产</a>
+          <a class="nav-item" data-page="governance-ops">数据治理</a>
           <a class="nav-item" data-page="develop">数据开发</a>
           <a class="nav-item" data-page="explore">数据探索</a>
           <a class="nav-item" data-page="service">数据服务</a>
@@ -341,6 +345,38 @@
         <!-- 帮助文档菜单组（待设计） -->
         <ul class="side-menu menu-group" id="menuHelp" style="display:none;"></ul>
 
+        <!-- 数据治理菜单组 -->
+        <ul class="side-menu menu-group" id="menuDataGovernance" style="display:none;">
+          <li class="menu-item">
+            <a class="menu-link" data-menu="governance-overview" href="javascript:;"><i class="bi bi-speedometer2"></i><span>资产概览</span></a>
+          </li>
+          <li class="menu-item">
+            <a class="menu-link" data-menu="meta-search" href="javascript:;"><i class="bi bi-search"></i><span>元数据搜索</span></a>
+          </li>
+          <li class="menu-item has-sub">
+            <a class="menu-link" href="javascript:;"><i class="bi bi-clipboard-check"></i><span>审核管理</span><i class="bi bi-chevron-down arrow"></i></a>
+            <ul class="sub-menu">
+              <li><a href="javascript:;">元数据审核</a></li>
+              <li><a href="javascript:;">标准审核</a></li>
+            </ul>
+          </li>
+          <li class="menu-item has-sub">
+            <a class="menu-link" href="javascript:;"><i class="bi bi-kanban"></i><span>规划管理</span><i class="bi bi-chevron-down arrow"></i></a>
+            <ul class="sub-menu">
+              <li><a href="javascript:;">治理规划</a></li>
+              <li><a href="javascript:;">治理任务</a></li>
+              <li><a href="javascript:;">治理成果</a></li>
+            </ul>
+          </li>
+          <li class="menu-item has-sub">
+            <a class="menu-link" href="javascript:;"><i class="bi bi-hdd-stack"></i><span>资源管理</span><i class="bi bi-chevron-down arrow"></i></a>
+            <ul class="sub-menu">
+              <li><a href="javascript:;">资源概览</a></li>
+              <li><a href="javascript:;">项目使用</a></li>
+            </ul>
+          </li>
+        </ul>
+
         <!-- 数据资产菜单组（默认显示） -->
         <ul class="side-menu menu-group" id="menuGovernance">
           <li class="menu-item">
@@ -372,14 +408,6 @@
             <ul class="sub-menu">
               <li><a href="javascript:;">大数据账号</a></li>
               <li><a href="javascript:;">集群配置</a></li>
-            </ul>
-          </li>
-          <li class="menu-item has-sub">
-            <a class="menu-link" href="javascript:;"><i class="bi bi-clipboard-data"></i><span>数据治理</span><i class="bi bi-chevron-down arrow"></i></a>
-            <ul class="sub-menu">
-              <li><a href="javascript:;">元数据搜索</a></li>
-              <li><a href="javascript:;">审核管理</a></li>
-              <li><a href="javascript:;">我的数据</a></li>
             </ul>
           </li>
           <li class="menu-item has-sub">
@@ -570,6 +598,10 @@
   <script src="js/pages/meta-search-result.js"></script>
   <script src="js/pages/data-develop.js"></script>
   <script src="js/pages/project-mgr.js"></script>
+  <script src="js/pages/governance-overview.js"></script>
+  <script src="js/pages/governance-plan.js"></script>
+  <script src="js/pages/meta-audit.js"></script>
+  <script src="js/pages/standard-audit.js"></script>
   <script src="js/ai-assistant.js"></script>
   <script src="js/sidebar.js"></script>
   <script src="js/router.js"></script>

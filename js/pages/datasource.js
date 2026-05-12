@@ -203,6 +203,9 @@ DP.pages.datasource = {
     /* ========== 右侧面板：工具栏 + 共享表格 ========== */
     '<div class="ds-right-panel">' +
 
+      /* ====== 主视图（数据源列表） ====== */
+      '<div class="ds-main-view" id="dsMainView">' +
+
       /* 工具栏：按钮(左) + 搜索条件(右) 一行展示 */
       '<div class="ds-toolbar">' +
         '<div class="ds-toolbar-left" id="dsToolbarBtns">' +
@@ -214,6 +217,7 @@ DP.pages.datasource = {
           '<button class="btn btn-primary"><i class="bi bi-pencil"></i> 编辑</button>' +
           '<button class="btn btn-primary"><i class="bi bi-arrow-repeat"></i> 同步</button>' +
           '<button class="btn btn-primary"><i class="bi bi-layers"></i> 数仓规划</button>' +
+          '<button class="btn btn-primary" id="dsImpactBtn"><i class="bi bi-diagram-3"></i> 影响依赖</button>' +
           '<button class="btn btn-danger"><i class="bi bi-trash"></i> 删除</button>' +
         '</div>' +
         '<div class="ds-toolbar-right">' +
@@ -254,6 +258,40 @@ DP.pages.datasource = {
         '<div class="page-nav"><a class="page-btn disabled">上一页</a><a class="page-num active">1</a><a class="page-num">2</a><a class="page-btn">下一页</a></div>' +
       '</div>' +
 
+      '</div>' + /* ds-main-view */
+
+      /* ====== 影响依赖视图（默认隐藏） ====== */
+      '<div class="ds-impact-view" id="dsImpactView" style="display:none">' +
+        '<div class="ds-impact-header">' +
+          '<div class="ds-impact-title" id="dsImpactTitle">prod_mysql_master - 影响依赖</div>' +
+          '<button class="btn btn-sm" id="dsImpactBack"><i class="bi bi-arrow-left"></i> 返回</button>' +
+        '</div>' +
+        '<div class="ds-impact-toolbar">' +
+          '<button class="btn btn-primary" id="dsImpactBatchRestart"><i class="bi bi-arrow-repeat"></i> 重启调度</button>' +
+          '<div class="ds-impact-filters">' +
+            '<input type="text" class="ds-impact-input" id="dsImpactTaskName" placeholder="任务名称">' +
+            '<select class="ds-impact-select" id="dsImpactStatus"><option value="">全部</option><option value="started">已启动</option><option value="stopped">未启动</option></select>' +
+            '<button class="btn btn-primary btn-sm" id="dsImpactQuery">查询</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="ds-table-wrap"><table class="ds-table ds-impact-table">' +
+          '<thead><tr>' +
+            '<th class="col-ck"><input type="checkbox" id="dsImpactCheckAll"></th>' +
+            '<th>任务名称</th>' +
+            '<th>调度状态</th>' +
+            '<th>调度周期</th>' +
+            '<th>被使用子流程数</th>' +
+            '<th>最近一次重启状态</th>' +
+            '<th>操作</th>' +
+          '</tr></thead>' +
+          '<tbody id="dsImpactTbody">' +
+          '</tbody>' +
+        '</table></div>' +
+        '<div class="ds-pagination" id="dsImpactPagination">' +
+          '<span class="page-info">显示第 1 到第 10 条记录，总共 10 条记录</span>' +
+        '</div>' +
+      '</div>' + /* ds-impact-view */
+
     '</div>' +
   '</div>',
 
@@ -289,15 +327,140 @@ DP.pages.datasource = {
       });
     });
 
-    /* 通用：树节点选中 */
+    /* 通用：树节点选中 + 记录当前选中名称 */
+    var _selectedDsName = 'prod_mysql_master';
     page.querySelectorAll('.ds-tree .tree-node').forEach(function (node) {
       node.addEventListener('click', function () {
         if (!node.querySelector('.tree-children')) {
           var tree = node.closest('.ds-tree');
           if (tree) tree.querySelectorAll('.tree-node.active').forEach(function (n) { n.classList.remove('active'); });
           node.classList.add('active');
+          var text = node.querySelector('.tree-text');
+          if (text) _selectedDsName = text.textContent.trim();
         }
       });
     });
+
+    /* ---- 影响依赖功能 ---- */
+    var mainView = document.getElementById('dsMainView');
+    var impactView = document.getElementById('dsImpactView');
+    var impactBtn = document.getElementById('dsImpactBtn');
+    var impactBack = document.getElementById('dsImpactBack');
+    var impactTitle = document.getElementById('dsImpactTitle');
+    var impactTbody = document.getElementById('dsImpactTbody');
+
+    var _impactData = [
+      { name: 'task_sync_order_daily', status: 'started', cycle: '每天 02:00', subCount: 3, lastRestart: 'success' },
+      { name: 'task_sync_user_profile', status: 'started', cycle: '每天 03:00', subCount: 5, lastRestart: 'success' },
+      { name: 'task_calc_gmv_report', status: 'started', cycle: '每天 06:00', subCount: 2, lastRestart: 'fail' },
+      { name: 'task_sync_product_dim', status: 'stopped', cycle: '每天 01:00', subCount: 1, lastRestart: null },
+      { name: 'task_etl_payment_flow', status: 'started', cycle: '每小时', subCount: 4, lastRestart: 'success' },
+      { name: 'task_sync_logistics', status: 'started', cycle: '每天 04:00', subCount: 2, lastRestart: 'success' },
+      { name: 'task_build_customer_tag', status: 'stopped', cycle: '每周一 00:00', subCount: 0, lastRestart: null },
+      { name: 'task_inventory_snapshot', status: 'started', cycle: '每天 23:00', subCount: 3, lastRestart: 'fail' },
+      { name: 'task_sync_behavior_log', status: 'started', cycle: '每30分钟', subCount: 6, lastRestart: 'success' },
+      { name: 'task_ads_sales_summary', status: 'stopped', cycle: '每天 07:00', subCount: 1, lastRestart: null }
+    ];
+
+    function _renderImpactTable(filter) {
+      if (!impactTbody) return;
+      var nameFilter = (filter && filter.name) ? filter.name.toLowerCase() : '';
+      var statusFilter = (filter && filter.status) ? filter.status : '';
+      var rows = _impactData.filter(function (d) {
+        if (nameFilter && d.name.toLowerCase().indexOf(nameFilter) < 0) return false;
+        if (statusFilter && d.status !== statusFilter) return false;
+        return true;
+      });
+      var html = '';
+      rows.forEach(function (d) {
+        var statusTag = d.status === 'started'
+          ? '<span class="tag tag-green">已启动</span>'
+          : '<span class="tag tag-gray">未启动</span>';
+        var restartTag = '--';
+        if (d.lastRestart === 'success') restartTag = '<span class="tag tag-green">成功</span>';
+        else if (d.lastRestart === 'fail') restartTag = '<span class="tag tag-red">失败</span>';
+        var ops = d.status === 'started'
+          ? '<a class="ds-impact-op ds-impact-restart" data-task="' + d.name + '">重启调度</a><a class="ds-impact-op ds-impact-dev" data-task="' + d.name + '">开发管理</a>'
+          : '<span class="ds-impact-op-disabled">--</span><a class="ds-impact-op ds-impact-dev" data-task="' + d.name + '">开发管理</a>';
+        html += '<tr>' +
+          '<td><input type="checkbox" class="ds-impact-ck" data-task="' + d.name + '"></td>' +
+          '<td>' + d.name + '</td>' +
+          '<td>' + statusTag + '</td>' +
+          '<td>' + d.cycle + '</td>' +
+          '<td>' + d.subCount + '</td>' +
+          '<td>' + restartTag + '</td>' +
+          '<td class="td-actions">' + ops + '</td>' +
+          '</tr>';
+      });
+      impactTbody.innerHTML = html || '<tr><td colspan="7" style="text-align:center;color:#999;padding:30px;">无匹配记录</td></tr>';
+      _bindImpactOps();
+    }
+
+    function _showConfirm(msg, onOk) {
+      DP.confirm(msg, { onOk: onOk });
+    }
+
+    function _bindImpactOps() {
+      if (!impactTbody) return;
+      impactTbody.querySelectorAll('.ds-impact-restart').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var taskName = btn.getAttribute('data-task');
+          _showConfirm('您确认要重启【' + taskName + '】的任务吗？', function () {});
+        });
+      });
+      impactTbody.querySelectorAll('.ds-impact-dev').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          window.open(location.pathname + '#page=data-develop', '_blank');
+        });
+      });
+    }
+
+    if (impactBtn) {
+      impactBtn.addEventListener('click', function () {
+        if (impactTitle) impactTitle.textContent = _selectedDsName + ' - 影响依赖';
+        if (mainView) mainView.style.display = 'none';
+        if (impactView) impactView.style.display = '';
+        _renderImpactTable();
+      });
+    }
+
+    if (impactBack) {
+      impactBack.addEventListener('click', function () {
+        if (impactView) impactView.style.display = 'none';
+        if (mainView) mainView.style.display = '';
+      });
+    }
+
+    var impactBatchBtn = document.getElementById('dsImpactBatchRestart');
+    if (impactBatchBtn) {
+      impactBatchBtn.addEventListener('click', function () {
+        var checked = impactTbody ? impactTbody.querySelectorAll('.ds-impact-ck:checked') : [];
+        if (checked.length === 0) {
+          _showConfirm('请先选择需要重启的任务记录', function () {});
+          return;
+        }
+        _showConfirm('您确认要重启选择的【' + checked.length + '条记录】的任务吗？', function () {});
+      });
+    }
+
+    var impactCheckAll = document.getElementById('dsImpactCheckAll');
+    if (impactCheckAll && impactTbody) {
+      impactCheckAll.addEventListener('change', function () {
+        var cks = impactTbody.querySelectorAll('.ds-impact-ck');
+        cks.forEach(function (ck) { ck.checked = impactCheckAll.checked; });
+      });
+    }
+
+    var impactQueryBtn = document.getElementById('dsImpactQuery');
+    if (impactQueryBtn) {
+      impactQueryBtn.addEventListener('click', function () {
+        var nameInput = document.getElementById('dsImpactTaskName');
+        var statusSel = document.getElementById('dsImpactStatus');
+        _renderImpactTable({
+          name: nameInput ? nameInput.value.trim() : '',
+          status: statusSel ? statusSel.value : ''
+        });
+      });
+    }
   }
 };

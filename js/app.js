@@ -34,6 +34,11 @@ document.addEventListener('DOMContentLoaded', function () {
         var dsLink = document.querySelector('[data-menu="datasource"]');
         if (dsLink) dsLink.classList.add('active');
         DP.showPage('datasource');
+      } else if (page === 'governance-ops') {
+        // 数据治理 → 默认进入"资产概览"
+        var govOverviewLink = document.querySelector('[data-menu="governance-overview"]');
+        if (govOverviewLink) govOverviewLink.classList.add('active');
+        DP.showPage('资产概览');
       } else if (page === 'workbench') {
         // 控制台 → 默认选中"项目管理"
         var pmLink = document.querySelector('[data-menu="project-mgr"]');
@@ -88,6 +93,12 @@ document.addEventListener('DOMContentLoaded', function () {
   /* ---- 初始化 AI 助手 ---- */
   DP.initAiAssistant();
 
-  /* ---- 加载默认页面（数据资产 - 数据源） ---- */
-  DP.showPage('datasource');
+  /* ---- 根据 hash 参数或默认加载页面 ---- */
+  var hashPage = (location.hash.match(/page=([^&]+)/) || [])[1];
+  if (hashPage === 'data-develop') {
+    var devNav = document.querySelector('[data-page="develop"]');
+    if (devNav) devNav.click();
+  } else {
+    DP.showPage('datasource');
+  }
 });

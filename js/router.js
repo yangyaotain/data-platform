@@ -22,6 +22,18 @@ DP.showPage = function (menuKey, opts) {
   } else if (menuKey === '数据开发') {
     c.innerHTML = DP.pages.dataDevelop.html;
     DP.pages.dataDevelop.init();
+  } else if (menuKey === '资产概览') {
+    c.innerHTML = DP.pages.governanceOverview.html;
+    DP.pages.governanceOverview.init();
+  } else if (menuKey === '治理规划') {
+    c.innerHTML = DP.pages.governancePlan.html;
+    DP.pages.governancePlan.init();
+  } else if (menuKey === '元数据审核') {
+    c.innerHTML = DP.pages.metaAudit.html;
+    DP.pages.metaAudit.init();
+  } else if (menuKey === '标准审核') {
+    c.innerHTML = DP.pages.standardAudit.html;
+    DP.pages.standardAudit.init();
   } else if (menuKey === '元数据搜索') {
     c.innerHTML = DP.pages.metaSearchHome.html;
     DP.pages.metaSearchHome.init();

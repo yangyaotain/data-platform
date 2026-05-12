@@ -303,6 +303,62 @@
 .dev-proj-env:hover { background: #f0f4ff; color: var(--primary); }
 .dev-proj-env.active { color: var(--primary); font-weight: 600; background: #e8f0ff; }
 
+/* ============================================================
+   公共确认弹窗
+   ============================================================ */
+.dp-modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: dpModalFadeIn .2s ease;
+}
+@keyframes dpModalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.dp-modal {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.18);
+  width: 460px;
+  max-width: 90vw;
+  overflow: hidden;
+  animation: dpModalSlideIn .25s ease;
+}
+@keyframes dpModalSlideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.dp-modal-body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 30px 28px 20px;
+}
+.dp-modal-icon {
+  font-size: 28px;
+  color: #faad14;
+  flex-shrink: 0;
+}
+.dp-modal-icon.icon-danger { color: #ff4d4f; }
+.dp-modal-icon.icon-info   { color: var(--primary); }
+.dp-modal-icon.icon-success { color: #52c41a; }
+.dp-modal-text {
+  font-size: 15px;
+  color: var(--text-primary);
+  line-height: 1.65;
+  flex: 1;
+}
+.dp-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 28px 24px;
+}
+.dp-modal-footer .btn {
+  min-width: 80px;
+  text-align: center;
+  justify-content: center;
+}
+
 /* ---- 响应式 ---- */
 @media (max-width: 1400px) {
   .nav-item { padding: 0 10px; font-size: 13px; }
