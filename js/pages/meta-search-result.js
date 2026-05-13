@@ -8,7 +8,7 @@ DP.pages = DP.pages || {};
 /* 瀛楁鎼滅储 - 鍒楄〃瑙嗗浘HTML */
 var _fieldSearchListHTML = `<table class="ds-table">
               <thead>
-                <tr><th>字段名称</th><th>字段类型</th><th>中文名</th><th>归属表</th><th>归属库</th><th>数据标签</th><th>描述</th><th>负责人</th><th>更新时间</th><th>操作</th></tr>
+                <tr><th>字段名称</th><th>字段类型</th><th>别名</th><th>归属表</th><th>归属库</th><th>数据标签</th><th>描述</th><th>负责人</th><th>更新时间</th><th>操作</th></tr>
               </thead>
               <tbody>
                 <tr class="ms-row-clickable" data-table="order_main" data-field="order_id">
@@ -21,7 +21,7 @@ var _fieldSearchListHTML = `<table class="ds-table">
                   <td class="td-desc"><mark class="ms-hl">订单</mark>唯一标识，自增主键</td>
                   <td>张明</td>
                   <td>2026-02-12 08:30</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable" data-table="order_main" data-field="order_no">
                   <td class="td-link"><mark class="ms-hl">order</mark>_no</td>
@@ -33,7 +33,7 @@ var _fieldSearchListHTML = `<table class="ds-table">
                   <td class="td-desc">业务<mark class="ms-hl">订单</mark>号，唯一索引</td>
                   <td>张明</td>
                   <td>2026-02-12 08:30</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable" data-table="order_main" data-field="order_status">
                   <td class="td-link"><mark class="ms-hl">order</mark>_status</td>
@@ -45,7 +45,7 @@ var _fieldSearchListHTML = `<table class="ds-table">
                   <td class="td-desc"><mark class="ms-hl">订单</mark>状态码 0待付款 1已付款 2已发货</td>
                   <td>张明</td>
                   <td>2026-02-12 08:30</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable" data-table="order_detail" data-field="order_amount">
                   <td class="td-link"><mark class="ms-hl">order</mark>_amount</td>
@@ -57,7 +57,7 @@ var _fieldSearchListHTML = `<table class="ds-table">
                   <td class="td-desc"><mark class="ms-hl">订单</mark>商品金额合计</td>
                   <td>张明</td>
                   <td>2026-02-12 08:30</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable" data-table="order_main" data-field="pay_time">
                   <td class="td-link">pay_time</td>
@@ -69,7 +69,7 @@ var _fieldSearchListHTML = `<table class="ds-table">
                   <td class="td-desc"><mark class="ms-hl">订单</mark>支付完成时间</td>
                   <td>张明</td>
                   <td>2026-02-12 08:30</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable" data-table="dwd_order_fact" data-field="order_type">
                   <td class="td-link"><mark class="ms-hl">order</mark>_type</td>
@@ -81,7 +81,7 @@ var _fieldSearchListHTML = `<table class="ds-table">
                   <td class="td-desc"><mark class="ms-hl">订单</mark>分类：普通、团购、秒杀</td>
                   <td>王强</td>
                   <td>2026-02-12 06:00</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable" data-table="dwd_order_fact" data-field="order_source">
                   <td class="td-link"><mark class="ms-hl">order</mark>_source</td>
@@ -93,7 +93,7 @@ var _fieldSearchListHTML = `<table class="ds-table">
                   <td class="td-desc"><mark class="ms-hl">订单</mark>来源渠道 APP/PC/H5/小程序</td>
                   <td>王强</td>
                   <td>2026-02-12 06:00</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable" data-table="dws_order_daily" data-field="order_count">
                   <td class="td-link"><mark class="ms-hl">order</mark>_count</td>
@@ -105,7 +105,7 @@ var _fieldSearchListHTML = `<table class="ds-table">
                   <td class="td-desc">按天汇总<mark class="ms-hl">订单</mark>总数</td>
                   <td>王强</td>
                   <td>2026-02-12 07:00</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable" data-table="dws_order_daily" data-field="order_gmv">
                   <td class="td-link"><mark class="ms-hl">order</mark>_gmv</td>
@@ -117,7 +117,7 @@ var _fieldSearchListHTML = `<table class="ds-table">
                   <td class="td-desc"><mark class="ms-hl">订单</mark>GMV每日汇总金额</td>
                   <td>王强</td>
                   <td>2026-02-12 07:00</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable" data-table="ads_order_overview" data-field="order_channel">
                   <td class="td-link"><mark class="ms-hl">order</mark>_channel</td>
@@ -129,7 +129,7 @@ var _fieldSearchListHTML = `<table class="ds-table">
                   <td class="td-desc"><mark class="ms-hl">订单</mark>渠道分布统计维度</td>
                   <td>赵丽</td>
                   <td>2026-02-12 07:30</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
               </tbody>
             </table>`;
@@ -382,7 +382,7 @@ DP.pages.metaSearchResult = {
           <!-- 搜索/筛选/排序区 -->
           <div class="ms-content-header">
             <div class="ms-search-bar ms-search-bar-v2">
-              <input type="text" class="ms-search-input" placeholder="输入表名、中文名或描述关键字搜索...">
+              <input type="text" class="ms-search-input" placeholder="输入表名、别名或描述关键字搜索...">
               <button class="btn ms-search-type-btn active" data-stype="table"><i class="bi bi-table"></i> 表搜索</button>
               <button class="btn ms-search-type-btn" data-stype="field"><i class="bi bi-input-cursor-text"></i> 字段搜索</button>
             </div>
@@ -469,7 +469,7 @@ DP.pages.metaSearchResult = {
               <thead>
                 <tr>
                   <th>表名</th>
-                  <th>中文名称</th>
+                  <th>别名</th>
                   <th>描述</th>
                   <th>数据源</th>
                   <th>数仓分层</th>
@@ -491,7 +491,7 @@ DP.pages.metaSearchResult = {
                   <td>1,438,920</td>
                   <td>张明</td>
                   <td>2026-02-12 08:30</td>
-                  <td class="td-actions"><i class="bi bi-eye" title="查看详情"></i><i class="bi bi-diagram-2" title="血缘关系"></i><i class="bi bi-shield-lock" title="申请权限"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable">
                   <td class="td-link"><mark class="ms-hl">order</mark>_detail</td>
@@ -503,7 +503,7 @@ DP.pages.metaSearchResult = {
                   <td>3,892,105</td>
                   <td>张明</td>
                   <td>2026-02-12 08:30</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i><i class="bi bi-shield-lock"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable">
                   <td class="td-link"><mark class="ms-hl">order</mark>_status_log</td>
@@ -515,7 +515,7 @@ DP.pages.metaSearchResult = {
                   <td>5,620,340</td>
                   <td>李婷</td>
                   <td>2026-02-11 22:15</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i><i class="bi bi-shield-lock"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable">
                   <td class="td-link">dwd_<mark class="ms-hl">order</mark>_fact</td>
@@ -527,7 +527,7 @@ DP.pages.metaSearchResult = {
                   <td>1,438,920</td>
                   <td>王强</td>
                   <td>2026-02-12 06:00</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i><i class="bi bi-shield-lock"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable">
                   <td class="td-link">dws_<mark class="ms-hl">order</mark>_daily</td>
@@ -539,7 +539,7 @@ DP.pages.metaSearchResult = {
                   <td>12,580</td>
                   <td>王强</td>
                   <td>2026-02-12 07:00</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i><i class="bi bi-shield-lock"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable">
                   <td class="td-link">ads_<mark class="ms-hl">order</mark>_overview</td>
@@ -551,7 +551,7 @@ DP.pages.metaSearchResult = {
                   <td>365</td>
                   <td>赵丽</td>
                   <td>2026-02-12 07:30</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i><i class="bi bi-shield-lock"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable">
                   <td class="td-link"><mark class="ms-hl">order</mark>_refund</td>
@@ -563,7 +563,7 @@ DP.pages.metaSearchResult = {
                   <td>89,450</td>
                   <td>李婷</td>
                   <td>2026-02-11 23:45</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i><i class="bi bi-shield-lock"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable">
                   <td class="td-link"><mark class="ms-hl">order</mark>_address</td>
@@ -575,7 +575,7 @@ DP.pages.metaSearchResult = {
                   <td>528,630</td>
                   <td>张明</td>
                   <td>2026-02-12 08:30</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i><i class="bi bi-shield-lock"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable">
                   <td class="td-link"><mark class="ms-hl">order</mark>_payment</td>
@@ -587,7 +587,7 @@ DP.pages.metaSearchResult = {
                   <td>1,205,680</td>
                   <td>李婷</td>
                   <td>2026-02-12 08:30</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i><i class="bi bi-shield-lock"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
                 <tr class="ms-row-clickable">
                   <td class="td-link"><mark class="ms-hl">order</mark>_coupon</td>
@@ -599,7 +599,7 @@ DP.pages.metaSearchResult = {
                   <td>762,340</td>
                   <td>赵丽</td>
                   <td>2026-02-12 07:45</td>
-                  <td class="td-actions"><i class="bi bi-eye"></i><i class="bi bi-diagram-2"></i><i class="bi bi-shield-lock"></i></td>
+                  <td class="td-actions"><i class="bi bi-eye" title="查看"></i></td>
                 </tr>
               </tbody>
             </table>
@@ -702,10 +702,6 @@ DP.pages.metaSearchResult = {
             <div class="ms-detail-header">
               <button class="btn btn-outline btn-sm ms-back-btn"><i class="bi bi-arrow-left"></i> 返回列表</button>
               <span class="ms-detail-title" id="msDetailTitle">order_main — 订单主表</span>
-              <div class="ms-detail-acts">
-                <button class="btn btn-primary btn-sm"><i class="bi bi-shield-lock"></i> 申请表权限</button>
-                <button class="btn btn-outline btn-sm"><i class="bi bi-key"></i> 申请字段权限</button>
-              </div>
             </div>
             <div class="ms-detail-tabs">
               <a class="ms-dtab active" data-tab="meta-info">元数据详情</a>
@@ -722,7 +718,7 @@ DP.pages.metaSearchResult = {
               <div class="ms-tab-content active" data-content="meta-info">
                 <div class="ms-info-grid">
                   <div class="ms-info-item"><span class="info-label">表名</span><span class="info-value">order_main</span></div>
-                  <div class="ms-info-item"><span class="info-label">中文名称</span><span class="info-value">订单主表</span></div>
+                  <div class="ms-info-item"><span class="info-label">别名</span><span class="info-value">订单主表</span></div>
                   <div class="ms-info-item"><span class="info-label">数据源</span><span class="info-value">prod_mysql_master</span></div>
                   <div class="ms-info-item"><span class="info-label">数仓分层</span><span class="info-value">ODS</span></div>
                   <div class="ms-info-item"><span class="info-label">存储引擎</span><span class="info-value">InnoDB</span></div>
@@ -738,7 +734,7 @@ DP.pages.metaSearchResult = {
               <!-- 表结构 -->
               <div class="ms-tab-content" data-content="structure">
                 <table class="ds-table">
-                  <thead><tr><th>序号</th><th>字段名</th><th>中文名</th><th>类型</th><th>长度</th><th>允许空</th><th>主键</th><th>描述</th></tr></thead>
+                  <thead><tr><th>序号</th><th>字段名</th><th>别名</th><th>类型</th><th>长度</th><th>允许空</th><th>主键</th><th>描述</th></tr></thead>
                   <tbody>
                     <tr><td>1</td><td class="td-link">order_id</td><td>订单编号</td><td>bigint</td><td>20</td><td>否</td><td><i class="bi bi-key-fill" style="color:#faad14"></i></td><td>订单唯一标识</td></tr>
                     <tr><td>2</td><td class="td-link">user_id</td><td>用户ID</td><td>bigint</td><td>20</td><td>否</td><td>-</td><td>下单用户ID</td></tr>
@@ -882,6 +878,12 @@ DP.pages.metaSearchResult = {
     const _tableListHTML = _msListView ? _msListView.innerHTML : '';
     const _tableCardHTML = _msCardView ? _msCardView.innerHTML : '';
 
+    function _normalizeActionCells() {
+      document.querySelectorAll('#msListView .td-actions').forEach(cell => {
+        cell.innerHTML = '<i class="bi bi-eye" title="查看"></i>';
+      });
+    }
+
     // ==== 切换搜索内容（表搜索 ↔ 字段搜索） ====
     function _applySearchContent(type) {
       _searchType = type;
@@ -903,7 +905,7 @@ DP.pages.metaSearchResult = {
         const pi = document.querySelector('#msPagination .page-info');
         if (pi) pi.textContent = '共 156 条记录，每页 10 条';
         const inp = document.querySelector('.ms-search-input');
-        if (inp) inp.placeholder = '输入表名、中文名或描述关键字搜索...';
+        if (inp) inp.placeholder = '输入表名、别名或描述关键字搜索...';
       }
       // 重置到列表视图
       const detail = document.getElementById('msDetailPanel');
@@ -916,6 +918,7 @@ DP.pages.metaSearchResult = {
       _msCardView.style.display = 'none';
       document.querySelectorAll('.ms-view-btn').forEach(b => b.classList.remove('active'));
       document.querySelector('.ms-view-btn[data-view="list"]')?.classList.add('active');
+      _normalizeActionCells();
       _bindRowClicks();
     }
 
@@ -1138,6 +1141,7 @@ DP.pages.metaSearchResult = {
     });
 
     // 点击表名或卡片进入详情（初始绑定，后续由 _applySearchContent 重新绑定）
+    _normalizeActionCells();
     _bindRowClicks();
 
     // 返回列表

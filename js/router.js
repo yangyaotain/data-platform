@@ -28,6 +28,9 @@ DP.showPage = function (menuKey, opts) {
   } else if (menuKey === '治理规划') {
     c.innerHTML = DP.pages.governancePlan.html;
     DP.pages.governancePlan.init();
+  } else if (menuKey === '治理任务') {
+    c.innerHTML = DP.pages.governanceTask.html;
+    DP.pages.governanceTask.init();
   } else if (menuKey === '元数据审核') {
     c.innerHTML = DP.pages.metaAudit.html;
     DP.pages.metaAudit.init();

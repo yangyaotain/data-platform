@@ -6,12 +6,20 @@ DP.pages = DP.pages || {};
 
 DP.pages.governancePlan = (function () {
   var pageSize = 6;
+  var scopePageSize = 10;
   var currentPage = 1;
   var activeTab = 'ongoing';
   var confirmState = null;
   var viewMode = 'list';
   var formMode = 'create';
   var editingPlanId = '';
+  var formDraftState = null;
+  var formUiState = {
+    pendingKeyword: '',
+    pendingPage: 1,
+    selectedKeyword: '',
+    selectedPage: 1
+  };
 
   var tabs = [
     { key: 'ongoing', label: '进行中' },
@@ -29,42 +37,86 @@ DP.pages.governancePlan = (function () {
   var dataSources = [
     {
       id: 'ds-trade',
-      name: '交易数仓',
+      category: '核心数仓',
+      instance: '交易主题实例',
+      name: 'dw_trade',
+      displayName: '交易数仓',
       tables: [
         { id: 'ods_order_main', name: 'ods_order_main', desc: '订单主表', fields: 82 },
         { id: 'dwd_trade_order_detail_di', name: 'dwd_trade_order_detail_di', desc: '交易订单明细表', fields: 126 },
         { id: 'dws_trade_summary_1d', name: 'dws_trade_summary_1d', desc: '交易汇总表', fields: 74 },
-        { id: 'ads_sales_daily_report', name: 'ads_sales_daily_report', desc: '销售日分析报表', fields: 58 }
+        { id: 'ads_sales_daily_report', name: 'ads_sales_daily_report', desc: '销售日分析报表', fields: 58 },
+        { id: 'ods_payment_record', name: 'ods_payment_record', desc: '支付流水表', fields: 64 },
+        { id: 'ods_refund_apply', name: 'ods_refund_apply', desc: '退款申请表', fields: 48 },
+        { id: 'dwd_trade_pay_detail_di', name: 'dwd_trade_pay_detail_di', desc: '交易支付明细表', fields: 92 },
+        { id: 'dwd_trade_refund_detail_di', name: 'dwd_trade_refund_detail_di', desc: '交易退款明细表', fields: 88 },
+        { id: 'dws_trade_user_summary_1d', name: 'dws_trade_user_summary_1d', desc: '用户交易汇总表', fields: 66 },
+        { id: 'dws_trade_shop_summary_1d', name: 'dws_trade_shop_summary_1d', desc: '店铺交易汇总表', fields: 70 },
+        { id: 'ads_order_conversion_report', name: 'ads_order_conversion_report', desc: '订单转化分析报表', fields: 52 },
+        { id: 'ads_refund_risk_report', name: 'ads_refund_risk_report', desc: '退款风险分析报表', fields: 46 }
       ]
     },
     {
       id: 'ds-customer',
-      name: '客户数据源',
+      category: '核心数仓',
+      instance: '客户主题实例',
+      name: 'dw_customer',
+      displayName: '客户数据源',
       tables: [
         { id: 'dwd_customer_base', name: 'dwd_customer_base', desc: '客户基础信息表', fields: 96 },
         { id: 'ods_member_address', name: 'ods_member_address', desc: '会员地址表', fields: 42 },
         { id: 'dwd_customer_identity', name: 'dwd_customer_identity', desc: '客户身份认证表', fields: 38 },
-        { id: 'dim_member_level', name: 'dim_member_level', desc: '会员等级维表', fields: 26 }
+        { id: 'dim_member_level', name: 'dim_member_level', desc: '会员等级维表', fields: 26 },
+        { id: 'ods_member_account', name: 'ods_member_account', desc: '会员账户表', fields: 54 },
+        { id: 'ods_member_login_log', name: 'ods_member_login_log', desc: '会员登录日志表', fields: 40 },
+        { id: 'dwd_customer_contact', name: 'dwd_customer_contact', desc: '客户联系方式表', fields: 44 },
+        { id: 'dwd_customer_preference', name: 'dwd_customer_preference', desc: '客户偏好特征表', fields: 72 },
+        { id: 'dws_customer_growth_1d', name: 'dws_customer_growth_1d', desc: '客户成长汇总表', fields: 58 },
+        { id: 'dws_customer_value_1d', name: 'dws_customer_value_1d', desc: '客户价值汇总表', fields: 61 },
+        { id: 'ads_customer_profile_report', name: 'ads_customer_profile_report', desc: '客户画像分析报表', fields: 67 },
+        { id: 'ads_member_retention_report', name: 'ads_member_retention_report', desc: '会员留存分析报表', fields: 45 }
       ]
     },
     {
       id: 'ds-marketing',
-      name: '营销分析库',
+      category: '应用数仓',
+      instance: '营销分析实例',
+      name: 'ads_marketing',
+      displayName: '营销分析库',
       tables: [
         { id: 'dwd_campaign_touch_di', name: 'dwd_campaign_touch_di', desc: '活动触达明细表', fields: 68 },
         { id: 'dws_marketing_conversion_1d', name: 'dws_marketing_conversion_1d', desc: '营销转化汇总表', fields: 54 },
         { id: 'ads_user_tag_profile', name: 'ads_user_tag_profile', desc: '用户标签画像表', fields: 112 },
-        { id: 'dim_channel', name: 'dim_channel', desc: '渠道维表', fields: 24 }
+        { id: 'dim_channel', name: 'dim_channel', desc: '渠道维表', fields: 24 },
+        { id: 'ods_campaign_base', name: 'ods_campaign_base', desc: '营销活动基础表', fields: 50 },
+        { id: 'ods_coupon_issue_record', name: 'ods_coupon_issue_record', desc: '优惠券发放记录表', fields: 57 },
+        { id: 'dwd_campaign_click_di', name: 'dwd_campaign_click_di', desc: '活动点击明细表', fields: 62 },
+        { id: 'dwd_coupon_use_detail_di', name: 'dwd_coupon_use_detail_di', desc: '优惠券使用明细表', fields: 73 },
+        { id: 'dws_channel_effect_1d', name: 'dws_channel_effect_1d', desc: '渠道效果汇总表', fields: 49 },
+        { id: 'dws_user_tag_change_1d', name: 'dws_user_tag_change_1d', desc: '用户标签变化表', fields: 84 },
+        { id: 'ads_campaign_roi_report', name: 'ads_campaign_roi_report', desc: '活动 ROI 分析报表', fields: 43 },
+        { id: 'ads_channel_funnel_report', name: 'ads_channel_funnel_report', desc: '渠道漏斗分析报表', fields: 47 }
       ]
     },
     {
       id: 'ds-resource',
-      name: '资源目录库',
+      category: '治理数仓',
+      instance: '资源管理实例',
+      name: 'gov_resource',
+      displayName: '资源目录库',
       tables: [
         { id: 'asset_catalog_item', name: 'asset_catalog_item', desc: '资产目录表', fields: 46 },
         { id: 'project_resource_usage', name: 'project_resource_usage', desc: '项目资源使用表', fields: 62 },
         { id: 'asset_owner_relation', name: 'asset_owner_relation', desc: '资产责任关系表', fields: 36 },
-        { id: 'resource_apply_record', name: 'resource_apply_record', desc: '资源申请记录表', fields: 44 }
+        { id: 'resource_apply_record', name: 'resource_apply_record', desc: '资源申请记录表', fields: 44 },
+        { id: 'asset_tag_relation', name: 'asset_tag_relation', desc: '资产标签关系表', fields: 32 },
+        { id: 'asset_lineage_relation', name: 'asset_lineage_relation', desc: '资产血缘关系表', fields: 58 },
+        { id: 'resource_quota_config', name: 'resource_quota_config', desc: '资源配额配置表', fields: 41 },
+        { id: 'resource_cost_daily', name: 'resource_cost_daily', desc: '资源成本日统计表', fields: 53 },
+        { id: 'project_asset_bind', name: 'project_asset_bind', desc: '项目资产绑定表', fields: 39 },
+        { id: 'project_usage_summary_1d', name: 'project_usage_summary_1d', desc: '项目使用汇总表', fields: 48 },
+        { id: 'asset_quality_score', name: 'asset_quality_score', desc: '资产质量评分表', fields: 37 },
+        { id: 'resource_alert_record', name: 'resource_alert_record', desc: '资源告警记录表', fields: 51 }
       ]
     }
   ];
@@ -255,6 +307,92 @@ DP.pages.governancePlan = (function () {
     return getTablesBySource(sourceId).find(function (table) { return table.id === tableId; });
   }
 
+  function getDataSourceName(id) {
+    var source = getDataSource(id);
+    return source.category + ' / ' + source.instance + ' / ' + source.name;
+  }
+
+  function getGovernanceItem(key) {
+    return governanceContents.find(function (item) { return item.key === key; });
+  }
+
+  function getDefaultTableConfig() {
+    return {
+      metadataFill: true,
+      standardMap: true,
+      standardAudit: true,
+      dataQuality: false
+    };
+  }
+
+  function resetFormUiState() {
+    formUiState = {
+      pendingKeyword: '',
+      pendingPage: 1,
+      selectedKeyword: '',
+      selectedPage: 1
+    };
+  }
+
+  function normalizeKeyword(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function filterTables(tables, keyword) {
+    var normalized = normalizeKeyword(keyword);
+    if (!normalized) return tables.slice();
+    return tables.filter(function (table) {
+      return (table.name + ' ' + table.desc).toLowerCase().indexOf(normalized) >= 0;
+    });
+  }
+
+  function getFilteredPendingTables(state) {
+    return filterTables(getTablesBySource(state.datasourceId), formUiState.pendingKeyword);
+  }
+
+  function getFilteredSelectedTableIds(state) {
+    return state.tableIds.filter(function (tableId) {
+      var table = getTableById(state.datasourceId, tableId);
+      if (!table) return false;
+      return filterTables([table], formUiState.selectedKeyword).length > 0;
+    });
+  }
+
+  function clampPage(page, total) {
+    var totalPages = Math.max(1, Math.ceil(total / scopePageSize));
+    return Math.min(Math.max(1, page || 1), totalPages);
+  }
+
+  function renderScopePagination(kind, total, current) {
+    var currentPageNo = clampPage(current, total);
+    var totalPages = Math.max(1, Math.ceil(total / scopePageSize));
+    var pages = [];
+
+    for (var i = 1; i <= totalPages; i += 1) {
+      pages.push('<a class="page-num' + (i === currentPageNo ? ' active' : '') + '" data-gp-scope="' + kind + '" data-gp-scope-page="' + i + '">' + i + '</a>');
+    }
+
+    return (
+      '<div class="ds-pagination gp-scope-pagination">' +
+        '<div class="page-info">共 ' + total + ' 条，每页 ' + scopePageSize + ' 条</div>' +
+        '<div class="page-nav">' +
+          '<a class="page-btn' + (currentPageNo === 1 ? ' disabled' : '') + '" data-gp-scope="' + kind + '" data-gp-scope-page="' + (currentPageNo - 1) + '">上一页</a>' +
+          pages.join('') +
+          '<a class="page-btn' + (currentPageNo === totalPages ? ' disabled' : '') + '" data-gp-scope="' + kind + '" data-gp-scope-page="' + (currentPageNo + 1) + '">下一页</a>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function normalizeTableConfig(config) {
+    var defaults = getDefaultTableConfig();
+    var result = {};
+    governanceContents.forEach(function (item) {
+      result[item.key] = config && typeof config[item.key] === 'boolean' ? config[item.key] : defaults[item.key];
+    });
+    return result;
+  }
+
   function findPlan(id) {
     return plans.find(function (plan) { return plan.id === id; });
   }
@@ -267,10 +405,10 @@ DP.pages.governancePlan = (function () {
 
     plan.datasourceId = source.id;
     plan.tableIds = tables.map(function (table) { return table.id; });
-    plan.contentKeys = plan.rate === 100
-      ? ['metadataFill', 'standardMap', 'standardAudit', 'dataQuality']
-      : ['metadataFill', 'standardMap'];
-    plan.qualityTableIds = plan.contentKeys.indexOf('dataQuality') >= 0 ? [tables[0].id] : [];
+    plan.tableConfigs = {};
+    plan.tableIds.forEach(function (tableId) {
+      plan.tableConfigs[tableId] = getDefaultTableConfig();
+    });
   }
 
   function getFilteredPlans() {
@@ -370,6 +508,10 @@ DP.pages.governancePlan = (function () {
   function getFormState(plan) {
     if (plan) {
       ensurePlanScope(plan);
+      var tableConfigs = {};
+      plan.tableIds.forEach(function (tableId) {
+        tableConfigs[tableId] = normalizeTableConfig(plan.tableConfigs && plan.tableConfigs[tableId]);
+      });
       return {
         name: plan.name,
         status: plan.status,
@@ -377,10 +519,18 @@ DP.pages.governancePlan = (function () {
         desc: plan.desc,
         datasourceId: plan.datasourceId,
         tableIds: plan.tableIds.slice(),
-        contentKeys: plan.contentKeys.slice(),
-        qualityTableIds: plan.qualityTableIds.slice()
+        tableConfigs: tableConfigs,
+        datasourceKeyword: ''
       };
     }
+
+    var defaultTableIds = getTablesBySource(dataSources[0].id).slice(0, 6).map(function (table) {
+      return table.id;
+    });
+    var defaultConfigs = {};
+    defaultTableIds.forEach(function (tableId) {
+      defaultConfigs[tableId] = getDefaultTableConfig();
+    });
 
     return {
       name: '',
@@ -388,9 +538,9 @@ DP.pages.governancePlan = (function () {
       owner: '',
       desc: '',
       datasourceId: dataSources[0].id,
-      tableIds: dataSources[0].tables.slice(0, 2).map(function (table) { return table.id; }),
-      contentKeys: ['metadataFill', 'standardMap'],
-      qualityTableIds: []
+      tableIds: defaultTableIds,
+      tableConfigs: defaultConfigs,
+      datasourceKeyword: ''
     };
   }
 
@@ -400,74 +550,195 @@ DP.pages.governancePlan = (function () {
     }).join('');
   }
 
-  function renderDataSourceOptions(value) {
-    return dataSources.map(function (source) {
-      return '<option value="' + source.id + '"' + (source.id === value ? ' selected' : '') + '>' + source.name + '</option>';
+  function renderDataSourceTree(activeId, keyword) {
+    var lowerKeyword = (keyword || '').trim().toLowerCase();
+    var groups = {};
+
+    dataSources.forEach(function (source) {
+      var pathText = (source.category + ' ' + source.instance + ' ' + source.name + ' ' + source.displayName).toLowerCase();
+      if (lowerKeyword && pathText.indexOf(lowerKeyword) < 0) return;
+      if (!groups[source.category]) groups[source.category] = {};
+      if (!groups[source.category][source.instance]) groups[source.category][source.instance] = [];
+      groups[source.category][source.instance].push(source);
+    });
+
+    var html = Object.keys(groups).map(function (category) {
+      var instances = Object.keys(groups[category]).map(function (instance) {
+        var dbs = groups[category][instance].map(function (source) {
+          return (
+            '<button class="gp-ds-node gp-ds-db' + (source.id === activeId ? ' active' : '') + '" type="button" data-gp-ds="' + source.id + '">' +
+              '<i class="bi bi-database"></i>' +
+              '<span>' + escapeHtml(source.name) + '</span>' +
+              '<em>' + escapeHtml(source.displayName) + '</em>' +
+            '</button>'
+          );
+        }).join('');
+
+        return (
+          '<div class="gp-ds-instance">' +
+            '<div class="gp-ds-node gp-ds-folder"><i class="bi bi-folder2-open"></i><span>' + escapeHtml(instance) + '</span></div>' +
+            '<div class="gp-ds-db-list">' + dbs + '</div>' +
+          '</div>'
+        );
+      }).join('');
+
+      return (
+        '<div class="gp-ds-category">' +
+          '<div class="gp-ds-node gp-ds-root"><i class="bi bi-diagram-3"></i><span>' + escapeHtml(category) + '</span></div>' +
+          instances +
+        '</div>'
+      );
     }).join('');
+
+    return html || '<div class="gp-ds-empty">未找到匹配的数据源</div>';
   }
 
   function renderTableOptions(state) {
-    return getTablesBySource(state.datasourceId).map(function (table) {
-      var checked = state.tableIds.indexOf(table.id) >= 0 ? ' checked' : '';
-      return (
-        '<label class="gp-table-option">' +
-          '<input class="gp-form-table" type="checkbox" value="' + table.id + '"' + checked + '>' +
-          '<div>' +
-            '<strong>' + escapeHtml(table.name) + '</strong>' +
-            '<span>' + escapeHtml(table.desc) + ' · ' + table.fields + ' 字段</span>' +
-          '</div>' +
-        '</label>'
-      );
-    }).join('');
-  }
+    var rows = getFilteredPendingTables(state);
+    formUiState.pendingPage = clampPage(formUiState.pendingPage, rows.length);
+    rows = rows.slice((formUiState.pendingPage - 1) * scopePageSize, formUiState.pendingPage * scopePageSize);
 
-  function renderContentOptions(state) {
-    return governanceContents.map(function (item) {
-      var checked = state.contentKeys.indexOf(item.key) >= 0 ? ' checked' : '';
-      return (
-        '<label class="gp-content-option">' +
-          '<input class="gp-form-content" type="checkbox" value="' + item.key + '"' + checked + '>' +
-          '<div>' +
-            '<strong>' + escapeHtml(item.name) + '</strong>' +
-            '<span>' + escapeHtml(item.desc) + '</span>' +
-          '</div>' +
-        '</label>'
-      );
-    }).join('');
-  }
-
-  function renderQualityOptions(sourceId, tableIds, selectedIds) {
-    if (!tableIds.length) {
-      return '<div class="gp-quality-empty">请先在治理范围中选择数据表。</div>';
+    if (!rows.length) {
+      return '<div class="gp-scope-empty">未找到匹配的数据表</div>';
     }
 
-    return tableIds.map(function (tableId) {
-      var table = getTableById(sourceId, tableId);
-      if (!table) return '';
-      var checked = selectedIds.indexOf(table.id) >= 0 ? ' checked' : '';
+    return rows.map(function (table) {
+      var checked = state.tableIds.indexOf(table.id) >= 0 ? ' checked' : '';
       return (
-        '<label class="gp-quality-option">' +
-          '<input class="gp-quality-table" type="checkbox" value="' + table.id + '"' + checked + '>' +
-          '<span>' + escapeHtml(table.name) + '</span>' +
+        '<label class="gp-pending-table">' +
+          '<input class="gp-form-table" type="checkbox" value="' + table.id + '"' + checked + '>' +
+          '<div class="gp-pending-main">' +
+            '<strong>' + escapeHtml(table.name) + '</strong>' +
+            '<span>' + escapeHtml(table.desc) + '</span>' +
+          '</div>' +
+          '<em>' + table.fields + ' 字段</em>' +
         '</label>'
       );
     }).join('');
+  }
+
+  function renderPendingPagination(state) {
+    var total = getFilteredPendingTables(state).length;
+    return renderScopePagination('pending', total, formUiState.pendingPage);
+  }
+
+  function renderConfigHeader(state, tableIds) {
+    var targetIds = tableIds || state.tableIds;
+    return governanceContents.map(function (item) {
+      var checked = targetIds.length > 0 && targetIds.every(function (tableId) {
+        var config = normalizeTableConfig(state.tableConfigs[tableId]);
+        return config[item.key];
+      });
+
+      return (
+        '<label class="gp-config-head-cell" title="' + escapeHtml(item.desc) + '">' +
+          '<input class="gp-config-all" type="checkbox" value="' + item.key + '"' + (checked ? ' checked' : '') + '>' +
+          '<span>' + escapeHtml(item.name) + '</span>' +
+          '<i class="bi bi-info-circle"></i>' +
+        '</label>'
+      );
+    }).join('');
+  }
+
+  function renderSelectedTables(state) {
+    var selectedIds = getFilteredSelectedTableIds(state);
+    formUiState.selectedPage = clampPage(formUiState.selectedPage, selectedIds.length);
+    var pageIds = selectedIds.slice((formUiState.selectedPage - 1) * scopePageSize, formUiState.selectedPage * scopePageSize);
+    var emptyText = state.tableIds.length ? '未找到匹配的已选表' : '请从左侧勾选需要治理的数据表';
+    var emptyIcon = state.tableIds.length ? 'bi-search' : 'bi-table';
+
+    return (
+      '<div class="gp-selected-table">' +
+        '<div class="gp-selected-row gp-selected-row-head">' +
+          '<div class="gp-selected-main">已选择表</div>' +
+          renderConfigHeader(state, pageIds) +
+          '<div class="gp-selected-action-head">操作</div>' +
+        '</div>' +
+        (pageIds.length ? pageIds.map(function (tableId) {
+          var table = getTableById(state.datasourceId, tableId);
+          if (!table) return '';
+          var config = normalizeTableConfig(state.tableConfigs[tableId]);
+          var cells = governanceContents.map(function (item) {
+            return (
+              '<label class="gp-config-cell" title="' + escapeHtml(item.desc) + '">' +
+                '<input class="gp-table-config" type="checkbox" data-table-id="' + table.id + '" value="' + item.key + '"' + (config[item.key] ? ' checked' : '') + '>' +
+                '<i class="bi bi-info-circle"></i>' +
+              '</label>'
+            );
+          }).join('');
+
+          return (
+            '<div class="gp-selected-row">' +
+              '<div class="gp-selected-main">' +
+                '<strong>' + escapeHtml(table.name) + '</strong>' +
+                '<span>' + escapeHtml(table.desc) + ' · ' + table.fields + ' 字段</span>' +
+              '</div>' +
+              cells +
+              '<div class="gp-selected-action"><button class="gp-row-remove" type="button" data-gp-remove-table="' + table.id + '" title="取消选择"><i class="bi bi-trash3"></i><span>移除</span></button></div>' +
+            '</div>'
+          );
+        }).join('') : '<div class="gp-selected-empty gp-selected-empty-row"><i class="bi ' + emptyIcon + '"></i><span>' + emptyText + '</span></div>') +
+      '</div>'
+    );
+  }
+
+  function renderSelectedPagination(state) {
+    var selectedIds = getFilteredSelectedTableIds(state);
+    return renderScopePagination('selected', selectedIds.length, formUiState.selectedPage);
   }
 
   function collectFormState() {
     var datasourceEl = document.getElementById('gpFormDatasource');
+    var draft = formDraftState || {
+      datasourceId: datasourceEl ? datasourceEl.value : dataSources[0].id,
+      tableIds: [],
+      tableConfigs: {}
+    };
+    var datasourceId = datasourceEl ? datasourceEl.value : draft.datasourceId;
+    var tableIds = draft.tableIds.slice();
+    var tableConfigs = Object.assign({}, draft.tableConfigs);
+
+    Array.prototype.slice.call(document.querySelectorAll('.gp-form-table')).forEach(function (input) {
+      var index = tableIds.indexOf(input.value);
+      if (input.checked && index < 0) {
+        tableIds.push(input.value);
+        tableConfigs[input.value] = normalizeTableConfig(tableConfigs[input.value]);
+      } else if (!input.checked && index >= 0) {
+        tableIds.splice(index, 1);
+        delete tableConfigs[input.value];
+      }
+    });
+
+    tableIds = getTablesBySource(datasourceId).map(function (table) {
+      return table.id;
+    }).filter(function (tableId) {
+      return tableIds.indexOf(tableId) >= 0;
+    });
+
+    Array.prototype.slice.call(document.querySelectorAll('.gp-table-config')).forEach(function (input) {
+      var tableId = input.dataset.tableId;
+      if (!tableConfigs[tableId]) return;
+      tableConfigs[tableId][input.value] = input.checked;
+    });
+
+    Object.keys(tableConfigs).forEach(function (tableId) {
+      if (tableIds.indexOf(tableId) < 0) delete tableConfigs[tableId];
+    });
+
     var state = {
       name: (document.getElementById('gpFormName') || {}).value || '',
       status: (document.getElementById('gpFormStatus') || {}).value || 'ongoing',
       owner: (document.getElementById('gpFormOwner') || {}).value || '',
       desc: (document.getElementById('gpFormDesc') || {}).value || '',
-      datasourceId: datasourceEl ? datasourceEl.value : dataSources[0].id,
-      tableIds: getCheckedValues('.gp-form-table'),
-      contentKeys: getCheckedValues('.gp-form-content'),
-      qualityTableIds: getCheckedValues('.gp-quality-table')
+      datasourceId: datasourceId,
+      tableIds: tableIds,
+      tableConfigs: tableConfigs,
+      datasourceKeyword: (document.getElementById('gpDatasourceSearch') || {}).value || '',
+      pendingKeyword: (document.getElementById('gpPendingSearch') || {}).value || formUiState.pendingKeyword,
+      selectedKeyword: (document.getElementById('gpSelectedSearch') || {}).value || formUiState.selectedKeyword
     };
 
-    if (state.contentKeys.indexOf('dataQuality') < 0) state.qualityTableIds = [];
+    formDraftState = state;
     return state;
   }
 
@@ -479,21 +750,20 @@ DP.pages.governancePlan = (function () {
     }
   }
 
-  function syncQualityScope() {
+  function syncSelectedTables() {
     var state = collectFormState();
-    var section = document.getElementById('gpQualitySection');
-    var list = document.getElementById('gpQualityList');
-    if (!section || !list) return;
-
-    var showQuality = state.contentKeys.indexOf('dataQuality') >= 0;
-    section.style.display = showQuality ? 'block' : 'none';
-    if (!showQuality) return;
-
-    var selectedQuality = state.qualityTableIds.filter(function (tableId) {
-      return state.tableIds.indexOf(tableId) >= 0;
-    });
-    if (!selectedQuality.length && state.tableIds.length) selectedQuality = [state.tableIds[0]];
-    list.innerHTML = renderQualityOptions(state.datasourceId, state.tableIds, selectedQuality);
+    var pending = document.getElementById('gpPendingTables');
+    if (pending) pending.innerHTML = renderTableOptions(state);
+    var pendingPagination = document.getElementById('gpPendingPagination');
+    if (pendingPagination) pendingPagination.innerHTML = renderPendingPagination(state);
+    var selected = document.getElementById('gpSelectedTables');
+    if (selected) selected.innerHTML = renderSelectedTables(state);
+    var selectedPagination = document.getElementById('gpSelectedPagination');
+    if (selectedPagination) selectedPagination.innerHTML = renderSelectedPagination(state);
+    var pendingCount = document.getElementById('gpPendingCount');
+    if (pendingCount) pendingCount.textContent = getFilteredPendingTables(state).length + ' 张';
+    var selectedCount = document.getElementById('gpSelectedCount');
+    if (selectedCount) selectedCount.textContent = '已选 ' + state.tableIds.length + ' 张';
   }
 
   function renderForm(state) {
@@ -504,8 +774,12 @@ DP.pages.governancePlan = (function () {
     viewMode = 'form';
     listRoot.style.display = 'none';
     formRoot.style.display = 'flex';
+    formUiState.pendingKeyword = state.pendingKeyword || formUiState.pendingKeyword || '';
+    formUiState.selectedKeyword = state.selectedKeyword || formUiState.selectedKeyword || '';
+    formDraftState = state;
+    formUiState.pendingPage = clampPage(formUiState.pendingPage, getFilteredPendingTables(state).length);
+    formUiState.selectedPage = clampPage(formUiState.selectedPage, getFilteredSelectedTableIds(state).length);
 
-    var showQuality = state.contentKeys.indexOf('dataQuality') >= 0;
     var title = formMode === 'edit' ? '编辑治理规划' : '新建治理规划';
 
     formRoot.innerHTML =
@@ -525,17 +799,39 @@ DP.pages.governancePlan = (function () {
         '</section>' +
         '<section class="gp-form-section">' +
           '<div class="gp-section-title"><i class="bi bi-bounding-box"></i><span>治理范围</span></div>' +
-          '<div class="gp-form-grid">' +
-            '<label class="gp-form-field"><span>选择数据源</span><select id="gpFormDatasource">' + renderDataSourceOptions(state.datasourceId) + '</select></label>' +
-          '</div>' +
-          '<div class="gp-table-select">' + renderTableOptions(state) + '</div>' +
-        '</section>' +
-        '<section class="gp-form-section">' +
-          '<div class="gp-section-title"><i class="bi bi-check2-square"></i><span>治理内容</span></div>' +
-          '<div class="gp-content-select">' + renderContentOptions(state) + '</div>' +
-          '<div class="gp-quality-section" id="gpQualitySection" style="display:' + (showQuality ? 'block' : 'none') + ';">' +
-            '<div class="gp-quality-title">基于治理范围配置的表，选择需要配置数据质量任务的表</div>' +
-            '<div class="gp-quality-list" id="gpQualityList">' + renderQualityOptions(state.datasourceId, state.tableIds, state.qualityTableIds) + '</div>' +
+          '<input id="gpFormDatasource" type="hidden" value="' + escapeHtml(state.datasourceId) + '">' +
+          '<div class="gp-range-layout">' +
+            '<div class="gp-range-left">' +
+              '<div class="gp-range-title"><span>待选项</span><em id="gpPendingCount">' + getFilteredPendingTables(state).length + ' 张</em></div>' +
+              '<div class="gp-source-row">' +
+                '<span class="gp-source-label">数据源</span>' +
+                '<div class="gp-ds-select">' +
+                  '<div class="gp-ds-combo" id="gpDsCombo">' +
+                    '<button class="gp-ds-trigger" type="button" data-gp-ds-toggle>' +
+                      '<strong>' + escapeHtml(getDataSourceName(state.datasourceId)) + '</strong>' +
+                      '<i class="bi bi-chevron-down"></i>' +
+                    '</button>' +
+                    '<div class="gp-ds-dropdown">' +
+                      '<div class="gp-ds-search"><i class="bi bi-search"></i><input id="gpDatasourceSearch" type="text" value="' + escapeHtml(state.datasourceKeyword || '') + '" placeholder="搜索分类、实例或数据库"></div>' +
+                      '<div class="gp-ds-tree" id="gpDatasourceTree">' + renderDataSourceTree(state.datasourceId, state.datasourceKeyword) + '</div>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+              '<div class="gp-scope-toolbar">' +
+                '<div class="gp-scope-search"><i class="bi bi-search"></i><input id="gpPendingSearch" type="text" value="' + escapeHtml(formUiState.pendingKeyword) + '" placeholder="搜索表名或说明"></div>' +
+              '</div>' +
+              '<div class="gp-pending-list" id="gpPendingTables">' + renderTableOptions(state) + '</div>' +
+              '<div id="gpPendingPagination">' + renderPendingPagination(state) + '</div>' +
+            '</div>' +
+            '<div class="gp-range-right">' +
+              '<div class="gp-range-title"><span>已选择</span><em id="gpSelectedCount">已选 ' + state.tableIds.length + ' 张</em></div>' +
+              '<div class="gp-selected-toolbar gp-scope-toolbar">' +
+                '<div class="gp-scope-search"><i class="bi bi-search"></i><input id="gpSelectedSearch" type="text" value="' + escapeHtml(formUiState.selectedKeyword) + '" placeholder="搜索已选表"></div>' +
+              '</div>' +
+              '<div id="gpSelectedTables">' + renderSelectedTables(state) + '</div>' +
+              '<div id="gpSelectedPagination">' + renderSelectedPagination(state) + '</div>' +
+            '</div>' +
           '</div>' +
         '</section>' +
         '<div class="gp-form-error" id="gpFormError" style="display:none;"></div>' +
@@ -546,6 +842,7 @@ DP.pages.governancePlan = (function () {
   function showPlanForm(mode, id) {
     formMode = mode;
     editingPlanId = id || '';
+    resetFormUiState();
     var plan = id ? findPlan(id) : null;
     renderForm(getFormState(plan));
   }
@@ -568,11 +865,6 @@ DP.pages.governancePlan = (function () {
       showFormError('请选择至少一张数据表。');
       return;
     }
-    if (!state.contentKeys.length) {
-      showFormError('请选择至少一项治理内容。');
-      return;
-    }
-
     var counts = buildCountsFromScope(state.datasourceId, state.tableIds);
 
     if (formMode === 'edit') {
@@ -584,8 +876,7 @@ DP.pages.governancePlan = (function () {
         plan.desc = state.desc;
         plan.datasourceId = state.datasourceId;
         plan.tableIds = state.tableIds;
-        plan.contentKeys = state.contentKeys;
-        plan.qualityTableIds = state.qualityTableIds;
+        plan.tableConfigs = state.tableConfigs;
         plan.counts = counts;
         if (state.status === 'completed') plan.rate = 100;
       }
@@ -601,8 +892,7 @@ DP.pages.governancePlan = (function () {
         desc: state.desc,
         datasourceId: state.datasourceId,
         tableIds: state.tableIds,
-        contentKeys: state.contentKeys,
-        qualityTableIds: state.qualityTableIds
+        tableConfigs: state.tableConfigs
       });
     }
 
@@ -859,6 +1149,72 @@ DP.pages.governancePlan = (function () {
         return;
       }
 
+      var dataSourceToggle = e.target.closest('[data-gp-ds-toggle]');
+      if (dataSourceToggle && viewMode === 'form') {
+        var combo = document.getElementById('gpDsCombo');
+        if (combo) {
+          combo.classList.toggle('open');
+          if (combo.classList.contains('open')) {
+            var searchInput = document.getElementById('gpDatasourceSearch');
+            if (searchInput) searchInput.focus();
+          }
+        }
+        return;
+      }
+
+      var dataSourceNode = e.target.closest('[data-gp-ds]');
+      if (dataSourceNode && viewMode === 'form') {
+        var sourceState = collectFormState();
+        sourceState.datasourceId = dataSourceNode.dataset.gpDs;
+        sourceState.tableIds = [];
+        sourceState.tableConfigs = {};
+        sourceState.datasourceKeyword = '';
+        formUiState.pendingKeyword = '';
+        formUiState.pendingPage = 1;
+        formUiState.selectedKeyword = '';
+        formUiState.selectedPage = 1;
+        renderForm(sourceState);
+        return;
+      }
+
+      var removeTableBtn = e.target.closest('[data-gp-remove-table]');
+      if (removeTableBtn && viewMode === 'form') {
+        var removeTableId = removeTableBtn.dataset.gpRemoveTable;
+        var removeState = collectFormState();
+        removeState.tableIds = removeState.tableIds.filter(function (tableId) {
+          return tableId !== removeTableId;
+        });
+        delete removeState.tableConfigs[removeTableId];
+        formDraftState = removeState;
+        var tableCheckbox = document.querySelector('.gp-form-table[value="' + removeTableId + '"]');
+        if (tableCheckbox) tableCheckbox.checked = false;
+        formUiState.selectedPage = 1;
+        syncSelectedTables();
+        return;
+      }
+
+      var scopePageBtn = e.target.closest('[data-gp-scope-page]');
+      if (scopePageBtn && viewMode === 'form' && !scopePageBtn.classList.contains('disabled')) {
+        var targetPage = Number(scopePageBtn.dataset.gpScopePage) || 1;
+        if (scopePageBtn.dataset.gpScope === 'pending') {
+          formUiState.pendingPage = targetPage;
+          var pendingState = collectFormState();
+          var pendingList = document.getElementById('gpPendingTables');
+          var pendingPagination = document.getElementById('gpPendingPagination');
+          if (pendingList) pendingList.innerHTML = renderTableOptions(pendingState);
+          if (pendingPagination) pendingPagination.innerHTML = renderPendingPagination(pendingState);
+        } else {
+          formUiState.selectedPage = targetPage;
+          syncSelectedTables();
+        }
+        return;
+      }
+
+      if (viewMode === 'form' && !e.target.closest('.gp-ds-combo')) {
+        var openCombo = document.getElementById('gpDsCombo');
+        if (openCombo) openCombo.classList.remove('open');
+      }
+
       var tab = e.target.closest('[data-gp-tab]');
       if (tab) {
         activeTab = tab.dataset.gpTab;
@@ -904,17 +1260,49 @@ DP.pages.governancePlan = (function () {
     page.addEventListener('change', function (e) {
       if (viewMode !== 'form') return;
 
-      if (e.target && e.target.id === 'gpFormDatasource') {
-        var state = collectFormState();
-        state.datasourceId = e.target.value;
-        state.tableIds = [];
-        state.qualityTableIds = [];
-        renderForm(state);
+      if (e.target && e.target.classList.contains('gp-config-all')) {
+        var checked = e.target.checked;
+        var key = e.target.value;
+        document.querySelectorAll('.gp-table-config[value="' + key + '"]').forEach(function (input) {
+          input.checked = checked;
+        });
+        syncSelectedTables();
         return;
       }
 
-      if (e.target && (e.target.classList.contains('gp-form-table') || e.target.classList.contains('gp-form-content'))) {
-        syncQualityScope();
+      if (e.target && (e.target.classList.contains('gp-form-table') || e.target.classList.contains('gp-table-config'))) {
+        if (e.target.classList.contains('gp-form-table')) formUiState.selectedPage = 1;
+        syncSelectedTables();
+      }
+    });
+
+    page.addEventListener('input', function (e) {
+      if (viewMode !== 'form' || !e.target) return;
+
+      if (e.target.id === 'gpDatasourceSearch') {
+        var state = collectFormState();
+        var tree = document.getElementById('gpDatasourceTree');
+        if (tree) tree.innerHTML = renderDataSourceTree(state.datasourceId, e.target.value);
+        return;
+      }
+
+      if (e.target.id === 'gpPendingSearch') {
+        formUiState.pendingKeyword = e.target.value;
+        formUiState.pendingPage = 1;
+        var pendingState = collectFormState();
+        var pendingList = document.getElementById('gpPendingTables');
+        var pendingPagination = document.getElementById('gpPendingPagination');
+        var pendingCount = document.getElementById('gpPendingCount');
+        if (pendingList) pendingList.innerHTML = renderTableOptions(pendingState);
+        if (pendingPagination) pendingPagination.innerHTML = renderPendingPagination(pendingState);
+        if (pendingCount) pendingCount.textContent = getFilteredPendingTables(pendingState).length + ' 张';
+        return;
+      }
+
+      if (e.target.id === 'gpSelectedSearch') {
+        formUiState.selectedKeyword = e.target.value;
+        formUiState.selectedPage = 1;
+        syncSelectedTables();
       }
     });
   }
@@ -945,6 +1333,7 @@ DP.pages.governancePlan = (function () {
       viewMode = 'list';
       formMode = 'create';
       editingPlanId = '';
+      resetFormUiState();
       renderPage();
       bindEvents();
     }

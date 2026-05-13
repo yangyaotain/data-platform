@@ -233,6 +233,42 @@
 
 .ms-detail-acts { display: flex; gap: 6px; }
 
+.page-meta-search .td-actions {
+  justify-content: center;
+  gap: 0;
+}
+
+.page-meta-search .td-actions i:not(.bi-eye) {
+  display: none;
+}
+
+.page-meta-search .td-actions .bi-eye {
+  min-width: 54px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px solid #d9dfe6;
+  border-radius: 4px;
+  background: #fff;
+  color: var(--primary);
+  font-style: normal;
+  font-size: 12px;
+}
+
+.page-meta-search .td-actions .bi-eye::after {
+  content: '查看';
+  font-family: -apple-system, BlinkMacSystemFont, 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 12px;
+}
+
+.page-meta-search .td-actions .bi-eye:hover {
+  border-color: var(--primary);
+  background: #f0f7ff;
+}
+
 .ms-detail-tabs {
   display: flex;
   gap: 0;
