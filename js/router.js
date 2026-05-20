@@ -37,6 +37,9 @@ DP.showPage = function (menuKey, opts) {
   } else if (menuKey === '标准审核') {
     c.innerHTML = DP.pages.standardAudit.html;
     DP.pages.standardAudit.init();
+  } else if (menuKey === '维度管理') {
+    c.innerHTML = DP.pages.dimensionManagement.html;
+    DP.pages.dimensionManagement.init();
   } else if (menuKey === '元数据搜索') {
     c.innerHTML = DP.pages.metaSearchHome.html;
     DP.pages.metaSearchHome.init();

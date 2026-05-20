@@ -884,6 +884,49 @@ DP.pages.metaSearchResult = {
       });
     }
 
+    function _cleanText(text) {
+      return String(text || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function _detailItemFromRow(row) {
+      const tds = row.querySelectorAll('td');
+      const isCard = row.classList.contains('ms-asset-card');
+      const tableName = row.dataset.table || _cleanText((isCard ? row.querySelector('.ac-header') : tds[0])?.textContent || 'order_main');
+      const alias = _searchType === 'field-search' ? '' : (isCard ? (row.querySelector('.ac-title')?.textContent || '') : (tds[1]?.textContent || ''));
+      const comment = _searchType === 'field-search' ? '' : (isCard ? '' : (tds[2]?.textContent || ''));
+      const dataSource = _searchType === 'field-search'
+        ? (isCard ? row.querySelector('.ac-meta span:nth-child(2)')?.textContent : tds[4]?.textContent)
+        : (isCard ? row.querySelector('.ac-meta span:first-child')?.textContent : tds[3]?.textContent);
+      const layer = _searchType === 'field-search' ? '' : (isCard ? row.querySelector('.ac-meta span:nth-child(2)')?.textContent : tds[4]?.textContent);
+      const recordText = _searchType === 'field-search' ? '' : (isCard ? row.querySelector('.ac-stats b')?.textContent : tds[6]?.textContent);
+      const owner = isCard ? row.querySelector('.ac-owner')?.textContent : tds[7]?.textContent;
+      const updateTime = isCard ? row.querySelector('.ac-time')?.textContent : tds[8]?.textContent;
+
+      return {
+        tableName: _cleanText(tableName) || 'order_main',
+        alias: _cleanText(alias) || undefined,
+        comment: _cleanText(comment) || undefined,
+        dataSource: _cleanText(dataSource) || undefined,
+        layer: _cleanText(layer) || undefined,
+        recordCount: _cleanText(recordText) || undefined,
+        owner: _cleanText(owner) || undefined,
+        updateTime: _cleanText(updateTime) || undefined
+      };
+    }
+
+    function _renderCommonDetail(item) {
+      const detail = document.getElementById('msDetailPanel');
+      if (!detail || !DP.components || !DP.components.tableDetailView) return;
+      detail.classList.add('gt-detail-view');
+      detail.innerHTML = DP.components.tableDetailView.renderInner(item, {
+        backClass: 'btn btn-outline btn-sm ms-back-btn',
+        titleId: 'msDetailTitle'
+      });
+      DP.components.tableDetailView.bind(detail);
+    }
+
+    _renderCommonDetail({ tableName: 'order_main', alias: '订单主表', comment: '核心订单交易主表，记录所有订单基础信息' });
+
     // ==== 切换搜索内容（表搜索 ↔ 字段搜索） ====
     function _applySearchContent(type) {
       _searchType = type;
@@ -931,6 +974,8 @@ DP.pages.metaSearchResult = {
           const detail = document.getElementById('msDetailPanel');
           const viewBar = document.querySelector('.ms-view-bar');
           const pagination = document.getElementById('msPagination');
+          const detailItem = _detailItemFromRow(row);
+          _renderCommonDetail(detailItem);
           if (list) list.style.display = 'none';
           if (card) card.style.display = 'none';
           if (viewBar) viewBar.style.display = 'none';
@@ -939,7 +984,7 @@ DP.pages.metaSearchResult = {
 
           if (_searchType === 'field-search') {
             const fieldName = row.dataset.field;
-            const tableName = row.dataset.table;
+            const tableName = detailItem.tableName;
             // 更新详情标题
             const detailTitle = document.getElementById('msDetailTitle');
             if (detailTitle && tableName) {
@@ -1145,9 +1190,10 @@ DP.pages.metaSearchResult = {
     _bindRowClicks();
 
     // 返回列表
-    const backBtn = document.querySelector('.ms-back-btn');
-    if (backBtn) {
-      backBtn.addEventListener('click', () => {
+    const detailPanel = document.getElementById('msDetailPanel');
+    if (detailPanel) {
+      detailPanel.addEventListener('click', (event) => {
+        if (!event.target.closest('.ms-back-btn')) return;
         const list = document.getElementById('msListView');
         const card = document.getElementById('msCardView');
         const detail = document.getElementById('msDetailPanel');

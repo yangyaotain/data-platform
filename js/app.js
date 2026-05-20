@@ -48,6 +48,18 @@ document.addEventListener('DOMContentLoaded', function () {
         var devLink = document.querySelector('[data-menu="dev-develop"]');
         if (devLink) devLink.classList.add('active');
         DP.showPage('数据开发');
+      } else if (page === 'analysis') {
+        var dimLink = Array.prototype.find.call(document.querySelectorAll('#menuAnalysis .sub-menu li a'), function (link) {
+          return link.textContent.trim() === '维度管理';
+        });
+        if (dimLink) {
+          var dimParent = dimLink.closest('.menu-item.has-sub');
+          if (dimParent) dimParent.classList.add('open');
+          dimLink.classList.add('active');
+          DP.showPage('维度管理');
+        } else {
+          DP.showPlaceholder(name);
+        }
       } else {
         // 通用逻辑：激活第一个菜单项
         var groupId = DP.menuGroupMap[page];

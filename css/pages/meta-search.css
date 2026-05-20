@@ -238,11 +238,11 @@
   gap: 0;
 }
 
-.page-meta-search .td-actions i:not(.bi-eye) {
+.page-meta-search .td-actions > i:not(.bi-eye) {
   display: none;
 }
 
-.page-meta-search .td-actions .bi-eye {
+.page-meta-search .td-actions > .bi-eye {
   min-width: 54px;
   height: 26px;
   display: inline-flex;
@@ -258,13 +258,13 @@
   font-size: 12px;
 }
 
-.page-meta-search .td-actions .bi-eye::after {
+.page-meta-search .td-actions > .bi-eye::after {
   content: '查看';
   font-family: -apple-system, BlinkMacSystemFont, 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
   font-size: 12px;
 }
 
-.page-meta-search .td-actions .bi-eye:hover {
+.page-meta-search .td-actions > .bi-eye:hover {
   border-color: var(--primary);
   background: #f0f7ff;
 }
