@@ -9,6 +9,9 @@
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/pages/datasource.css">
+  <link rel="stylesheet" href="css/pages/technical-metadata.css">
+  <link rel="stylesheet" href="css/pages/business-metadata.css">
+  <link rel="stylesheet" href="css/pages/business-code.css">
   <link rel="stylesheet" href="css/pages/meta-search.css">
   <link rel="stylesheet" href="css/pages/data-develop.css">
   <link rel="stylesheet" href="css/pages/project-mgr.css">
@@ -38,8 +41,8 @@
         </div>
         <div class="nav-divider"></div>
         <nav class="main-nav">
-          <a class="nav-item" data-page="workbench">控制台</a>
-          <a class="nav-item active" data-page="governance">数据资产</a>
+          <a class="nav-item active" data-page="workbench">控制台</a>
+          <a class="nav-item" data-page="governance">数据资产</a>
           <a class="nav-item" data-page="governance-ops">数据治理</a>
           <a class="nav-item" data-page="develop">数据开发</a>
           <a class="nav-item" data-page="explore">数据探索</a>
@@ -152,9 +155,9 @@
       <div class="sidebar-scroll">
 
         <!-- 控制台菜单组 -->
-        <ul class="side-menu menu-group" id="menuWorkbench" style="display:none;">
+        <ul class="side-menu menu-group" id="menuWorkbench">
           <li class="menu-item">
-            <a class="menu-link" data-menu="project-mgr" href="javascript:;"><i class="bi bi-layers"></i><span>项目管理</span></a>
+            <a class="menu-link active" data-menu="project-mgr" href="javascript:;"><i class="bi bi-layers"></i><span>项目管理</span></a>
           </li>
           <li class="menu-item">
             <a class="menu-link" data-menu="my-ticket" href="javascript:;"><i class="bi bi-file-earmark-text"></i><span>我的工单</span></a>
@@ -356,10 +359,12 @@
             <a class="menu-link" data-menu="meta-search" href="javascript:;"><i class="bi bi-search"></i><span>元数据搜索</span></a>
           </li>
           <li class="menu-item has-sub">
-            <a class="menu-link" href="javascript:;"><i class="bi bi-clipboard-check"></i><span>审核管理</span><i class="bi bi-chevron-down arrow"></i></a>
+            <a class="menu-link" href="javascript:;"><i class="bi bi-clipboard-check"></i><span>治理工单</span><i class="bi bi-chevron-down arrow"></i></a>
             <ul class="sub-menu">
+              <li><a href="javascript:;">规划审核</a></li>
               <li><a href="javascript:;">元数据审核</a></li>
               <li><a href="javascript:;">标准审核</a></li>
+              <li><a href="javascript:;">质量工单</a></li>
             </ul>
           </li>
           <li class="menu-item has-sub">
@@ -367,22 +372,50 @@
             <ul class="sub-menu">
               <li><a href="javascript:;">治理规划</a></li>
               <li><a href="javascript:;">治理任务</a></li>
-              <li><a href="javascript:;">治理成果</a></li>
             </ul>
           </li>
           <li class="menu-item has-sub">
-            <a class="menu-link" href="javascript:;"><i class="bi bi-hdd-stack"></i><span>资源管理</span><i class="bi bi-chevron-down arrow"></i></a>
+            <a class="menu-link" href="javascript:;"><i class="bi bi-clipboard-check"></i><span>数据质量</span><i class="bi bi-chevron-down arrow"></i></a>
             <ul class="sub-menu">
-              <li><a href="javascript:;">资源概览</a></li>
-              <li><a href="javascript:;">项目使用</a></li>
+              <li><a href="javascript:;">质量需求</a></li>
+              <li><a href="javascript:;">质量规则</a></li>
+              <li><a href="javascript:;">规则映射</a></li>
+              <li><a href="javascript:;">质量任务</a></li>
+              <li><a href="javascript:;">质量报告</a></li>
+            </ul>
+          </li>
+          <li class="menu-item has-sub">
+            <a class="menu-link" href="javascript:;"><i class="bi bi-tags"></i><span>元数据管理</span><i class="bi bi-chevron-down arrow"></i></a>
+            <ul class="sub-menu">
+              <li><a href="javascript:;">技术元数据</a></li>
+              <li><a href="javascript:;">业务元数据</a></li>
+              <li><a href="javascript:;">业务代码</a></li>
+              <li><a href="javascript:;">元模型</a></li>
+              <li><a href="javascript:;">同步记录</a></li>
+              <li><a href="javascript:;">变更记录</a></li>
+              <li><a href="javascript:;">标准稽查</a></li>
+            </ul>
+          </li>
+          <li class="menu-item has-sub">
+            <a class="menu-link" href="javascript:;"><i class="bi bi-bookmark"></i><span>数据标准管理</span><i class="bi bi-chevron-down arrow"></i></a>
+            <ul class="sub-menu">
+              <li><a href="javascript:;">数据标准</a></li>
+              <li><a href="javascript:;">标准代码</a></li>
+            </ul>
+          </li>
+          <li class="menu-item has-sub">
+            <a class="menu-link" href="javascript:;"><i class="bi bi-layers"></i><span>分级分类</span><i class="bi bi-chevron-down arrow"></i></a>
+            <ul class="sub-menu">
+              <li><a href="javascript:;">分类管理</a></li>
+              <li><a href="javascript:;">分级管理</a></li>
             </ul>
           </li>
         </ul>
 
-        <!-- 数据资产菜单组（默认显示） -->
-        <ul class="side-menu menu-group" id="menuGovernance">
+        <!-- 数据资产菜单组 -->
+        <ul class="side-menu menu-group" id="menuGovernance" style="display:none;">
           <li class="menu-item">
-            <a class="menu-link active" data-menu="datasource" href="javascript:;"><i class="bi bi-database"></i><span>数据源</span></a>
+            <a class="menu-link" data-menu="datasource" href="javascript:;"><i class="bi bi-database"></i><span>数据源</span></a>
           </li>
           <li class="menu-item">
             <a class="menu-link" data-menu="biz-category" href="javascript:;"><i class="bi bi-grid"></i><span>业务分类</span></a>
@@ -413,48 +446,10 @@
             </ul>
           </li>
           <li class="menu-item has-sub">
-            <a class="menu-link" href="javascript:;"><i class="bi bi-tags"></i><span>元数据管理</span><i class="bi bi-chevron-down arrow"></i></a>
-            <ul class="sub-menu">
-              <li><a href="javascript:;">技术元数据</a></li>
-              <li><a href="javascript:;">业务元数据</a></li>
-              <li><a href="javascript:;">业务代码</a></li>
-              <li><a href="javascript:;">元模型</a></li>
-              <li><a href="javascript:;">同步记录</a></li>
-              <li><a href="javascript:;">变更记录</a></li>
-              <li><a href="javascript:;">标准稽查</a></li>
-            </ul>
-          </li>
-          <li class="menu-item has-sub">
-            <a class="menu-link" href="javascript:;"><i class="bi bi-bookmark"></i><span>数据标准管理</span><i class="bi bi-chevron-down arrow"></i></a>
-            <ul class="sub-menu">
-              <li><a href="javascript:;">数据标准</a></li>
-              <li><a href="javascript:;">标准代码</a></li>
-            </ul>
-          </li>
-          <li class="menu-item has-sub">
-            <a class="menu-link" href="javascript:;"><i class="bi bi-layers"></i><span>资源目录</span><i class="bi bi-chevron-down arrow"></i></a>
-            <ul class="sub-menu">
-              <li><a href="javascript:;">分类管理</a></li>
-              <li><a href="javascript:;">分级管理</a></li>
-              <li><a href="javascript:;">资产卡片</a></li>
-            </ul>
-          </li>
-          <li class="menu-item has-sub">
             <a class="menu-link" href="javascript:;"><i class="bi bi-bar-chart-steps"></i><span>数据权限</span><i class="bi bi-chevron-down arrow"></i></a>
             <ul class="sub-menu">
               <li><a href="javascript:;">权限配置</a></li>
               <li><a href="javascript:;">分权分域</a></li>
-            </ul>
-          </li>
-          <li class="menu-item has-sub">
-            <a class="menu-link" href="javascript:;"><i class="bi bi-clipboard-check"></i><span>数据质量</span><i class="bi bi-chevron-down arrow"></i></a>
-            <ul class="sub-menu">
-              <li><a href="javascript:;">质量分析</a></li>
-              <li><a href="javascript:;">绩效管理</a></li>
-              <li><a href="javascript:;">稽查报告</a></li>
-              <li><a href="javascript:;">稽查任务</a></li>
-              <li><a href="javascript:;">质量管理</a></li>
-              <li><a href="javascript:;">质量规则</a></li>
             </ul>
           </li>
           <li class="menu-item has-sub">
@@ -597,6 +592,9 @@
   <script src="js/config.js"></script>
   <script src="js/components/table-detail-view.js"></script>
   <script src="js/pages/datasource.js"></script>
+  <script src="js/pages/technical-metadata.js"></script>
+  <script src="js/pages/business-metadata.js"></script>
+  <script src="js/pages/business-code.js"></script>
   <script src="js/pages/meta-search-home.js"></script>
   <script src="js/pages/meta-search-result.js"></script>
   <script src="js/pages/data-develop.js"></script>

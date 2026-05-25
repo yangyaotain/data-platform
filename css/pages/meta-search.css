@@ -53,7 +53,7 @@
   overflow: hidden;
 }
 
-/* ---- 左侧资源目录 ---- */
+/* ---- 左侧数据目录 ---- */
 .ms-catalog {
   width: 240px;
   flex-shrink: 0;
@@ -267,6 +267,447 @@
 .page-meta-search .td-actions > .bi-eye:hover {
   border-color: var(--primary);
   background: #f0f7ff;
+}
+
+/* ---- 列表数据标签交互 ---- */
+.page-meta-search .ms-tag-table-cell {
+  min-width: 190px;
+  max-width: 280px;
+  overflow: visible;
+  white-space: normal;
+}
+
+.page-meta-search .ms-tag-editor-cell {
+  min-height: 26px;
+  overflow: visible;
+}
+
+.page-meta-search .ms-row-tag-list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.page-meta-search .ms-row-tag {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  max-width: 118px;
+  height: 24px;
+  padding: 0 24px 0 11px;
+  border-radius: 14px;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.page-meta-search .ms-row-tag-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-meta-search .ms-row-tag-remove {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0,0,0,.18);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-50%) scale(.86);
+  transition: opacity .16s, transform .16s, background .16s;
+}
+
+.page-meta-search .ms-row-tag:hover .ms-row-tag-remove,
+.page-meta-search .ms-row-tag:focus-within .ms-row-tag-remove {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+
+.page-meta-search .ms-row-tag-remove:hover {
+  background: rgba(0,0,0,.32);
+}
+
+.page-meta-search .ms-tag-add {
+  width: 21px;
+  height: 21px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #c1c7d0;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.page-meta-search .ms-tag-add:hover {
+  background: var(--primary);
+  box-shadow: 0 2px 8px rgba(0,120,255,.25);
+}
+
+.page-meta-search .ms-tag-blue { background: #e6f4ff; color: #1677ff; }
+.page-meta-search .ms-tag-green { background: #eaf8ef; color: #1b9a4b; }
+.page-meta-search .ms-tag-teal { background: #e6fffb; color: #08979c; }
+.page-meta-search .ms-tag-purple { background: #f1efff; color: #6c5ce7; }
+.page-meta-search .ms-tag-orange { background: #fff4e5; color: #d46b08; }
+.page-meta-search .ms-tag-red { background: #fff1f0; color: #cf1322; }
+
+/* ---- 列表资产卡片单选 ---- */
+.page-meta-search .ms-asset-table-cell {
+  min-width: 118px;
+  max-width: 160px;
+  overflow: visible;
+}
+
+.page-meta-search .ms-asset-card-pill {
+  max-width: 132px;
+  height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.page-meta-search .ms-asset-card-pill span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-meta-search .ms-asset-card-pill .bi-collection {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.page-meta-search .ms-asset-card-pill .bi-chevron-down {
+  font-size: 10px;
+  opacity: .7;
+  flex-shrink: 0;
+}
+
+.page-meta-search .ms-asset-card-pill:hover {
+  box-shadow: 0 2px 8px rgba(0,120,255,.16);
+  filter: saturate(1.05);
+}
+
+.ms-tag-popover {
+  position: fixed;
+  width: 342px;
+  z-index: 2400;
+  background: #fff;
+  border: 1px solid #eef0f3;
+  border-radius: 6px;
+  box-shadow: 0 12px 36px rgba(30, 45, 70, .14);
+  overflow: hidden;
+}
+
+.ms-tag-picker-search {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px 0 12px;
+  border-bottom: 1px solid #eef0f3;
+  color: var(--text-light);
+}
+
+.ms-tag-search-box {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  display: flex;
+  align-items: center;
+}
+
+.ms-tag-search-box .bi-search {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #aeb6c2;
+  font-size: 15px;
+  pointer-events: none;
+}
+
+.ms-tag-search-input,
+.ms-tag-name-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #dfe3e8;
+  border-radius: 4px;
+  color: var(--text-primary);
+  outline: none;
+  transition: var(--transition);
+}
+
+.ms-tag-search-input {
+  height: 36px;
+  padding: 0 12px 0 34px;
+  font-size: 14px;
+  background: #fff;
+}
+
+.ms-tag-search-input::placeholder,
+.ms-tag-name-input::placeholder {
+  color: #b8bec8;
+}
+
+.ms-tag-search-input:focus,
+.ms-tag-name-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(0,120,255,.08);
+}
+
+.ms-tag-popover-add,
+.ms-tag-icon-btn,
+.ms-tag-option-edit {
+  border: 0;
+  background: transparent;
+  color: var(--text-light);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.ms-tag-popover-add {
+  width: 28px;
+  height: 28px;
+  color: var(--primary);
+  font-size: 18px;
+}
+
+.ms-tag-popover-add:hover,
+.ms-tag-icon-btn:hover,
+.ms-tag-option-edit:hover {
+  color: var(--primary);
+}
+
+.ms-tag-option-list {
+  max-height: 286px;
+  overflow-y: auto;
+  padding: 4px 8px 8px;
+}
+
+.ms-tag-option-list::-webkit-scrollbar { width: 6px; }
+.ms-tag-option-list::-webkit-scrollbar-thumb { background: #c7ccd4; border-radius: 6px; }
+
+.ms-tag-option {
+  display: flex;
+  align-items: center;
+  height: 42px;
+  border-radius: 4px;
+  transition: background .15s;
+}
+
+.ms-tag-option:hover,
+.ms-tag-option.selected {
+  background: #f5f7fa;
+}
+
+.ms-tag-option-main {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 0 12px;
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ms-tag-option-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.ms-tag-option-check {
+  display: none;
+  color: #8792a2;
+  font-size: 16px;
+}
+
+.ms-tag-option.selected .ms-tag-option-check {
+  display: inline-flex;
+}
+
+.ms-tag-option-edit {
+  width: 34px;
+  height: 34px;
+  font-size: 16px;
+  opacity: 0;
+}
+
+.ms-tag-option:hover .ms-tag-option-edit,
+.ms-tag-option.selected .ms-tag-option-edit {
+  opacity: 1;
+}
+
+.ms-tag-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ms-tag-dot-blue { background: #2196f3; }
+.ms-tag-dot-green { background: #14ad3a; }
+.ms-tag-dot-teal { background: #00a3a3; }
+.ms-tag-dot-purple { background: #6c6fc0; }
+.ms-tag-dot-orange { background: #ff8c14; }
+.ms-tag-dot-red { background: #ed1c10; }
+
+.ms-tag-empty {
+  padding: 28px 0;
+  text-align: center;
+  color: var(--text-light);
+  font-size: 13px;
+}
+
+.ms-tag-editor-head {
+  height: 54px;
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  border-bottom: 1px solid #eef0f3;
+}
+
+.ms-tag-editor-head strong {
+  text-align: center;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.ms-tag-icon-btn {
+  width: 44px;
+  height: 44px;
+  font-size: 18px;
+}
+
+.ms-tag-editor-body {
+  padding: 22px;
+}
+
+.ms-tag-name-input {
+  height: 54px;
+  padding: 0 14px;
+  font-size: 16px;
+}
+
+.ms-tag-color-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 28px 0;
+}
+
+.ms-tag-color {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: transform .16s, box-shadow .16s;
+}
+
+.ms-tag-color i {
+  opacity: 0;
+}
+
+.ms-tag-color.active {
+  box-shadow: 0 0 0 4px rgba(0,120,255,.1);
+  transform: scale(1.04);
+}
+
+.ms-tag-color.active i {
+  opacity: 1;
+}
+
+.ms-tag-editor-actions {
+  display: flex;
+  gap: 22px;
+}
+
+.ms-tag-editor-actions .btn {
+  flex: 1;
+  height: 50px;
+  justify-content: center;
+}
+
+.ms-tag-delete-btn {
+  color: #f5222d;
+  border-color: #ff4d4f;
+  background: #fff;
+}
+
+.ms-tag-delete-btn:hover {
+  color: #fff;
+  background: #ff4d4f;
+  border-color: #ff4d4f;
+}
+
+.ms-tag-save-btn:disabled {
+  border-color: #c8c8c8;
+  background: #c8c8c8;
+  color: #fff;
+  cursor: not-allowed;
+}
+
+.ms-tag-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 36px;
+  z-index: 2600;
+  padding: 9px 18px;
+  border-radius: 4px;
+  background: rgba(0,0,0,.74);
+  color: #fff;
+  font-size: 13px;
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  transition: opacity .18s, transform .18s;
+}
+
+.ms-tag-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .ms-detail-tabs {
@@ -609,31 +1050,6 @@
   border-color: var(--primary);
 }
 
-.mh-card-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.mh-card-tag {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.mh-card-tag.tag-blue  { background: #e6f0ff; color: #0078FF; }
-.mh-card-tag.tag-yellow { background: #fff8e1; color: #e6a000; }
-.mh-card-tag.tag-green  { background: #e6faf3; color: #00b894; }
-.mh-card-tag.tag-purple { background: #f0ecff; color: #6c5ce7; }
-
-.mh-card-count {
-  font-size: 12px;
-  color: #999;
-}
-
 .mh-card-title {
   font-size: 16px;
   font-weight: 600;
@@ -652,16 +1068,28 @@
   overflow: hidden;
 }
 
-.mh-card-meta {
-  display: flex;
-  gap: 18px;
-  font-size: 12px;
-  color: #aaa;
+.mh-tab-content[data-content="asset"] .mh-card-desc {
+  min-height: 39px;
+  margin-bottom: 14px;
 }
 
-.mh-card-meta i { margin-right: 4px; }
+.mh-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f2f7;
+  font-size: 12px;
+  color: #8a8fb5;
+}
 
-/* ---- 资源/数据源目录卡片 ---- */
+.mh-card-footer span:first-child {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* ---- 数据目录/数据源目录卡片 ---- */
 .mh-card-folder, .mh-card-db {
   text-align: center;
   padding: 28px 20px;

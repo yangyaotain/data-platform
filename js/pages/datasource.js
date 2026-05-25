@@ -73,7 +73,6 @@ DP.pages.datasource = {
               '<li class="tree-node"><i class="bi bi-database tree-icon"></i><span class="tree-text">api_map_service</span></li>' +
             '</ul>' +
           '</li>' +
-          '<li class="tree-node"><i class="bi bi-database tree-icon leaf-indent"></i><span class="tree-text">redis_cache_01</span></li>' +
           '<li class="tree-node">' +
             '<span class="tree-toggle"><i class="bi bi-chevron-right"></i></span>' +
             '<i class="bi bi-folder2 tree-icon"></i>' +

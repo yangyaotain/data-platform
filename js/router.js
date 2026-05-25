@@ -16,6 +16,15 @@ DP.showPage = function (menuKey, opts) {
   if (menuKey === 'datasource') {
     c.innerHTML = DP.pages.datasource.html;
     DP.pages.datasource.init();
+  } else if (menuKey === '技术元数据') {
+    c.innerHTML = DP.pages.technicalMetadata.html;
+    DP.pages.technicalMetadata.init();
+  } else if (menuKey === '业务元数据') {
+    c.innerHTML = DP.pages.businessMetadata.html;
+    DP.pages.businessMetadata.init();
+  } else if (menuKey === '业务代码') {
+    c.innerHTML = DP.pages.businessCode.html;
+    DP.pages.businessCode.init();
   } else if (menuKey === 'project-mgr') {
     c.innerHTML = DP.pages.projectMgr.html;
     DP.pages.projectMgr.init();
@@ -23,14 +32,14 @@ DP.showPage = function (menuKey, opts) {
     c.innerHTML = DP.pages.dataDevelop.html;
     DP.pages.dataDevelop.init();
   } else if (menuKey === '资产概览') {
-    c.innerHTML = DP.pages.governanceOverview.html;
-    DP.pages.governanceOverview.init();
+    c.innerHTML = DP.pages.metaSearchHome.html;
+    DP.pages.metaSearchHome.init();
   } else if (menuKey === '治理规划') {
     c.innerHTML = DP.pages.governancePlan.html;
     DP.pages.governancePlan.init();
   } else if (menuKey === '治理任务') {
     c.innerHTML = DP.pages.governanceTask.html;
-    DP.pages.governanceTask.init();
+    DP.pages.governanceTask.init(opts);
   } else if (menuKey === '元数据审核') {
     c.innerHTML = DP.pages.metaAudit.html;
     DP.pages.metaAudit.init();
@@ -40,10 +49,7 @@ DP.showPage = function (menuKey, opts) {
   } else if (menuKey === '维度管理') {
     c.innerHTML = DP.pages.dimensionManagement.html;
     DP.pages.dimensionManagement.init();
-  } else if (menuKey === '元数据搜索') {
-    c.innerHTML = DP.pages.metaSearchHome.html;
-    DP.pages.metaSearchHome.init();
-  } else if (menuKey === '元数据搜索结果') {
+  } else if (menuKey === '元数据搜索' || menuKey === '元数据搜索结果') {
     c.innerHTML = DP.pages.metaSearchResult.html;
     DP.pages.metaSearchResult.init(opts);
   } else {

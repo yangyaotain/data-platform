@@ -75,6 +75,55 @@
   font-family: inherit;
 }
 
+.gt-plan-status-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 12px 12px 0;
+}
+
+.gt-plan-status-tab {
+  min-width: 0;
+  height: 32px;
+  padding: 0 6px;
+  border: 1px solid #d9dfe6;
+  border-radius: 4px;
+  background: #fff;
+  color: #5f7285;
+  font-size: 12px;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.gt-plan-status-tab:hover,
+.gt-plan-status-tab.active {
+  border-color: var(--primary);
+  background: #f0f7ff;
+  color: var(--primary);
+}
+
+.gt-plan-status-tab b {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #eef3f8;
+  color: #6b7d8e;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.gt-plan-status-tab.active b {
+  background: var(--primary);
+  color: #fff;
+}
+
 .gt-plan-list {
   flex: 1;
   min-height: 0;
@@ -84,10 +133,10 @@
 
 .gt-plan-item {
   width: 100%;
-  min-height: 72px;
+  min-height: 94px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: auto 6px;
+  grid-template-rows: auto 6px auto;
   align-items: center;
   gap: 10px 8px;
   margin-bottom: 8px;
@@ -135,6 +184,37 @@
   height: 100%;
   border-radius: 6px;
   background: var(--primary);
+}
+
+.gt-plan-meta {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  color: #7c8da0;
+  font-size: 12px;
+}
+
+.gt-plan-meta span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gt-plan-meta span:last-child {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.gt-plan-meta i {
+  color: var(--primary);
+  font-size: 12px;
 }
 
 .gt-filter-panel {

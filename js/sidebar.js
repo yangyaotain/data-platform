@@ -54,8 +54,8 @@ DP.initSidebar = function () {
         DP.setActiveMenu(link);
         var menuKey = link.dataset.menu || '';
         var menuText = link.querySelector('span') ? link.querySelector('span').textContent : '';
-        if (menuKey === 'datasource') {
-          DP.showPage('datasource');
+        if (menuKey === 'datasource' || menuKey === 'project-mgr') {
+          DP.showPage(menuKey);
         } else {
           DP.showPage(menuText);
         }

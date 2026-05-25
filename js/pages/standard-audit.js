@@ -305,12 +305,12 @@ DP.pages.standardAudit = (function () {
       return '<tr>' +
         (showCheckbox ? '<td class="ma-col-ck"><input type="checkbox" data-ma-row-check data-ma-index="' + index + '" aria-label="选择第' + (index + 1) + '条"></td>' : '') +
         '<td class="ma-col-content">' + renderApplyContent(row) + '</td>' +
-        '<td class="ma-col-change">' + renderChangeType(row) + '</td>' +
         '<td class="ma-col-summary">' + renderSummary(row) + '</td>' +
+        '<td class="ma-col-change">' + renderChangeType(row) + '</td>' +
+        '<td class="ma-col-status"><span class="ma-status ' + row.statusClass + '">' + row.status + '</span></td>' +
         '<td class="ma-col-user">' + row.applicant + '</td>' +
         '<td class="ma-col-time">' + row.applyTime + '</td>' +
         (showFinishTime ? '<td class="ma-col-time">' + row.finishTime + '</td>' : '') +
-        '<td class="ma-col-status"><span class="ma-status ' + row.statusClass + '">' + row.status + '</span></td>' +
         '<td class="ma-col-action">' + (type === 'pending' ? '<button class="ma-op-btn" data-ma-action="handle" data-ma-tab="' + type + '" data-ma-index="' + index + '"><i class="bi bi-check2-square"></i><span>处理</span></button>' : '<button class="ma-op-btn" data-ma-action="detail" data-ma-tab="' + type + '" data-ma-index="' + index + '"><i class="bi bi-eye"></i><span>查看详情</span></button>') + '</td>' +
       '</tr>';
     }).join('');
@@ -331,12 +331,12 @@ DP.pages.standardAudit = (function () {
     var columns = [];
     if (showCheckbox) columns.push({ cls: 'ma-col-ck', title: '<input type="checkbox" data-ma-check-all aria-label="全选">', width: 46, min: 46 });
     columns.push({ cls: 'ma-col-content', title: '申请内容', width: 300, min: 240 });
-    columns.push({ cls: 'ma-col-change', title: '类型', width: 78, min: 70 });
     columns.push({ cls: 'ma-col-summary', title: '申请理由', width: null, min: 180, flexible: true });
+    columns.push({ cls: 'ma-col-change', title: '类型', width: 78, min: 70 });
+    columns.push({ cls: 'ma-col-status', title: '流转状态', width: 138, min: 118 });
     columns.push({ cls: 'ma-col-user', title: '申请人', width: 120, min: 100 });
     columns.push({ cls: 'ma-col-time', title: '申请时间', width: 145, min: 125 });
     if (showFinishTime) columns.push({ cls: 'ma-col-time', title: '完成时间', width: 145, min: 125 });
-    columns.push({ cls: 'ma-col-status', title: '流程状态', width: 138, min: 118 });
     columns.push({ cls: 'ma-col-action', title: '操作', width: 152, min: 132 });
     return columns;
   }

@@ -111,6 +111,11 @@ document.addEventListener('DOMContentLoaded', function () {
     var devNav = document.querySelector('[data-page="develop"]');
     if (devNav) devNav.click();
   } else {
-    DP.showPage('datasource');
+    var workbenchNav = document.querySelector('[data-page="workbench"]');
+    if (workbenchNav) {
+      workbenchNav.click();
+    } else {
+      DP.showPage('project-mgr');
+    }
   }
 });

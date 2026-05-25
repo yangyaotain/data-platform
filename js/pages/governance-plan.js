@@ -14,6 +14,8 @@ DP.pages.governancePlan = (function () {
   var formMode = 'create';
   var editingPlanId = '';
   var formDraftState = null;
+  var importProgressTimer = null;
+  var importFinishTimer = null;
   var formUiState = {
     pendingKeyword: '',
     pendingPage: 1,
@@ -750,6 +752,308 @@ DP.pages.governancePlan = (function () {
     }
   }
 
+  function cleanTemplateDesc(value) {
+    return String(value || '').replace(/[。.]$/, '');
+  }
+
+  function renderTemplateRow(cells) {
+    return '<tr>' + cells.map(function (cell) {
+      return '<td style="mso-number-format:\\@;">' + escapeHtml(cell) + '</td>';
+    }).join('') + '</tr>';
+  }
+
+  function downloadImportTemplate() {
+    var headerRow = ['表名'].concat(governanceContents.map(function (item) { return item.name; }));
+    var descRow = ['表的英文名'].concat(governanceContents.map(function (item) {
+      return cleanTemplateDesc(item.desc) + '，填是/否';
+    }));
+    var exampleRows = [
+      ['dwd_trade_pay_detail_di', '是', '是', '否', '是'],
+      ['dwd_trade_refund_detail_di', '是', '是', '是', '否'],
+      ['dws_trade_user_summary_1d', '是', '否', '否', '是'],
+      ['ads_refund_risk_report', '是', '是', '是', '是']
+    ];
+    var rows = [headerRow, descRow].concat(exampleRows);
+    var tableHtml =
+      '<table border="1">' +
+        rows.map(renderTemplateRow).join('') +
+      '</table>';
+    var html =
+      '\ufeff<html><head><meta charset="UTF-8"></head><body>' +
+        tableHtml +
+      '</body></html>';
+    var blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+
+    link.href = url;
+    link.download = '治理范围导入模板.xls';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.setTimeout(function () { URL.revokeObjectURL(url); }, 0);
+  }
+
+  function setImportError(message) {
+    var error = document.getElementById('gpImportError');
+    if (!error) return;
+    error.textContent = message || '';
+    error.style.display = message ? 'block' : 'none';
+  }
+
+  function formatFileSize(size) {
+    if (!size && size !== 0) return '';
+    if (size < 1024 * 1024) return Math.max(1, Math.round(size / 1024)) + 'KB';
+    return (size / 1024 / 1024).toFixed(1).replace(/\.0$/, '') + 'MB';
+  }
+
+  function validateImportFile(file) {
+    if (!file) return '请选择需要导入的 Excel 文件。';
+    if (!/\.(xls|xlsx)$/i.test(file.name || '')) return '仅支持 .xls / .xlsx 文件。';
+    if (file.size >= 20 * 1024 * 1024) return '文件大小需小于 20M。';
+    return '';
+  }
+
+  function handleImportFileChange(input) {
+    var fileName = document.getElementById('gpImportFileName');
+    var file = input.files && input.files[0];
+    var error = validateImportFile(file);
+
+    if (!file) {
+      if (fileName) fileName.textContent = '未选择文件';
+      setImportError('');
+      return;
+    }
+
+    if (fileName) fileName.textContent = file.name + '（' + formatFileSize(file.size) + '）';
+
+    if (error) {
+      input.value = '';
+      if (fileName) fileName.textContent = '未选择文件';
+      setImportError(error);
+      return;
+    }
+
+    setImportError('');
+  }
+
+  function showImportDialog(page) {
+    closeImportDialog();
+    var mask = document.createElement('div');
+    mask.className = 'gp-import-mask';
+    mask.innerHTML =
+      '<div class="gp-import-modal" role="dialog" aria-modal="true" aria-labelledby="gpImportTitle">' +
+        '<div class="gp-import-head">' +
+          '<button class="gp-import-icon-btn" type="button" data-gp-import-close title="关闭"><i class="bi bi-chevron-left"></i></button>' +
+          '<strong id="gpImportTitle">导入治理范围</strong>' +
+          '<button class="gp-import-icon-btn" type="button" data-gp-import-close title="关闭"><i class="bi bi-x-lg"></i></button>' +
+        '</div>' +
+        '<div class="gp-import-body">' +
+          '<div class="gp-import-block">' +
+            '<div class="gp-import-block-title"><i class="bi bi-file-earmark-spreadsheet"></i><span>导入模板</span></div>' +
+            '<p>模板包含表名及治理内容列，第三行起填写需要导入的数据表。</p>' +
+            '<button class="btn btn-outline btn-sm" type="button" data-gp-import-download><i class="bi bi-download"></i> 下载Excel模板</button>' +
+          '</div>' +
+          '<div class="gp-import-upload">' +
+            '<div class="gp-import-block-title"><i class="bi bi-upload"></i><span>选择导入文件</span></div>' +
+            '<div class="gp-import-file-control">' +
+              '<label class="btn btn-outline btn-sm" for="gpImportFileInput"><i class="bi bi-folder2-open"></i> 选择文件</label>' +
+              '<input id="gpImportFileInput" type="file" accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">' +
+              '<span class="gp-import-file-name" id="gpImportFileName">未选择文件</span>' +
+            '</div>' +
+            '<div class="gp-import-tip">支持 .xls / .xlsx，单个文件小于 20M。</div>' +
+            '<div class="gp-import-error" id="gpImportError" style="display:none;"></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="gp-import-actions">' +
+          '<button class="btn btn-outline" type="button" data-gp-import-close>取消</button>' +
+          '<button class="btn btn-primary" type="button" data-gp-import-submit><i class="bi bi-check-lg"></i> 导入</button>' +
+        '</div>' +
+      '</div>';
+    page.appendChild(mask);
+  }
+
+  function clearImportProgressTimer() {
+    if (importProgressTimer) {
+      window.clearInterval(importProgressTimer);
+      importProgressTimer = null;
+    }
+    if (importFinishTimer) {
+      window.clearTimeout(importFinishTimer);
+      importFinishTimer = null;
+    }
+  }
+
+  function closeImportDialog() {
+    clearImportProgressTimer();
+    var mask = document.querySelector('.gp-import-mask');
+    if (mask && mask.parentNode) mask.parentNode.removeChild(mask);
+  }
+
+  function showImportToast(message) {
+    var page = document.querySelector('.page-governance-plan');
+    if (!page) return;
+    var oldToast = page.querySelector('.gp-import-toast');
+    if (oldToast && oldToast.parentNode) oldToast.parentNode.removeChild(oldToast);
+    var toast = document.createElement('div');
+    toast.className = 'gp-import-toast';
+    toast.innerHTML = '<i class="bi bi-check-circle"></i><span>' + escapeHtml(message) + '</span>';
+    page.appendChild(toast);
+    window.setTimeout(function () {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 2200);
+  }
+
+  function getImportDemoTables(state) {
+    var tables = getTablesBySource(state.datasourceId);
+    var preferredIndexes = [6, 7, 8, 10];
+    var selected = preferredIndexes.map(function (index) {
+      return tables[index];
+    }).filter(Boolean);
+
+    tables.forEach(function (table) {
+      if (selected.length >= 4) return;
+      if (selected.indexOf(table) < 0) selected.push(table);
+    });
+
+    return selected.slice(0, 4);
+  }
+
+  function buildImportTask() {
+    var state = collectFormState();
+    var configs = [
+      { metadataFill: true, standardMap: true, standardAudit: false, dataQuality: true },
+      { metadataFill: true, standardMap: true, standardAudit: true, dataQuality: false },
+      { metadataFill: true, standardMap: false, standardAudit: false, dataQuality: true },
+      { metadataFill: true, standardMap: true, standardAudit: true, dataQuality: true }
+    ];
+
+    return {
+      state: state,
+      tables: getImportDemoTables(state),
+      configs: configs
+    };
+  }
+
+  function renderImportProgress(percent, text) {
+    var title = document.getElementById('gpImportTitle');
+    var body = document.querySelector('.gp-import-body');
+    var actions = document.querySelector('.gp-import-actions');
+
+    if (title) title.textContent = '导入中';
+    if (body) {
+      body.innerHTML =
+        '<div class="gp-import-progress">' +
+          '<div class="gp-import-progress-head">' +
+            '<div class="gp-import-progress-icon"><i class="bi bi-arrow-repeat"></i></div>' +
+            '<div>' +
+              '<strong>正在导入治理范围</strong>' +
+              '<span>' + escapeHtml(text) + '</span>' +
+            '</div>' +
+            '<em>' + percent + '%</em>' +
+          '</div>' +
+          '<div class="gp-import-progress-track"><div style="width:' + percent + '%;"></div></div>' +
+          '<div class="gp-import-step-list">' +
+            '<span class="' + (percent >= 24 ? 'done' : 'active') + '">解析文件</span>' +
+            '<span class="' + (percent >= 58 ? 'done' : (percent >= 24 ? 'active' : '')) + '">校验数据</span>' +
+            '<span class="' + (percent >= 86 ? 'done' : (percent >= 58 ? 'active' : '')) + '">写入范围</span>' +
+          '</div>' +
+        '</div>';
+    }
+    if (actions) {
+      actions.innerHTML =
+        '<button class="btn btn-outline" type="button" data-gp-import-close>取消</button>' +
+        '<button class="btn btn-primary" type="button" disabled><i class="bi bi-arrow-repeat gp-import-spin"></i> 导入中</button>';
+    }
+  }
+
+  function renderImportResult(result) {
+    var title = document.getElementById('gpImportTitle');
+    var body = document.querySelector('.gp-import-body');
+    var actions = document.querySelector('.gp-import-actions');
+
+    if (title) title.textContent = '导入完成';
+    if (body) {
+      body.innerHTML =
+        '<div class="gp-import-result">' +
+          '<div class="gp-import-result-icon"><i class="bi bi-check-lg"></i></div>' +
+          '<strong>导入完成</strong>' +
+          '<p>本次导入已完成，治理范围和治理内容配置已同步更新。</p>' +
+          '<div class="gp-import-result-grid">' +
+            '<div><span>总导入</span><em>' + result.total + '</em><b>条记录</b></div>' +
+            '<div><span>成功</span><em>' + result.success + '</em><b>条</b></div>' +
+            '<div><span>失败</span><em>' + result.failed + '</em><b>条</b></div>' +
+          '</div>' +
+        '</div>';
+    }
+    if (actions) {
+      actions.innerHTML =
+        '<button class="btn btn-primary" type="button" data-gp-import-finish><i class="bi bi-check-lg"></i> 完成</button>';
+    }
+  }
+
+  function finishImportTask(task) {
+    var state = task.state;
+
+    task.tables.forEach(function (table, index) {
+      if (state.tableIds.indexOf(table.id) < 0) {
+        state.tableIds.push(table.id);
+      }
+      state.tableConfigs[table.id] = normalizeTableConfig(task.configs[index] || getDefaultTableConfig());
+    });
+
+    formDraftState = state;
+    formUiState.selectedKeyword = '';
+    formUiState.selectedPage = 1;
+    syncSelectedTables();
+    showFormError('');
+    renderImportResult({
+      total: task.tables.length,
+      success: task.tables.length,
+      failed: 0
+    });
+  }
+
+  function startImportProgress(task) {
+    var steps = [
+      { percent: 16, text: '正在读取 Excel 文件' },
+      { percent: 32, text: '正在解析表名和治理内容列' },
+      { percent: 58, text: '正在校验数据源中的表信息' },
+      { percent: 78, text: '正在匹配治理范围配置' },
+      { percent: 100, text: '正在写入治理范围' }
+    ];
+    var index = 0;
+
+    clearImportProgressTimer();
+    renderImportProgress(8, '准备导入数据');
+    importProgressTimer = window.setInterval(function () {
+      var step = steps[index];
+      renderImportProgress(step.percent, step.text);
+      index += 1;
+
+      if (index >= steps.length) {
+        clearImportProgressTimer();
+        importFinishTimer = window.setTimeout(function () {
+          importFinishTimer = null;
+          finishImportTask(task);
+        }, 320);
+      }
+    }, 520);
+  }
+
+  function applyImportSelection() {
+    var input = document.getElementById('gpImportFileInput');
+    var file = input && input.files && input.files[0];
+    var error = validateImportFile(file);
+
+    if (error) {
+      setImportError(error);
+      return;
+    }
+
+    startImportProgress(buildImportTask());
+  }
+
   function syncSelectedTables() {
     var state = collectFormState();
     var pending = document.getElementById('gpPendingTables');
@@ -798,7 +1102,10 @@ DP.pages.governancePlan = (function () {
           '</div>' +
         '</section>' +
         '<section class="gp-form-section">' +
-          '<div class="gp-section-title"><i class="bi bi-bounding-box"></i><span>治理范围</span></div>' +
+          '<div class="gp-section-title gp-section-title-actions">' +
+            '<div class="gp-section-title-main"><i class="bi bi-bounding-box"></i><span>治理范围</span></div>' +
+            '<button class="btn btn-outline btn-sm" type="button" data-gp-import-open><i class="bi bi-upload"></i> 导入选择</button>' +
+          '</div>' +
           '<input id="gpFormDatasource" type="hidden" value="' + escapeHtml(state.datasourceId) + '">' +
           '<div class="gp-range-layout">' +
             '<div class="gp-range-left">' +
@@ -980,9 +1287,9 @@ DP.pages.governancePlan = (function () {
       return (
         '<article class="gp-plan-card">' +
           '<div class="gp-plan-head">' +
-            '<div class="gp-plan-name" title="' + escapeHtml(plan.name) + '">' +
+            '<button class="gp-plan-name" type="button" data-gp-action="open-task" data-gp-id="' + plan.id + '" title="进入治理任务：' + escapeHtml(plan.name) + '">' +
               '<i class="bi bi-kanban"></i><span>' + escapeHtml(plan.name) + '</span>' +
-            '</div>' +
+            '</button>' +
             '<div class="gp-plan-actions">' +
               '<button class="gp-icon-btn" type="button" data-gp-action="edit" data-gp-id="' + plan.id + '" title="编辑"><i class="bi bi-pencil-square"></i></button>' +
               archiveButton +
@@ -995,6 +1302,10 @@ DP.pages.governancePlan = (function () {
           '</div>' +
           '<div class="gp-plan-progress"><div style="width:' + plan.rate + '%;"></div></div>' +
           '<p class="gp-plan-desc">' + escapeHtml(plan.desc) + '</p>' +
+          '<div class="gp-plan-scope">' +
+            '<span><i class="bi bi-table"></i>治理表 <strong>' + formatNumber(plan.counts.table) + '</strong> 张</span>' +
+            '<span><i class="bi bi-input-cursor-text"></i>字段 <strong>' + formatNumber(plan.counts.field) + '</strong> 个</span>' +
+          '</div>' +
           '<div class="gp-plan-meta">' +
             '<div><span>责任人</span><strong>' + escapeHtml(plan.owner) + '</strong></div>' +
             '<div><span>创建时间</span><strong>' + escapeHtml(plan.createdAt) + '</strong></div>' +
@@ -1002,6 +1313,25 @@ DP.pages.governancePlan = (function () {
         '</article>'
       );
     }).join('');
+  }
+
+  function activateGovernanceTaskMenu() {
+    document.querySelectorAll('.menu-link.active, .sub-menu li a.active').forEach(function (el) {
+      el.classList.remove('active');
+    });
+    var taskLink = Array.prototype.find.call(document.querySelectorAll('#menuDataGovernance .sub-menu li a'), function (link) {
+      return link.textContent.trim() === '治理任务';
+    });
+    if (!taskLink) return;
+    taskLink.classList.add('active');
+    var parent = taskLink.closest('.menu-item.has-sub');
+    if (parent) parent.classList.add('open');
+  }
+
+  function openPlanTask(plan) {
+    if (!plan || !DP.showPage) return;
+    activateGovernanceTaskMenu();
+    DP.showPage('治理任务', { planId: plan.id, status: plan.status });
   }
 
   function renderPagination() {
@@ -1139,6 +1469,36 @@ DP.pages.governancePlan = (function () {
         return;
       }
 
+      var importOpen = e.target.closest('[data-gp-import-open]');
+      if (importOpen && viewMode === 'form') {
+        showImportDialog(page);
+        return;
+      }
+
+      var importClose = e.target.closest('[data-gp-import-close]');
+      if (importClose) {
+        closeImportDialog();
+        return;
+      }
+
+      var importFinish = e.target.closest('[data-gp-import-finish]');
+      if (importFinish) {
+        closeImportDialog();
+        return;
+      }
+
+      var importDownload = e.target.closest('[data-gp-import-download]');
+      if (importDownload) {
+        downloadImportTemplate();
+        return;
+      }
+
+      var importSubmit = e.target.closest('[data-gp-import-submit]');
+      if (importSubmit) {
+        applyImportSelection();
+        return;
+      }
+
       var formAction = e.target.closest('[data-gp-form-action]');
       if (formAction) {
         if (formAction.dataset.gpFormAction === 'save') {
@@ -1248,6 +1608,8 @@ DP.pages.governancePlan = (function () {
 
       if (action === 'create') {
         showPlanForm('create');
+      } else if (action === 'open-task' && plan) {
+        openPlanTask(plan);
       } else if (action === 'edit' && plan) {
         showPlanForm('edit', plan.id);
       } else if (action === 'archive' && plan) {
@@ -1259,6 +1621,11 @@ DP.pages.governancePlan = (function () {
 
     page.addEventListener('change', function (e) {
       if (viewMode !== 'form') return;
+
+      if (e.target && e.target.id === 'gpImportFileInput') {
+        handleImportFileChange(e.target);
+        return;
+      }
 
       if (e.target && e.target.classList.contains('gp-config-all')) {
         var checked = e.target.checked;

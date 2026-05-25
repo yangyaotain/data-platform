@@ -1,5 +1,5 @@
 /**
- * 数据中台 V4.0 - 元数据搜索首页
+ * 数据中台 V4.0 - 数据治理 / 资产概览
  * HTML模板 + 页面交互逻辑
  */
 window.DP = window.DP || {};
@@ -74,7 +74,7 @@ DP.pages.metaSearchHome = {
       <div class="mh-tabs-area">
         <div class="mh-tabs">
           <a class="mh-tab active" data-tab="asset">资产卡片</a>
-          <a class="mh-tab" data-tab="resource">资源目录</a>
+          <a class="mh-tab" data-tab="resource">数据目录</a>
           <a class="mh-tab" data-tab="datasource">数据源目录</a>
         </div>
 
@@ -82,112 +82,70 @@ DP.pages.metaSearchHome = {
         <div class="mh-tab-content active" data-content="asset">
           <div class="mh-cards-grid">
             <div class="mh-card mh-card-clickable">
-              <div class="mh-card-top">
-                <span class="mh-card-tag tag-blue">ODS</span>
-                <span class="mh-card-count">18 张表</span>
-              </div>
               <div class="mh-card-title">订单数据</div>
               <div class="mh-card-desc">核心订单交易相关表，包括订单主表、明细、状态日志等</div>
-              <div class="mh-card-meta"><span><i class="bi bi-person"></i> 张明</span><span><i class="bi bi-clock"></i> 2026-02-12</span></div>
+              <div class="mh-card-footer"><span>18 张表</span><span>2026-02-12</span></div>
             </div>
             <div class="mh-card mh-card-clickable">
-              <div class="mh-card-top">
-                <span class="mh-card-tag tag-blue">ODS</span>
-                <span class="mh-card-count">12 张表</span>
-              </div>
               <div class="mh-card-title">支付数据</div>
               <div class="mh-card-desc">支付流水、第三方支付回调、对账数据等</div>
-              <div class="mh-card-meta"><span><i class="bi bi-person"></i> 李婷</span><span><i class="bi bi-clock"></i> 2026-02-11</span></div>
+              <div class="mh-card-footer"><span>12 张表</span><span>2026-02-11</span></div>
             </div>
             <div class="mh-card mh-card-clickable">
-              <div class="mh-card-top">
-                <span class="mh-card-tag tag-yellow">DWD</span>
-                <span class="mh-card-count">15 张表</span>
-              </div>
               <div class="mh-card-title">用户基础</div>
               <div class="mh-card-desc">用户注册信息、实名认证、账户状态、登录记录</div>
-              <div class="mh-card-meta"><span><i class="bi bi-person"></i> 王强</span><span><i class="bi bi-clock"></i> 2026-02-12</span></div>
+              <div class="mh-card-footer"><span>15 张表</span><span>2026-02-12</span></div>
             </div>
             <div class="mh-card mh-card-clickable">
-              <div class="mh-card-top">
-                <span class="mh-card-tag tag-green">DWS</span>
-                <span class="mh-card-count">12 张表</span>
-              </div>
               <div class="mh-card-title">用户画像</div>
               <div class="mh-card-desc">用户标签、偏好分析、消费能力评级、活跃度指标</div>
-              <div class="mh-card-meta"><span><i class="bi bi-person"></i> 王强</span><span><i class="bi bi-clock"></i> 2026-02-10</span></div>
+              <div class="mh-card-footer"><span>12 张表</span><span>2026-02-10</span></div>
             </div>
             <div class="mh-card mh-card-clickable">
-              <div class="mh-card-top">
-                <span class="mh-card-tag tag-blue">ODS</span>
-                <span class="mh-card-count">16 张表</span>
-              </div>
               <div class="mh-card-title">商品信息</div>
               <div class="mh-card-desc">商品主数据、SKU属性、分类、品牌、价格体系</div>
-              <div class="mh-card-meta"><span><i class="bi bi-person"></i> 赵丽</span><span><i class="bi bi-clock"></i> 2026-02-12</span></div>
+              <div class="mh-card-footer"><span>16 张表</span><span>2026-02-12</span></div>
             </div>
             <div class="mh-card mh-card-clickable">
-              <div class="mh-card-top">
-                <span class="mh-card-tag tag-purple">ADS</span>
-                <span class="mh-card-count">8 张表</span>
-              </div>
               <div class="mh-card-title">营销报表</div>
               <div class="mh-card-desc">活动效果分析、优惠券核销、渠道ROI报表</div>
-              <div class="mh-card-meta"><span><i class="bi bi-person"></i> 赵丽</span><span><i class="bi bi-clock"></i> 2026-02-11</span></div>
+              <div class="mh-card-footer"><span>8 张表</span><span>2026-02-11</span></div>
             </div>
             <div class="mh-card mh-card-clickable">
-              <div class="mh-card-top">
-                <span class="mh-card-tag tag-blue">ODS</span>
-                <span class="mh-card-count">14 张表</span>
-              </div>
               <div class="mh-card-title">物流配送</div>
               <div class="mh-card-desc">配送单、物流轨迹、签收记录、异常件处理</div>
-              <div class="mh-card-meta"><span><i class="bi bi-person"></i> 张明</span><span><i class="bi bi-clock"></i> 2026-02-12</span></div>
+              <div class="mh-card-footer"><span>14 张表</span><span>2026-02-12</span></div>
             </div>
             <div class="mh-card mh-card-clickable">
-              <div class="mh-card-top">
-                <span class="mh-card-tag tag-yellow">DWD</span>
-                <span class="mh-card-count">12 张表</span>
-              </div>
               <div class="mh-card-title">库存管理</div>
               <div class="mh-card-desc">库存快照、出入库流水、库存预警、盘点记录</div>
-              <div class="mh-card-meta"><span><i class="bi bi-person"></i> 李婷</span><span><i class="bi bi-clock"></i> 2026-02-11</span></div>
+              <div class="mh-card-footer"><span>12 张表</span><span>2026-02-11</span></div>
             </div>
           </div>
         </div>
 
-        <!-- 资源目录 -->
+        <!-- 数据目录 -->
         <div class="mh-tab-content" data-content="resource">
           <div class="mh-cards-grid">
             <div class="mh-card mh-card-clickable mh-card-folder">
               <div class="mh-card-icon"><i class="bi bi-folder2-open"></i></div>
-              <div class="mh-card-title">交易域</div>
-              <div class="mh-card-desc">42 张表 · 订单、支付、退款、结算</div>
+              <div class="mh-card-title">物流履约域</div>
+              <div class="mh-card-desc">42 项 · 订单履约：运单主题、派送主题、超时预警；运力管理：司机主题、车辆主题、线路主题</div>
             </div>
             <div class="mh-card mh-card-clickable mh-card-folder">
               <div class="mh-card-icon"><i class="bi bi-folder2-open"></i></div>
-              <div class="mh-card-title">用户域</div>
-              <div class="mh-card-desc">35 张表 · 用户基础、画像、行为日志</div>
+              <div class="mh-card-title">客户服务域</div>
+              <div class="mh-card-desc">28 项 · 客户画像：客户基础信息、客户标签；服务工单：投诉处理、满意度回访</div>
             </div>
             <div class="mh-card mh-card-clickable mh-card-folder">
               <div class="mh-card-icon"><i class="bi bi-folder2-open"></i></div>
-              <div class="mh-card-title">商品域</div>
-              <div class="mh-card-desc">28 张表 · 商品信息、库存管理</div>
+              <div class="mh-card-title">财务结算域</div>
+              <div class="mh-card-desc">31 项 · 费用结算：运费结算、发票开具；财务风控：欠费预警、异常退款</div>
             </div>
             <div class="mh-card mh-card-clickable mh-card-folder">
               <div class="mh-card-icon"><i class="bi bi-folder2-open"></i></div>
-              <div class="mh-card-title">物流域</div>
-              <div class="mh-card-desc">22 张表 · 配送数据、仓储数据</div>
-            </div>
-            <div class="mh-card mh-card-clickable mh-card-folder">
-              <div class="mh-card-icon"><i class="bi bi-folder2-open"></i></div>
-              <div class="mh-card-title">营销域</div>
-              <div class="mh-card-desc">18 张表 · 活动数据、优惠券</div>
-            </div>
-            <div class="mh-card mh-card-clickable mh-card-folder">
-              <div class="mh-card-icon"><i class="bi bi-folder2-open"></i></div>
-              <div class="mh-card-title">财务域</div>
-              <div class="mh-card-desc">11 张表 · 应收应付、成本核算</div>
+              <div class="mh-card-title">公共维度域</div>
+              <div class="mh-card-desc">25 项 · 行政区划、组织机构、时间周期等公共维度目录</div>
             </div>
           </div>
         </div>
@@ -239,6 +197,12 @@ DP.pages.metaSearchHome = {
 
   /* Page interaction init - extracted from initMetaSearchHome */
   init: function () {
+    function goToMetaSearch(opts) {
+      const searchLink = document.querySelector('[data-menu="meta-search"]');
+      if (searchLink && DP.setActiveMenu) DP.setActiveMenu(searchLink);
+      DP.showPage('元数据搜索', opts);
+    }
+
     // tab 切换
     document.querySelectorAll('.mh-tab').forEach(tab => {
       tab.addEventListener('click', () => {
@@ -251,28 +215,28 @@ DP.pages.metaSearchHome = {
       });
     });
 
-    // 搜索按钮 → 进入二级搜索结果页
+    // 搜索按钮 → 进入元数据搜索页
     document.querySelectorAll('.mh-search-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const input = document.querySelector('.mh-search-input');
         const keyword = input ? input.value.trim() : '';
         const action = btn.dataset.action;   // table-search / field-search
-        DP.showPage('元数据搜索结果', { keyword, searchType: action });
+        goToMetaSearch({ keyword, searchType: action });
       });
     });
 
     // 热门标签点击 → 搜索
     document.querySelectorAll('.mh-tag').forEach(tag => {
       tag.addEventListener('click', () => {
-        DP.showPage('元数据搜索结果', { keyword: tag.textContent, searchType: 'table-search' });
+        goToMetaSearch({ keyword: tag.textContent, searchType: 'table-search' });
       });
     });
 
-    // 卡片点击 → 进入搜索结果页
+    // 卡片点击 → 进入元数据搜索页
     document.querySelectorAll('.mh-card-clickable').forEach(card => {
       card.addEventListener('click', () => {
         const title = card.querySelector('.mh-card-title')?.textContent || '';
-        DP.showPage('元数据搜索结果', { keyword: title, searchType: 'table-search' });
+        goToMetaSearch({ keyword: title, searchType: 'table-search' });
       });
     });
 
@@ -282,7 +246,7 @@ DP.pages.metaSearchHome = {
       searchInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           const keyword = searchInput.value.trim();
-          DP.showPage('元数据搜索结果', { keyword, searchType: 'table-search' });
+          goToMetaSearch({ keyword, searchType: 'table-search' });
         }
       });
     }

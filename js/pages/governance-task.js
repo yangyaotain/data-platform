@@ -7,6 +7,7 @@ DP.pages = DP.pages || {};
 DP.pages.governanceTask = (function () {
   var pageSize = 8;
   var currentPage = 1;
+  var activeStatus = 'ongoing';
   var activePlanId = 'gp-001';
   var filters = {
     keyword: '',
@@ -16,14 +17,25 @@ DP.pages.governanceTask = (function () {
     dataQuality: 'all'
   };
 
+  var statusTabs = [
+    { key: 'ongoing', label: '进行中' },
+    { key: 'completed', label: '已完成' },
+    { key: 'archived', label: '归档' }
+  ];
+
   var plans = [
-    { id: 'gp-001', name: '客户域核心资产治理规划', rate: 68 },
-    { id: 'gp-003', name: '营销域标签数据治理规划', rate: 54 },
-    { id: 'gp-004', name: '供应链主题资产治理规划', rate: 0 },
-    { id: 'gp-005', name: '财务报表口径治理规划', rate: 72 },
-    { id: 'gp-007', name: '公共维表字段治理规划', rate: 61 },
-    { id: 'gp-008', name: '实时数据链路治理规划', rate: 46 },
-    { id: 'gp-011', name: '数据安全分级治理规划', rate: 39 }
+    { id: 'gp-001', name: '客户域核心资产治理规划', status: 'ongoing', rate: 68, owner: '李婷', createdAt: '2026-05-08 09:30', counts: { db: 2, table: 32, field: 520 }, desc: '围绕客户主数据、会员基础表和客户标签字段补齐标准、口径、血缘与责任人信息。' },
+    { id: 'gp-002', name: '交易域数仓标准化规划', status: 'completed', rate: 100, owner: '张明', createdAt: '2026-05-06 14:20', counts: { db: 2, table: 28, field: 460 }, desc: '完成订单、支付、履约主题库表字段的标准映射和核心指标口径统一。' },
+    { id: 'gp-003', name: '营销域标签数据治理规划', status: 'ongoing', rate: 54, owner: '王强', createdAt: '2026-05-05 11:05', counts: { db: 1, table: 24, field: 360 }, desc: '梳理活动投放、用户触达和标签生产链路，明确标签字段命名、来源和使用范围。' },
+    { id: 'gp-004', name: '供应链主题资产治理规划', status: 'ongoing', rate: 0, owner: '赵磊', createdAt: '2026-05-04 16:45', counts: { db: 1, table: 18, field: 260 }, desc: '计划对供应商、库存、入库出库等主题资产进行责任归属和元数据完整性治理。' },
+    { id: 'gp-005', name: '财务报表口径治理规划', status: 'ongoing', rate: 72, owner: '陈晨', createdAt: '2026-05-03 10:18', counts: { db: 1, table: 20, field: 310 }, desc: '统一收入、退款、成本、毛利相关字段定义，降低跨报表统计口径差异。' },
+    { id: 'gp-006', name: '商品域基础模型治理规划', status: 'completed', rate: 100, owner: '刘洋', createdAt: '2026-05-02 15:36', counts: { db: 2, table: 22, field: 330 }, desc: '完成商品类目、SKU、SPU 相关库表字段的标准绑定和基础质量规则配置。' },
+    { id: 'gp-007', name: '公共维表字段治理规划', status: 'ongoing', rate: 61, owner: '孙悦', createdAt: '2026-04-30 13:12', counts: { db: 1, table: 16, field: 280 }, desc: '治理区域、日期、组织、渠道等公共维表，沉淀可复用字段标准和维护责任。' },
+    { id: 'gp-008', name: '实时数据链路治理规划', status: 'ongoing', rate: 46, owner: '周航', createdAt: '2026-04-28 17:20', counts: { db: 1, table: 18, field: 240 }, desc: '聚焦实时采集、清洗和宽表产出链路，补齐任务归属、字段说明和异常处置规则。' },
+    { id: 'gp-009', name: '风控模型特征治理规划', status: 'archived', rate: 0, owner: '高敏', createdAt: '2026-04-26 09:42', counts: { db: 1, table: 14, field: 210 }, desc: '准备对风控特征字段进行来源校验、脱敏标识和模型使用说明补充。' },
+    { id: 'gp-010', name: '经营分析指标治理规划', status: 'completed', rate: 100, owner: '黄鑫', createdAt: '2026-04-24 10:00', counts: { db: 2, table: 26, field: 390 }, desc: '完成 GMV、客单价、转化率等经营指标涉及字段的定义、计算口径和资产归属治理。' },
+    { id: 'gp-011', name: '数据安全分级治理规划', status: 'ongoing', rate: 39, owner: '何倩', createdAt: '2026-04-22 14:28', counts: { db: 1, table: 13, field: 180 }, desc: '按敏感等级梳理个人信息、交易信息和经营数据字段，补齐安全分级和使用边界。' },
+    { id: 'gp-012', name: '项目资源目录治理规划', status: 'archived', rate: 100, owner: '马宁', createdAt: '2026-04-20 11:50', counts: { db: 1, table: 15, field: 220 }, desc: '完成重点项目资产目录归类、资源责任人和使用说明整理，支撑后续资源管理视图。' }
   ];
 
   var planTables = {
@@ -74,6 +86,35 @@ DP.pages.governanceTask = (function () {
       row('order_address', '收货地址表', '用户订单关联的收货地址信息', 100, 42, 24, 18),
       row('dwd_customer_identity', '客户身份认证表', '客户实名、证件与认证状态信息', 100, 100, 100, 66),
       row('asset_security_level', '资产安全分级表', '资产敏感等级、脱敏策略与授权边界', 26, 15, 0, 0)
+    ],
+    'gp-002': [
+      row('ods_order_main', '订单主表', '订单交易主数据，承载订单生命周期状态', 100, 100, 100, 100),
+      row('dwd_trade_order_detail_di', '交易订单明细表', '交易订单明细、商品、优惠和支付口径', 100, 100, 100, 100),
+      row('dws_trade_summary_1d', '交易汇总表', '按日沉淀交易指标和标准口径', 100, 100, 100, 100),
+      row('ads_sales_daily_report', '销售日分析报表', '销售日报经营指标展示', 100, 100, 100, 100)
+    ],
+    'gp-006': [
+      row('ods_product_spu', '商品SPU表', '商品基础模型和类目归属信息', 100, 100, 100, 100),
+      row('ods_product_sku', '商品SKU表', 'SKU规格、价格和上下架状态', 100, 100, 100, 100),
+      row('dim_product_category', '商品类目维表', '商品类目层级和维护责任', 100, 100, 100, 100),
+      row('dwd_product_inventory_di', '商品库存明细表', '商品库存和销售状态快照', 100, 100, 100, 100)
+    ],
+    'gp-010': [
+      row('ads_gmv_overview', 'GMV概览报表', '经营分析核心指标口径和展示表', 100, 100, 100, 100),
+      row('dws_conversion_rate_1d', '转化率日汇总表', '按日统计转化链路指标', 100, 100, 100, 100),
+      row('dws_customer_price_1d', '客单价日汇总表', '客单价、订单数和用户数统计', 100, 100, 100, 100),
+      row('ads_operation_metric_report', '经营指标报表', '管理层经营分析指标报表', 100, 100, 100, 100)
+    ],
+    'gp-009': [
+      row('dwd_risk_feature_di', '风控特征明细表', '风控模型特征来源、口径与脱敏说明', 0, 0, 0, 0),
+      row('dim_risk_model', '风控模型维表', '模型编码、版本和责任人信息', 0, 0, 0, 0),
+      row('ads_risk_score_report', '风险评分报表', '风险评分结果和模型应用说明', 0, 0, 0, 0)
+    ],
+    'gp-012': [
+      row('asset_catalog_item', '资产目录表', '资产目录归类和层级维护结果', 100, 100, 100, 100),
+      row('project_resource_usage', '项目资源使用表', '项目资源消耗、归属和使用说明', 100, 100, 100, 100),
+      row('asset_owner_relation', '资产责任关系表', '资产责任人、部门和维护关系', 100, 100, 100, 100),
+      row('resource_apply_record', '资源申请记录表', '资源申请、审批和使用留痕', 100, 100, 100, 100)
     ]
   };
 
@@ -102,8 +143,36 @@ DP.pages.governanceTask = (function () {
     return String(value || '').trim().toLowerCase();
   }
 
+  function getStatusLabel(status) {
+    var item = statusTabs.find(function (tab) { return tab.key === status; });
+    return item ? item.label : status;
+  }
+
+  function getPlansByStatus(status) {
+    return plans.filter(function (plan) { return plan.status === status; });
+  }
+
+  function getPlanCount(status) {
+    return getPlansByStatus(status).length;
+  }
+
+  function getFilteredPlans() {
+    var keyword = normalize((document.getElementById('gtPlanSearch') || {}).value || '');
+    return getPlansByStatus(activeStatus).filter(function (plan) {
+      return matchText(plan.name + ' ' + plan.owner + ' ' + plan.createdAt, keyword);
+    });
+  }
+
+  function ensureActivePlan() {
+    var active = plans.find(function (plan) { return plan.id === activePlanId && plan.status === activeStatus; });
+    if (active) return active;
+    var first = getPlansByStatus(activeStatus)[0] || plans[0];
+    activePlanId = first ? first.id : '';
+    return first;
+  }
+
   function getActivePlan() {
-    return plans.find(function (plan) { return plan.id === activePlanId; }) || plans[0];
+    return ensureActivePlan();
   }
 
   function getActiveRows() {
@@ -152,18 +221,25 @@ DP.pages.governanceTask = (function () {
   }
 
   function renderPlans() {
-    var keyword = normalize((document.getElementById('gtPlanSearch') || {}).value || '');
-    var html = plans.filter(function (plan) {
-      return matchText(plan.name, keyword);
-    }).map(function (plan) {
+    ensureActivePlan();
+    var html = getFilteredPlans().map(function (plan) {
       return '<button class="gt-plan-item' + (plan.id === activePlanId ? ' active' : '') + '" type="button" data-gt-plan="' + plan.id + '">' +
         '<span class="gt-plan-name" title="' + escapeHtml(plan.name) + '">' + escapeHtml(plan.name) + '</span>' +
         '<span class="gt-plan-rate">' + plan.rate + '%</span>' +
         '<span class="gt-plan-progress"><span style="width:' + plan.rate + '%;"></span></span>' +
+        '<span class="gt-plan-meta"><span><i class="bi bi-person"></i>' + escapeHtml(plan.owner) + '</span><span>' + escapeHtml(plan.createdAt) + '</span></span>' +
       '</button>';
     }).join('');
 
-    return html || '<div class="gt-empty-side">未找到进行中的治理规划</div>';
+    return html || '<div class="gt-empty-side">未找到' + getStatusLabel(activeStatus) + '的治理规划</div>';
+  }
+
+  function renderPlanStatusTabs() {
+    return '<div class="gt-plan-status-tabs">' + statusTabs.map(function (tab) {
+      return '<button class="gt-plan-status-tab' + (tab.key === activeStatus ? ' active' : '') + '" type="button" data-gt-status="' + tab.key + '">' +
+        '<span>' + tab.label + '</span><b>' + getPlanCount(tab.key) + '</b>' +
+      '</button>';
+    }).join('') + '</div>';
   }
 
   function renderStatusSelect(key, label) {
@@ -997,8 +1073,12 @@ DP.pages.governanceTask = (function () {
     if (tableWrap) tableWrap.classList.remove('gt-table-detail');
     if (summary) {
       summary.innerHTML = '<span><i class="bi bi-kanban"></i> ' + escapeHtml(plan.name) + '</span>' +
-        '<span>治理表 ' + rows.length + ' 张</span>' +
-        '<span>任务完成率 ' + getCompletionRate(rows) + '%</span>';
+        '<span>治理表 ' + (plan.counts ? plan.counts.table : rows.length) + ' 张</span>' +
+        '<span>字段 ' + (plan.counts ? plan.counts.field : rows.length * 40) + ' 个</span>' +
+        '<span>' + getStatusLabel(plan.status) + '</span>' +
+        '<span>责任人 ' + escapeHtml(plan.owner) + '</span>' +
+        '<span>创建时间 ' + escapeHtml(plan.createdAt) + '</span>' +
+        '<span>规划进度 ' + plan.rate + '%</span>';
     }
     if (tableWrap) tableWrap.innerHTML = renderTable();
     if (pagination) {
@@ -1011,7 +1091,8 @@ DP.pages.governanceTask = (function () {
     page.classList.remove('gt-detail-mode');
     page.innerHTML =
       '<aside class="gt-plan-panel">' +
-        '<div class="gt-panel-title"><i class="bi bi-diagram-3"></i><span>进行中的规划</span></div>' +
+        '<div class="gt-panel-title"><i class="bi bi-diagram-3"></i><span>治理规划任务</span></div>' +
+        renderPlanStatusTabs() +
         '<div class="gt-plan-search"><i class="bi bi-search"></i><input id="gtPlanSearch" type="text" placeholder="搜索治理规划"></div>' +
         '<div class="gt-plan-list">' + renderPlans() + '</div>' +
       '</aside>' +
@@ -1080,6 +1161,26 @@ DP.pages.governanceTask = (function () {
 
   function bindEvents(page) {
     page.addEventListener('click', function (e) {
+      var statusBtn = e.target.closest('[data-gt-status]');
+      if (statusBtn) {
+        activeStatus = statusBtn.dataset.gtStatus || 'ongoing';
+        var first = getPlansByStatus(activeStatus)[0];
+        activePlanId = first ? first.id : activePlanId;
+        currentPage = 1;
+        resetFilters();
+        var searchInput = page.querySelector('#gtPlanSearch');
+        if (searchInput) searchInput.value = '';
+        page.querySelector('.gt-filter-panel').innerHTML = renderFilters();
+        page.querySelector('.gt-plan-status-tabs').innerHTML = statusTabs.map(function (tab) {
+          return '<button class="gt-plan-status-tab' + (tab.key === activeStatus ? ' active' : '') + '" type="button" data-gt-status="' + tab.key + '">' +
+            '<span>' + tab.label + '</span><b>' + getPlanCount(tab.key) + '</b>' +
+          '</button>';
+        }).join('');
+        page.querySelector('.gt-plan-list').innerHTML = renderPlans();
+        renderMain();
+        return;
+      }
+
       var planBtn = e.target.closest('[data-gt-plan]');
       if (planBtn) {
         activePlanId = planBtn.dataset.gtPlan;
@@ -1188,9 +1289,14 @@ DP.pages.governanceTask = (function () {
 
   return {
     html: '<div class="page-governance-task"></div>',
-    init: function () {
+    init: function (opts) {
+      opts = opts || {};
       currentPage = 1;
-      activePlanId = activePlanId || plans[0].id;
+      var targetPlan = opts.planId ? plans.find(function (plan) { return plan.id === opts.planId; }) : null;
+      activeStatus = targetPlan ? targetPlan.status : (opts.status || 'ongoing');
+      activePlanId = targetPlan
+        ? targetPlan.id
+        : (getPlansByStatus(activeStatus)[0] || plans[0]).id;
       resetFilters();
       var page = document.querySelector('.page-governance-task');
       if (!page) return;

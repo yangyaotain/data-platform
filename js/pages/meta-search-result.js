@@ -214,83 +214,108 @@ DP.pages.metaSearchResult = {
   html: `
     <div class="page-meta-search">
 
-      <!-- 返回按钮 -->
-      <div class="ms-header-slim">
-        <button class="btn btn-text ms-home-btn"><i class="bi bi-arrow-left"></i> 返回搜索首页</button>
-      </div>
-
       <!-- 主体区域：左目录 + 右内容 -->
       <div class="ms-body">
 
-        <!-- 左侧：资源目录 -->
+        <!-- 左侧：数据目录 -->
         <div class="ms-catalog">
           <div class="ms-catalog-tabs">
-            <a class="ms-ctab active">资源目录</a>
+            <a class="ms-ctab active">数据目录</a>
             <a class="ms-ctab">数据源目录</a>
           </div>
-          <!-- 资源目录树 -->
+          <!-- 数据目录树 -->
           <div class="ms-catalog-tree" id="msCatalogResource">
             <ul class="ms-tree">
               <li class="ms-tnode open">
                 <span class="ms-toggle"><i class="bi bi-chevron-down"></i></span>
-                <i class="bi bi-folder2-open ms-ticon"></i>
-                <span class="ms-ttext">全部资产 (156)</span>
+                <i class="bi bi-journals ms-ticon"></i>
+                <span class="ms-ttext">企业数据资产目录 (126)</span>
                 <ul class="ms-tchildren">
                   <li class="ms-tnode open">
                     <span class="ms-toggle"><i class="bi bi-chevron-down"></i></span>
                     <i class="bi bi-folder2-open ms-ticon"></i>
-                    <span class="ms-ttext">交易域 (42)</span>
+                    <span class="ms-ttext">物流履约域 (42)</span>
                     <ul class="ms-tchildren">
-                      <li class="ms-tnode active"><i class="bi bi-table ms-ticon-leaf"></i><span class="ms-ttext">订单数据 (18)</span></li>
-                      <li class="ms-tnode"><i class="bi bi-table ms-ticon-leaf"></i><span class="ms-ttext">支付数据 (12)</span></li>
-                      <li class="ms-tnode"><i class="bi bi-table ms-ticon-leaf"></i><span class="ms-ttext">退款数据 (8)</span></li>
-                      <li class="ms-tnode"><i class="bi bi-table ms-ticon-leaf"></i><span class="ms-ttext">结算数据 (4)</span></li>
+                      <li class="ms-tnode open">
+                        <span class="ms-toggle"><i class="bi bi-chevron-down"></i></span>
+                        <i class="bi bi-folder2-open ms-ticon"></i>
+                        <span class="ms-ttext">订单履约 (24)</span>
+                        <ul class="ms-tchildren">
+                          <li class="ms-tnode active"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">运单主题 (10)</span></li>
+                          <li class="ms-tnode"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">派送主题 (8)</span></li>
+                          <li class="ms-tnode"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">超时预警 (6)</span></li>
+                        </ul>
+                      </li>
+                      <li class="ms-tnode open">
+                        <span class="ms-toggle"><i class="bi bi-chevron-down"></i></span>
+                        <i class="bi bi-folder2-open ms-ticon"></i>
+                        <span class="ms-ttext">运力管理 (18)</span>
+                        <ul class="ms-tchildren">
+                          <li class="ms-tnode"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">司机主题 (7)</span></li>
+                          <li class="ms-tnode"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">车辆主题 (5)</span></li>
+                          <li class="ms-tnode"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">线路主题 (6)</span></li>
+                        </ul>
+                      </li>
                     </ul>
                   </li>
                   <li class="ms-tnode open">
                     <span class="ms-toggle"><i class="bi bi-chevron-down"></i></span>
                     <i class="bi bi-folder2-open ms-ticon"></i>
-                    <span class="ms-ttext">用户域 (35)</span>
+                    <span class="ms-ttext">客户服务域 (28)</span>
                     <ul class="ms-tchildren">
-                      <li class="ms-tnode"><i class="bi bi-table ms-ticon-leaf"></i><span class="ms-ttext">用户基础 (15)</span></li>
-                      <li class="ms-tnode"><i class="bi bi-table ms-ticon-leaf"></i><span class="ms-ttext">用户画像 (12)</span></li>
-                      <li class="ms-tnode"><i class="bi bi-table ms-ticon-leaf"></i><span class="ms-ttext">行为日志 (8)</span></li>
+                      <li class="ms-tnode open">
+                        <span class="ms-toggle"><i class="bi bi-chevron-down"></i></span>
+                        <i class="bi bi-folder2-open ms-ticon"></i>
+                        <span class="ms-ttext">客户画像 (15)</span>
+                        <ul class="ms-tchildren">
+                          <li class="ms-tnode"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">客户基础信息 (8)</span></li>
+                          <li class="ms-tnode"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">客户标签 (7)</span></li>
+                        </ul>
+                      </li>
+                      <li class="ms-tnode open">
+                        <span class="ms-toggle"><i class="bi bi-chevron-down"></i></span>
+                        <i class="bi bi-folder2-open ms-ticon"></i>
+                        <span class="ms-ttext">服务工单 (13)</span>
+                        <ul class="ms-tchildren">
+                          <li class="ms-tnode"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">投诉处理 (8)</span></li>
+                          <li class="ms-tnode"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">满意度回访 (5)</span></li>
+                        </ul>
+                      </li>
                     </ul>
                   </li>
                   <li class="ms-tnode open">
                     <span class="ms-toggle"><i class="bi bi-chevron-down"></i></span>
                     <i class="bi bi-folder2-open ms-ticon"></i>
-                    <span class="ms-ttext">商品域 (28)</span>
+                    <span class="ms-ttext">财务结算域 (31)</span>
                     <ul class="ms-tchildren">
-                      <li class="ms-tnode"><i class="bi bi-table ms-ticon-leaf"></i><span class="ms-ttext">商品信息 (16)</span></li>
-                      <li class="ms-tnode"><i class="bi bi-table ms-ticon-leaf"></i><span class="ms-ttext">库存管理 (12)</span></li>
+                      <li class="ms-tnode open">
+                        <span class="ms-toggle"><i class="bi bi-chevron-down"></i></span>
+                        <i class="bi bi-folder2-open ms-ticon"></i>
+                        <span class="ms-ttext">费用结算 (17)</span>
+                        <ul class="ms-tchildren">
+                          <li class="ms-tnode"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">运费结算 (10)</span></li>
+                          <li class="ms-tnode"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">发票开具 (7)</span></li>
+                        </ul>
+                      </li>
+                      <li class="ms-tnode open">
+                        <span class="ms-toggle"><i class="bi bi-chevron-down"></i></span>
+                        <i class="bi bi-folder2-open ms-ticon"></i>
+                        <span class="ms-ttext">财务风控 (14)</span>
+                        <ul class="ms-tchildren">
+                          <li class="ms-tnode"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">欠费预警 (8)</span></li>
+                          <li class="ms-tnode"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">异常退款 (6)</span></li>
+                        </ul>
+                      </li>
                     </ul>
                   </li>
                   <li class="ms-tnode open">
                     <span class="ms-toggle"><i class="bi bi-chevron-down"></i></span>
                     <i class="bi bi-folder2-open ms-ticon"></i>
-                    <span class="ms-ttext">物流域 (22)</span>
+                    <span class="ms-ttext">公共维度域 (25)</span>
                     <ul class="ms-tchildren">
-                      <li class="ms-tnode"><i class="bi bi-table ms-ticon-leaf"></i><span class="ms-ttext">配送数据 (14)</span></li>
-                      <li class="ms-tnode"><i class="bi bi-table ms-ticon-leaf"></i><span class="ms-ttext">仓储数据 (8)</span></li>
-                    </ul>
-                  </li>
-                  <li class="ms-tnode open">
-                    <span class="ms-toggle"><i class="bi bi-chevron-down"></i></span>
-                    <i class="bi bi-folder2-open ms-ticon"></i>
-                    <span class="ms-ttext">营销域 (18)</span>
-                    <ul class="ms-tchildren">
-                      <li class="ms-tnode"><i class="bi bi-table ms-ticon-leaf"></i><span class="ms-ttext">活动数据 (10)</span></li>
-                      <li class="ms-tnode"><i class="bi bi-table ms-ticon-leaf"></i><span class="ms-ttext">优惠券 (8)</span></li>
-                    </ul>
-                  </li>
-                  <li class="ms-tnode open">
-                    <span class="ms-toggle"><i class="bi bi-chevron-down"></i></span>
-                    <i class="bi bi-folder2-open ms-ticon"></i>
-                    <span class="ms-ttext">财务域 (11)</span>
-                    <ul class="ms-tchildren">
-                      <li class="ms-tnode"><i class="bi bi-table ms-ticon-leaf"></i><span class="ms-ttext">应收应付 (6)</span></li>
-                      <li class="ms-tnode"><i class="bi bi-table ms-ticon-leaf"></i><span class="ms-ttext">成本核算 (5)</span></li>
+                      <li class="ms-tnode"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">行政区划 (9)</span></li>
+                      <li class="ms-tnode"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">组织机构 (8)</span></li>
+                      <li class="ms-tnode"><i class="bi bi-bookmark ms-ticon-leaf"></i><span class="ms-ttext">时间周期 (8)</span></li>
                     </ul>
                   </li>
                 </ul>
@@ -343,33 +368,11 @@ DP.pages.metaSearchResult = {
               <li class="ms-tnode open">
                 <span class="ms-toggle"><i class="bi bi-chevron-down"></i></span>
                 <i class="bi bi-folder2-open ms-ticon"></i>
-                <span class="ms-ttext">外部数据接入 (2)</span>
-                <ul class="ms-tchildren">
-                  <li class="ms-tnode"><i class="bi bi-database ms-ticon-leaf"></i><span class="ms-ttext">api_weather_source</span></li>
-                  <li class="ms-tnode"><i class="bi bi-database ms-ticon-leaf"></i><span class="ms-ttext">api_map_service</span></li>
-                </ul>
-              </li>
-              <li class="ms-tnode">
-                <i class="bi bi-database ms-ticon-leaf" style="margin-left:0"></i>
-                <span class="ms-ttext">redis_cache_01</span>
-              </li>
-              <li class="ms-tnode open">
-                <span class="ms-toggle"><i class="bi bi-chevron-down"></i></span>
-                <i class="bi bi-folder2-open ms-ticon"></i>
                 <span class="ms-ttext">测试环境 (3)</span>
                 <ul class="ms-tchildren">
                   <li class="ms-tnode"><i class="bi bi-database ms-ticon-leaf"></i><span class="ms-ttext">test_mysql_db</span></li>
                   <li class="ms-tnode"><i class="bi bi-database ms-ticon-leaf"></i><span class="ms-ttext">test_clickhouse</span></li>
                   <li class="ms-tnode"><i class="bi bi-database ms-ticon-leaf"></i><span class="ms-ttext">test_mongodb</span></li>
-                </ul>
-              </li>
-              <li class="ms-tnode open">
-                <span class="ms-toggle"><i class="bi bi-chevron-down"></i></span>
-                <i class="bi bi-folder2-open ms-ticon"></i>
-                <span class="ms-ttext">文件存储 (2)</span>
-                <ul class="ms-tchildren">
-                  <li class="ms-tnode"><i class="bi bi-database ms-ticon-leaf"></i><span class="ms-ttext">hdfs_data_lake</span></li>
-                  <li class="ms-tnode"><i class="bi bi-database ms-ticon-leaf"></i><span class="ms-ttext">oss_archive</span></li>
                 </ul>
               </li>
             </ul>
@@ -409,11 +412,6 @@ DP.pages.metaSearchResult = {
                     <a class="ms-filter-tag" data-val="营销报表">营销报表</a>
                     <a class="ms-filter-tag" data-val="物流配送">物流配送</a>
                     <a class="ms-filter-tag" data-val="库存管理">库存管理</a>
-                    <a class="ms-filter-tag" data-val="财务结算">财务结算</a>
-                    <a class="ms-filter-tag" data-val="客服工单">客服工单</a>
-                    <a class="ms-filter-tag" data-val="风控数据">风控数据</a>
-                    <a class="ms-filter-tag" data-val="会员体系">会员体系</a>
-                    <a class="ms-filter-tag" data-val="渠道管理">渠道管理</a>
                   </div>
                   <a class="ms-filter-expand" data-target="filterAssetTags"><i class="bi bi-chevron-down"></i> 展开</a>
                 </div>
@@ -455,7 +453,7 @@ DP.pages.metaSearchResult = {
             <div class="ms-view-info">
               <span>共 <b>156</b> 张表</span>
               <span class="ms-view-sep">|</span>
-              <span>交易域 / 订单数据</span>
+              <span>资产卡片 / 订单数据</span>
             </div>
             <div class="ms-view-actions">
               <button class="btn btn-outline btn-sm ms-view-btn active" data-view="list"><i class="bi bi-list-ul"></i> 列表</button>
@@ -472,7 +470,7 @@ DP.pages.metaSearchResult = {
                   <th>别名</th>
                   <th>描述</th>
                   <th>数据源</th>
-                  <th>数仓分层</th>
+                  <th>资产卡片</th>
                   <th>数据标签</th>
                   <th>记录数</th>
                   <th>负责人</th>
@@ -486,7 +484,7 @@ DP.pages.metaSearchResult = {
                   <td><mark class="ms-hl">订单</mark>主表</td>
                   <td class="td-desc">核心<mark class="ms-hl">订单</mark>交易主表，记录所有订单基础信息</td>
                   <td>prod_mysql_master</td>
-                  <td><span class="tag tag-blue">ODS</span></td>
+                  <td><span class="tag tag-blue">订单数据</span></td>
                   <td><span class="tag tag-green">核心指标</span> <span class="tag tag-purple">已认证</span></td>
                   <td>1,438,920</td>
                   <td>张明</td>
@@ -498,7 +496,7 @@ DP.pages.metaSearchResult = {
                   <td><mark class="ms-hl">订单</mark>明细表</td>
                   <td class="td-desc"><mark class="ms-hl">订单</mark>商品明细，包含SKU、数量、金额</td>
                   <td>prod_mysql_master</td>
-                  <td><span class="tag tag-blue">ODS</span></td>
+                  <td><span class="tag tag-blue">订单数据</span></td>
                   <td><span class="tag tag-green">核心指标</span></td>
                   <td>3,892,105</td>
                   <td>张明</td>
@@ -510,7 +508,7 @@ DP.pages.metaSearchResult = {
                   <td><mark class="ms-hl">订单</mark>状态变更日志</td>
                   <td class="td-desc">记录<mark class="ms-hl">订单</mark>状态流转的完整日志</td>
                   <td>prod_mysql_master</td>
-                  <td><span class="tag tag-yellow">DWD</span></td>
+                  <td><span class="tag tag-blue">订单数据</span></td>
                   <td><span class="tag tag-blue">事实表</span> <span class="tag tag-yellow">增量同步</span></td>
                   <td>5,620,340</td>
                   <td>李婷</td>
@@ -522,7 +520,7 @@ DP.pages.metaSearchResult = {
                   <td><mark class="ms-hl">订单</mark>事实宽表</td>
                   <td class="td-desc">关联用户、商品、支付的<mark class="ms-hl">订单</mark>宽表</td>
                   <td>dw_hive_dwd</td>
-                  <td><span class="tag tag-yellow">DWD</span></td>
+                  <td><span class="tag tag-blue">订单数据</span></td>
                   <td><span class="tag tag-blue">事实表</span> <span class="tag tag-purple">已认证</span></td>
                   <td>1,438,920</td>
                   <td>王强</td>
@@ -534,7 +532,7 @@ DP.pages.metaSearchResult = {
                   <td><mark class="ms-hl">订单</mark>日汇总表</td>
                   <td class="td-desc">按天汇总<mark class="ms-hl">订单</mark>数、GMV、客单价等指标</td>
                   <td>dw_hive_dws</td>
-                  <td><span class="tag tag-green">DWS</span></td>
+                  <td><span class="tag tag-blue">订单数据</span></td>
                   <td><span class="tag tag-green">核心指标</span> <span class="tag tag-blue">聚合表</span></td>
                   <td>12,580</td>
                   <td>王强</td>
@@ -546,7 +544,7 @@ DP.pages.metaSearchResult = {
                   <td><mark class="ms-hl">订单</mark>概览报表</td>
                   <td class="td-desc">面向管理层的<mark class="ms-hl">订单</mark>业务全局报表</td>
                   <td>dw_hive_ads</td>
-                  <td><span class="tag tag-purple">ADS</span></td>
+                  <td><span class="tag tag-purple">营销报表</span></td>
                   <td><span class="tag tag-green">核心指标</span></td>
                   <td>365</td>
                   <td>赵丽</td>
@@ -558,7 +556,7 @@ DP.pages.metaSearchResult = {
                   <td><mark class="ms-hl">订单</mark>退款记录</td>
                   <td class="td-desc">退款申请、审核结果、退款金额明细</td>
                   <td>prod_mysql_master</td>
-                  <td><span class="tag tag-blue">ODS</span></td>
+                  <td><span class="tag tag-blue">支付数据</span></td>
                   <td><span class="tag tag-red">敏感数据</span></td>
                   <td>89,450</td>
                   <td>李婷</td>
@@ -570,7 +568,7 @@ DP.pages.metaSearchResult = {
                   <td>收货地址表</td>
                   <td class="td-desc">用户<mark class="ms-hl">订单</mark>关联的收货地址信息</td>
                   <td>prod_mysql_master</td>
-                  <td><span class="tag tag-blue">ODS</span></td>
+                  <td><span class="tag tag-yellow">用户基础</span></td>
                   <td><span class="tag tag-red">敏感数据</span> <span class="tag tag-yellow">脱敏字段</span></td>
                   <td>528,630</td>
                   <td>张明</td>
@@ -582,7 +580,7 @@ DP.pages.metaSearchResult = {
                   <td><mark class="ms-hl">订单</mark>支付记录</td>
                   <td class="td-desc">支付流水、支付渠道、支付状态记录</td>
                   <td>prod_mysql_master</td>
-                  <td><span class="tag tag-blue">ODS</span></td>
+                  <td><span class="tag tag-blue">支付数据</span></td>
                   <td><span class="tag tag-red">敏感数据</span> <span class="tag tag-purple">已认证</span></td>
                   <td>1,205,680</td>
                   <td>李婷</td>
@@ -594,7 +592,7 @@ DP.pages.metaSearchResult = {
                   <td><mark class="ms-hl">订单</mark>优惠券关联</td>
                   <td class="td-desc"><mark class="ms-hl">订单</mark>使用的优惠券、满减规则关联</td>
                   <td>prod_mysql_master</td>
-                  <td><span class="tag tag-blue">ODS</span></td>
+                  <td><span class="tag tag-purple">营销报表</span></td>
                   <td><span class="tag tag-blue">维度表</span></td>
                   <td>762,340</td>
                   <td>赵丽</td>
@@ -888,6 +886,705 @@ DP.pages.metaSearchResult = {
       return String(text || '').replace(/\s+/g, ' ').trim();
     }
 
+    const _tagColorPalette = ['blue', 'green', 'teal', 'purple', 'orange', 'red'];
+    let _tagOptions = [
+      { name: '核心指标', color: 'green' },
+      { name: '已认证', color: 'purple' },
+      { name: '事实表', color: 'blue' },
+      { name: '增量同步', color: 'orange' },
+      { name: '聚合表', color: 'blue' },
+      { name: '敏感数据', color: 'red' },
+      { name: '脱敏字段', color: 'orange' },
+      { name: '维度表', color: 'blue' }
+    ];
+    let _activeTagCell = null;
+    let _tagPopover = null;
+    let _assetCardOptions = [
+      { name: '订单数据', color: 'blue' },
+      { name: '支付数据', color: 'teal' },
+      { name: '用户基础', color: 'orange' },
+      { name: '用户画像', color: 'purple' },
+      { name: '商品信息', color: 'green' },
+      { name: '营销报表', color: 'purple' },
+      { name: '物流配送', color: 'teal' },
+      { name: '库存管理', color: 'green' }
+    ];
+    let _activeAssetCell = null;
+    let _assetPopover = null;
+
+    function _escapeHTML(value) {
+      return String(value || '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[ch]));
+    }
+
+    function _tagColorFromClass(el) {
+      if (!el) return 'blue';
+      const classText = Array.from(el.classList || []).join(' ');
+      if (classText.includes('tag-green') || classText.includes('ms-tag-green')) return 'green';
+      if (classText.includes('tag-purple') || classText.includes('ms-tag-purple')) return 'purple';
+      if (classText.includes('tag-red') || classText.includes('ms-tag-red')) return 'red';
+      if (classText.includes('tag-yellow') || classText.includes('ms-tag-orange')) return 'orange';
+      if (classText.includes('ms-tag-teal')) return 'teal';
+      return 'blue';
+    }
+
+    function _tagOption(name, fallbackColor) {
+      const tagName = _cleanText(name);
+      if (!tagName) return null;
+      let option = _tagOptions.find(item => item.name === tagName);
+      if (!option) {
+        option = { name: tagName, color: fallbackColor || 'blue' };
+        _tagOptions.push(option);
+      } else if (fallbackColor && !option.color) {
+        option.color = fallbackColor;
+      }
+      return option;
+    }
+
+    function _readTagState(cell) {
+      if (!cell) return [];
+      if (cell.dataset.msTags) {
+        try {
+          return JSON.parse(cell.dataset.msTags).filter(item => item && item.name);
+        } catch (err) {
+          cell.removeAttribute('data-ms-tags');
+        }
+      }
+      const tags = Array.from(cell.querySelectorAll('.tag, .ms-row-tag'))
+        .map(tag => {
+          const name = _cleanText(tag.dataset.msTag || tag.textContent.replace(/[×x]$/, ''));
+          const option = _tagOption(name, _tagColorFromClass(tag));
+          return option ? { name: option.name, color: option.color } : null;
+        })
+        .filter(Boolean);
+      const unique = [];
+      tags.forEach(tag => {
+        if (!unique.some(item => item.name === tag.name)) unique.push(tag);
+      });
+      return unique;
+    }
+
+    function _saveTagState(cell, tags) {
+      if (!cell) return;
+      const unique = [];
+      (tags || []).forEach(tag => {
+        const option = _tagOption(tag.name, tag.color);
+        if (option && !unique.some(item => item.name === option.name)) {
+          unique.push({ name: option.name, color: option.color });
+        }
+      });
+      cell.dataset.msTags = JSON.stringify(unique);
+    }
+
+    function _renderTagCell(cell, tags) {
+      if (!cell) return;
+      _saveTagState(cell, tags);
+      const state = _readTagState(cell);
+      cell.classList.add('ms-tag-table-cell');
+      cell.innerHTML = `
+        <div class="ms-tag-editor-cell" data-ms-tag-cell>
+          <div class="ms-row-tag-list">
+            ${state.map(tag => `
+              <span class="ms-row-tag ms-tag-${tag.color}" data-ms-tag="${_escapeHTML(tag.name)}" title="${_escapeHTML(tag.name)}">
+                <span class="ms-row-tag-text">${_escapeHTML(tag.name)}</span>
+                <button type="button" class="ms-row-tag-remove" data-ms-tag-action="remove" title="删除标签">
+                  <i class="bi bi-x"></i>
+                </button>
+              </span>
+            `).join('')}
+            <button type="button" class="ms-tag-add" data-ms-tag-action="open" title="添加标签">
+              <i class="bi bi-plus"></i>
+            </button>
+          </div>
+        </div>`;
+    }
+
+    function _enhanceTagCells() {
+      document.querySelectorAll('#msListView table').forEach(table => {
+        const headers = Array.from(table.querySelectorAll('thead th')).map(th => _cleanText(th.textContent));
+        const tagIndex = headers.findIndex(text => text === '数据标签');
+        if (tagIndex < 0) return;
+        table.querySelectorAll('tbody tr').forEach(row => {
+          const cell = row.querySelectorAll('td')[tagIndex];
+          if (!cell || cell.querySelector('[data-ms-tag-cell]')) return;
+          _renderTagCell(cell, _readTagState(cell));
+        });
+      });
+    }
+
+    function _positionTagPopover(anchor) {
+      if (!_tagPopover || !anchor || !anchor.isConnected) return;
+      const rect = anchor.getBoundingClientRect();
+      const width = 342;
+      const gap = 8;
+      let left = rect.left;
+      let top = rect.bottom + gap;
+      left = Math.max(12, Math.min(left, window.innerWidth - width - 12));
+      if (top + 360 > window.innerHeight) {
+        top = Math.max(12, rect.top - 360 - gap);
+      }
+      _tagPopover.style.left = `${left}px`;
+      _tagPopover.style.top = `${top}px`;
+    }
+
+    function _ensureTagPopover() {
+      if (_tagPopover) return _tagPopover;
+      _tagPopover = document.createElement('div');
+      _tagPopover.className = 'ms-tag-popover';
+      document.body.appendChild(_tagPopover);
+      return _tagPopover;
+    }
+
+    function _closeTagPopover() {
+      if (!_tagPopover) return;
+      _tagPopover.remove();
+      _tagPopover = null;
+      _activeTagCell = null;
+    }
+
+    function _showTagToast(text) {
+      const oldToast = document.querySelector('.ms-tag-toast');
+      if (oldToast) oldToast.remove();
+      const toast = document.createElement('div');
+      toast.className = 'ms-tag-toast';
+      toast.textContent = text;
+      document.body.appendChild(toast);
+      window.setTimeout(() => toast.classList.add('show'), 20);
+      window.setTimeout(() => {
+        toast.classList.remove('show');
+        window.setTimeout(() => toast.remove(), 180);
+      }, 1600);
+    }
+
+    function _addTagToCell(cell, option) {
+      if (!cell || !option) return;
+      const tags = _readTagState(cell);
+      if (!tags.some(tag => tag.name === option.name)) {
+        tags.push({ name: option.name, color: option.color });
+        _renderTagCell(cell, tags);
+      }
+    }
+
+    function _removeTagFromCell(cell, tagName) {
+      if (!cell || !tagName) return;
+      const nextTags = _readTagState(cell).filter(tag => tag.name !== tagName);
+      _renderTagCell(cell, nextTags);
+      _showTagToast('已删除标签');
+    }
+
+    function _renderTagPicker(anchor, keyword) {
+      if (!_activeTagCell) return;
+      const popover = _ensureTagPopover();
+      const searchText = _cleanText(keyword);
+      const selected = new Set(_readTagState(_activeTagCell).map(tag => tag.name));
+      const list = _tagOptions.filter(tag => !searchText || tag.name.toLowerCase().includes(searchText.toLowerCase()));
+      popover.innerHTML = `
+        <div class="ms-tag-picker" data-ms-tag-popover>
+          <div class="ms-tag-picker-search">
+            <div class="ms-tag-search-box">
+              <i class="bi bi-search"></i>
+              <input type="text" class="ms-tag-search-input" placeholder="搜索标签" value="${_escapeHTML(searchText)}">
+            </div>
+            <button type="button" class="ms-tag-popover-add" data-ms-pop-action="create" title="新建标签">
+              <i class="bi bi-plus-circle"></i>
+            </button>
+          </div>
+          <div class="ms-tag-option-list">
+            ${list.map(tag => `
+              <div class="ms-tag-option ${selected.has(tag.name) ? 'selected' : ''}" data-ms-tag-name="${_escapeHTML(tag.name)}">
+                <button type="button" class="ms-tag-option-main" data-ms-pop-action="toggle" title="${selected.has(tag.name) ? '已添加' : '添加标签'}">
+                  <span class="ms-tag-dot ms-tag-dot-${tag.color}"></span>
+                  <span class="ms-tag-option-name">${_escapeHTML(tag.name)}</span>
+                  <i class="bi bi-check ms-tag-option-check"></i>
+                </button>
+                <button type="button" class="ms-tag-option-edit" data-ms-pop-action="edit" title="编辑标签">
+                  <i class="bi bi-pencil"></i>
+                </button>
+              </div>
+            `).join('') || '<div class="ms-tag-empty">没有匹配标签，可新建标签</div>'}
+          </div>
+        </div>`;
+      _positionTagPopover(anchor);
+      const input = popover.querySelector('.ms-tag-search-input');
+      if (input) {
+        input.focus();
+        const len = input.value.length;
+        input.setSelectionRange(len, len);
+      }
+      popover.onclick = (event) => {
+        event.stopPropagation();
+        const actionEl = event.target.closest('[data-ms-pop-action]');
+        if (!actionEl) return;
+        const action = actionEl.dataset.msPopAction;
+        const optionName = actionEl.closest('.ms-tag-option')?.dataset.msTagName;
+        const option = _tagOptions.find(tag => tag.name === optionName);
+        if (action === 'create') {
+          _renderTagEditor(anchor);
+          return;
+        }
+        if (action === 'edit' && option) {
+          _renderTagEditor(anchor, option.name);
+          return;
+        }
+        if (action === 'toggle' && option) {
+          const selectedTags = _readTagState(_activeTagCell);
+          if (selectedTags.some(tag => tag.name === option.name)) {
+            _renderTagCell(_activeTagCell, selectedTags.filter(tag => tag.name !== option.name));
+            _showTagToast('已移除标签');
+          } else {
+            _addTagToCell(_activeTagCell, option);
+            _showTagToast('已添加标签');
+          }
+          _renderTagPicker(anchor, searchText);
+        }
+      };
+      popover.oninput = (event) => {
+        if (event.target.matches('.ms-tag-search-input')) {
+          _renderTagPicker(anchor, event.target.value);
+        }
+      };
+    }
+
+    function _renderTagEditor(anchor, tagName) {
+      if (!_activeTagCell) return;
+      const option = tagName ? _tagOptions.find(tag => tag.name === tagName) : null;
+      const isCreate = !option;
+      let selectedColor = option?.color || 'blue';
+      const popover = _ensureTagPopover();
+      popover.innerHTML = `
+        <div class="ms-tag-editor-panel" data-ms-tag-popover>
+          <div class="ms-tag-editor-head">
+            <button type="button" class="ms-tag-icon-btn" data-ms-pop-action="back" title="返回">
+              <i class="bi bi-chevron-left"></i>
+            </button>
+            <strong>${isCreate ? '新建标签' : '编辑标签'}</strong>
+            <button type="button" class="ms-tag-icon-btn" data-ms-pop-action="close" title="关闭">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <div class="ms-tag-editor-body">
+            <input type="text" class="ms-tag-name-input" placeholder="标签名称" value="${_escapeHTML(option?.name || '')}">
+            <div class="ms-tag-color-row">
+              ${_tagColorPalette.map(color => `
+                <button type="button" class="ms-tag-color ms-tag-dot-${color} ${color === selectedColor ? 'active' : ''}" data-ms-color="${color}" title="选择颜色">
+                  <i class="bi bi-check"></i>
+                </button>
+              `).join('')}
+            </div>
+            <div class="ms-tag-editor-actions">
+              ${isCreate ? '' : '<button type="button" class="btn btn-outline btn-sm ms-tag-delete-btn" data-ms-pop-action="delete"><i class="bi bi-trash"></i>删除</button>'}
+              <button type="button" class="btn btn-primary btn-sm ms-tag-save-btn" data-ms-pop-action="save" ${isCreate ? 'disabled' : ''}>
+                <i class="bi bi-check2"></i>${isCreate ? '创建' : '完成'}
+              </button>
+            </div>
+          </div>
+        </div>`;
+      _positionTagPopover(anchor);
+      const input = popover.querySelector('.ms-tag-name-input');
+      const saveBtn = popover.querySelector('.ms-tag-save-btn');
+      const refreshSaveState = () => {
+        if (saveBtn) saveBtn.disabled = !_cleanText(input?.value);
+      };
+      popover.querySelectorAll('.ms-tag-color').forEach(btn => {
+        btn.addEventListener('click', event => {
+          event.stopPropagation();
+          selectedColor = btn.dataset.msColor;
+          popover.querySelectorAll('.ms-tag-color').forEach(item => item.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+      if (input) {
+        input.focus();
+        input.addEventListener('input', refreshSaveState);
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+      popover.onclick = (event) => {
+        event.stopPropagation();
+        const action = event.target.closest('[data-ms-pop-action]')?.dataset.msPopAction;
+        if (!action) return;
+        const currentName = _cleanText(input?.value);
+        if (action === 'back') {
+          _renderTagPicker(anchor, '');
+          return;
+        }
+        if (action === 'close') {
+          _closeTagPopover();
+          return;
+        }
+        if (action === 'delete' && option) {
+          _tagOptions = _tagOptions.filter(tag => tag.name !== option.name);
+          document.querySelectorAll('#msListView .ms-tag-table-cell').forEach(cell => {
+            _renderTagCell(cell, _readTagState(cell).filter(tag => tag.name !== option.name));
+          });
+          _showTagToast('已删除标签');
+          _renderTagPicker(anchor, '');
+          return;
+        }
+        if (action === 'save' && currentName) {
+          const existing = _tagOptions.find(tag => tag.name === currentName);
+          if (isCreate) {
+            const created = existing || { name: currentName, color: selectedColor };
+            if (!existing) _tagOptions.push(created);
+            _addTagToCell(_activeTagCell, created);
+            _showTagToast('已创建并添加标签');
+            _renderTagPicker(anchor, '');
+          } else if (option) {
+            const oldName = option.name;
+            let targetOption = option;
+            if (existing && existing !== option) {
+              existing.color = selectedColor;
+              _tagOptions = _tagOptions.filter(tag => tag !== option);
+              targetOption = existing;
+            } else {
+              option.name = currentName;
+              option.color = selectedColor;
+            }
+            document.querySelectorAll('#msListView .ms-tag-table-cell').forEach(cell => {
+              const nextTags = _readTagState(cell).map(tag => tag.name === oldName ? { name: targetOption.name, color: targetOption.color } : tag);
+              _renderTagCell(cell, nextTags);
+            });
+            _showTagToast('已更新标签');
+            _renderTagPicker(anchor, targetOption.name);
+          }
+        }
+      };
+      refreshSaveState();
+    }
+
+    function _openTagPicker(cell, anchor) {
+      _closeAssetPopover();
+      _activeTagCell = cell;
+      _renderTagPicker(anchor, '');
+    }
+
+    function _bindTagInteractions() {
+      if (!_msListView || _msListView.dataset.msTagBound) return;
+      _msListView.dataset.msTagBound = 'true';
+      _msListView.addEventListener('click', event => {
+        const actionEl = event.target.closest('[data-ms-tag-action]');
+        if (!actionEl) return;
+        const cell = actionEl.closest('td');
+        if (!cell) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (actionEl.dataset.msTagAction === 'remove') {
+          const tagName = actionEl.closest('.ms-row-tag')?.dataset.msTag;
+          _removeTagFromCell(cell, tagName);
+          return;
+        }
+        _openTagPicker(cell, actionEl);
+      });
+      _msListView.addEventListener('click', event => {
+        const tag = event.target.closest('.ms-row-tag');
+        if (!tag || event.target.closest('.ms-row-tag-remove')) return;
+        const cell = tag.closest('td');
+        if (!cell) return;
+        event.preventDefault();
+        event.stopPropagation();
+        _openTagPicker(cell, tag);
+      });
+      document.addEventListener('click', event => {
+        if (!_tagPopover) return;
+        if (_tagPopover.contains(event.target) || event.target.closest('[data-ms-tag-action], .ms-row-tag')) return;
+        _closeTagPopover();
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') _closeTagPopover();
+      });
+    }
+
+    function _assetCardOption(name, fallbackColor) {
+      const cardName = _cleanText(name);
+      if (!cardName) return null;
+      let option = _assetCardOptions.find(item => item.name === cardName);
+      if (!option) {
+        option = { name: cardName, color: fallbackColor || 'blue' };
+        _assetCardOptions.push(option);
+      } else if (fallbackColor && !option.color) {
+        option.color = fallbackColor;
+      }
+      return option;
+    }
+
+    function _readAssetCardState(cell) {
+      if (!cell) return null;
+      if (cell.dataset.msAssetCard) {
+        try {
+          const state = JSON.parse(cell.dataset.msAssetCard);
+          return _assetCardOption(state.name, state.color);
+        } catch (err) {
+          cell.removeAttribute('data-ms-asset-card');
+        }
+      }
+      const source = cell.querySelector('.ms-asset-card-pill, .tag') || cell;
+      return _assetCardOption(source.dataset.msAssetCard || source.textContent, _tagColorFromClass(source));
+    }
+
+    function _renderAssetCardCell(cell, option) {
+      if (!cell || !option) return;
+      const current = _assetCardOption(option.name, option.color);
+      cell.dataset.msAssetCard = JSON.stringify(current);
+      cell.classList.add('ms-asset-table-cell');
+      cell.innerHTML = `
+        <button type="button" class="ms-asset-card-pill ms-tag-${current.color}" data-ms-asset-action="open" data-ms-asset-card="${_escapeHTML(current.name)}" title="切换资产卡片">
+          <i class="bi bi-collection"></i>
+          <span>${_escapeHTML(current.name)}</span>
+          <i class="bi bi-chevron-down"></i>
+        </button>`;
+    }
+
+    function _enhanceAssetCardCells() {
+      document.querySelectorAll('#msListView table').forEach(table => {
+        const headers = Array.from(table.querySelectorAll('thead th')).map(th => _cleanText(th.textContent));
+        const assetIndex = headers.findIndex(text => text === '资产卡片');
+        if (assetIndex < 0) return;
+        table.querySelectorAll('tbody tr').forEach(row => {
+          const cell = row.querySelectorAll('td')[assetIndex];
+          if (!cell || cell.querySelector('[data-ms-asset-action]')) return;
+          _renderAssetCardCell(cell, _readAssetCardState(cell));
+        });
+      });
+    }
+
+    function _positionAssetPopover(anchor) {
+      if (!_assetPopover || !anchor || !anchor.isConnected) return;
+      const rect = anchor.getBoundingClientRect();
+      const width = 342;
+      const gap = 8;
+      let left = rect.left;
+      let top = rect.bottom + gap;
+      left = Math.max(12, Math.min(left, window.innerWidth - width - 12));
+      if (top + 360 > window.innerHeight) {
+        top = Math.max(12, rect.top - 360 - gap);
+      }
+      _assetPopover.style.left = `${left}px`;
+      _assetPopover.style.top = `${top}px`;
+    }
+
+    function _ensureAssetPopover() {
+      if (_assetPopover) return _assetPopover;
+      _assetPopover = document.createElement('div');
+      _assetPopover.className = 'ms-tag-popover ms-asset-popover';
+      document.body.appendChild(_assetPopover);
+      return _assetPopover;
+    }
+
+    function _closeAssetPopover() {
+      if (!_assetPopover) return;
+      _assetPopover.remove();
+      _assetPopover = null;
+      _activeAssetCell = null;
+    }
+
+    function _renderAssetCardPicker(anchor, keyword) {
+      if (!_activeAssetCell) return;
+      const popover = _ensureAssetPopover();
+      const searchText = _cleanText(keyword);
+      const selectedName = _readAssetCardState(_activeAssetCell)?.name;
+      const list = _assetCardOptions.filter(card => !searchText || card.name.toLowerCase().includes(searchText.toLowerCase()));
+      popover.innerHTML = `
+        <div class="ms-tag-picker ms-asset-picker" data-ms-asset-popover>
+          <div class="ms-tag-picker-search">
+            <div class="ms-tag-search-box">
+              <i class="bi bi-search"></i>
+              <input type="text" class="ms-tag-search-input ms-asset-search-input" placeholder="搜索资产卡片" value="${_escapeHTML(searchText)}">
+            </div>
+            <button type="button" class="ms-tag-popover-add" data-ms-asset-pop-action="create" title="新建资产卡片">
+              <i class="bi bi-plus-circle"></i>
+            </button>
+          </div>
+          <div class="ms-tag-option-list">
+            ${list.map(card => `
+              <div class="ms-tag-option ${selectedName === card.name ? 'selected' : ''}" data-ms-asset-name="${_escapeHTML(card.name)}">
+                <button type="button" class="ms-tag-option-main" data-ms-asset-pop-action="select" title="选择资产卡片">
+                  <span class="ms-tag-dot ms-tag-dot-${card.color}"></span>
+                  <span class="ms-tag-option-name">${_escapeHTML(card.name)}</span>
+                  <i class="bi bi-check ms-tag-option-check"></i>
+                </button>
+                <button type="button" class="ms-tag-option-edit" data-ms-asset-pop-action="edit" title="编辑资产卡片">
+                  <i class="bi bi-pencil"></i>
+                </button>
+              </div>
+            `).join('') || '<div class="ms-tag-empty">没有匹配资产卡片，可新建资产卡片</div>'}
+          </div>
+        </div>`;
+      _positionAssetPopover(anchor);
+      const input = popover.querySelector('.ms-asset-search-input');
+      if (input) {
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+      popover.onclick = (event) => {
+        event.stopPropagation();
+        const actionEl = event.target.closest('[data-ms-asset-pop-action]');
+        if (!actionEl) return;
+        const action = actionEl.dataset.msAssetPopAction;
+        const optionName = actionEl.closest('.ms-tag-option')?.dataset.msAssetName;
+        const option = _assetCardOptions.find(card => card.name === optionName);
+        if (action === 'create') {
+          _renderAssetCardEditor(anchor);
+          return;
+        }
+        if (action === 'edit' && option) {
+          _renderAssetCardEditor(anchor, option.name);
+          return;
+        }
+        if (action === 'select' && option) {
+          _renderAssetCardCell(_activeAssetCell, option);
+          _showTagToast('已切换资产卡片');
+          _closeAssetPopover();
+        }
+      };
+      popover.oninput = (event) => {
+        if (event.target.matches('.ms-asset-search-input')) {
+          _renderAssetCardPicker(anchor, event.target.value);
+        }
+      };
+    }
+
+    function _renderAssetCardEditor(anchor, cardName) {
+      if (!_activeAssetCell) return;
+      const option = cardName ? _assetCardOptions.find(card => card.name === cardName) : null;
+      const isCreate = !option;
+      let selectedColor = option?.color || 'blue';
+      const popover = _ensureAssetPopover();
+      popover.innerHTML = `
+        <div class="ms-tag-editor-panel ms-asset-editor-panel" data-ms-asset-popover>
+          <div class="ms-tag-editor-head">
+            <button type="button" class="ms-tag-icon-btn" data-ms-asset-pop-action="back" title="返回">
+              <i class="bi bi-chevron-left"></i>
+            </button>
+            <strong>${isCreate ? '新建资产卡片' : '编辑资产卡片'}</strong>
+            <button type="button" class="ms-tag-icon-btn" data-ms-asset-pop-action="close" title="关闭">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <div class="ms-tag-editor-body">
+            <input type="text" class="ms-tag-name-input ms-asset-name-input" placeholder="资产卡片名称" value="${_escapeHTML(option?.name || '')}">
+            <div class="ms-tag-color-row">
+              ${_tagColorPalette.map(color => `
+                <button type="button" class="ms-tag-color ms-tag-dot-${color} ${color === selectedColor ? 'active' : ''}" data-ms-color="${color}" title="选择颜色">
+                  <i class="bi bi-check"></i>
+                </button>
+              `).join('')}
+            </div>
+            <div class="ms-tag-editor-actions">
+              ${isCreate ? '' : '<button type="button" class="btn btn-outline btn-sm ms-tag-delete-btn" data-ms-asset-pop-action="delete"><i class="bi bi-trash"></i>删除</button>'}
+              <button type="button" class="btn btn-primary btn-sm ms-tag-save-btn" data-ms-asset-pop-action="save" ${isCreate ? 'disabled' : ''}>
+                <i class="bi bi-check2"></i>${isCreate ? '创建' : '完成'}
+              </button>
+            </div>
+          </div>
+        </div>`;
+      _positionAssetPopover(anchor);
+      const input = popover.querySelector('.ms-asset-name-input');
+      const saveBtn = popover.querySelector('.ms-tag-save-btn');
+      const refreshSaveState = () => {
+        if (saveBtn) saveBtn.disabled = !_cleanText(input?.value);
+      };
+      popover.querySelectorAll('.ms-tag-color').forEach(btn => {
+        btn.addEventListener('click', event => {
+          event.stopPropagation();
+          selectedColor = btn.dataset.msColor;
+          popover.querySelectorAll('.ms-tag-color').forEach(item => item.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+      if (input) {
+        input.focus();
+        input.addEventListener('input', refreshSaveState);
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+      popover.onclick = (event) => {
+        event.stopPropagation();
+        const action = event.target.closest('[data-ms-asset-pop-action]')?.dataset.msAssetPopAction;
+        if (!action) return;
+        const currentName = _cleanText(input?.value);
+        if (action === 'back') {
+          _renderAssetCardPicker(anchor, '');
+          return;
+        }
+        if (action === 'close') {
+          _closeAssetPopover();
+          return;
+        }
+        if (action === 'delete' && option) {
+          _assetCardOptions = _assetCardOptions.filter(card => card.name !== option.name);
+          const fallback = _assetCardOptions[0] || { name: '订单数据', color: 'blue' };
+          document.querySelectorAll('#msListView .ms-asset-table-cell').forEach(cell => {
+            const current = _readAssetCardState(cell);
+            if (current?.name === option.name) _renderAssetCardCell(cell, fallback);
+          });
+          _showTagToast('已删除资产卡片');
+          _closeAssetPopover();
+          return;
+        }
+        if (action === 'save' && currentName) {
+          const existing = _assetCardOptions.find(card => card.name === currentName);
+          if (isCreate) {
+            const created = existing || { name: currentName, color: selectedColor };
+            if (!existing) _assetCardOptions.push(created);
+            _renderAssetCardCell(_activeAssetCell, created);
+            _showTagToast('已创建并切换资产卡片');
+            _closeAssetPopover();
+          } else if (option) {
+            const oldName = option.name;
+            let targetOption = option;
+            if (existing && existing !== option) {
+              existing.color = selectedColor;
+              _assetCardOptions = _assetCardOptions.filter(card => card !== option);
+              targetOption = existing;
+            } else {
+              option.name = currentName;
+              option.color = selectedColor;
+            }
+            document.querySelectorAll('#msListView .ms-asset-table-cell').forEach(cell => {
+              const current = _readAssetCardState(cell);
+              if (current?.name === oldName || current?.name === targetOption.name) {
+                _renderAssetCardCell(cell, targetOption);
+              }
+            });
+            _showTagToast('已更新资产卡片');
+            _closeAssetPopover();
+          }
+        }
+      };
+      refreshSaveState();
+    }
+
+    function _openAssetCardPicker(cell, anchor) {
+      _closeTagPopover();
+      _activeAssetCell = cell;
+      _renderAssetCardPicker(anchor, '');
+    }
+
+    function _bindAssetCardInteractions() {
+      if (!_msListView || _msListView.dataset.msAssetBound) return;
+      _msListView.dataset.msAssetBound = 'true';
+      _msListView.addEventListener('click', event => {
+        const actionEl = event.target.closest('[data-ms-asset-action]');
+        if (!actionEl) return;
+        const cell = actionEl.closest('td');
+        if (!cell) return;
+        event.preventDefault();
+        event.stopPropagation();
+        _openAssetCardPicker(cell, actionEl);
+      });
+      document.addEventListener('click', event => {
+        if (!_assetPopover) return;
+        if (_assetPopover.contains(event.target) || event.target.closest('[data-ms-asset-action]')) return;
+        _closeAssetPopover();
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') _closeAssetPopover();
+      });
+    }
+
     function _detailItemFromRow(row) {
       const tds = row.querySelectorAll('td');
       const isCard = row.classList.contains('ms-asset-card');
@@ -931,6 +1628,8 @@ DP.pages.metaSearchResult = {
     function _applySearchContent(type) {
       _searchType = type;
       if (!_msListView || !_msCardView) return;
+      _closeTagPopover();
+      _closeAssetPopover();
       if (type === 'field-search') {
         _msListView.innerHTML = _fieldSearchListHTML;
         _msCardView.innerHTML = _fieldSearchCardHTML;
@@ -962,13 +1661,16 @@ DP.pages.metaSearchResult = {
       document.querySelectorAll('.ms-view-btn').forEach(b => b.classList.remove('active'));
       document.querySelector('.ms-view-btn[data-view="list"]')?.classList.add('active');
       _normalizeActionCells();
+      _enhanceAssetCardCells();
+      _enhanceTagCells();
       _bindRowClicks();
     }
 
     // ==== 绑定结果行/卡片点击 → 进入详情 ====
     function _bindRowClicks() {
       document.querySelectorAll('#msListView .ms-row-clickable, #msCardView .ms-row-clickable').forEach(row => {
-        row.addEventListener('click', () => {
+        row.addEventListener('click', (event) => {
+          if (row.closest('#msListView') && !event.target.closest('.td-link, .td-actions .bi-eye')) return;
           const list = document.getElementById('msListView');
           const card = document.getElementById('msCardView');
           const detail = document.getElementById('msDetailPanel');
@@ -1016,14 +1718,6 @@ DP.pages.metaSearchResult = {
             if (metaContent) metaContent.classList.add('active');
           }
         });
-      });
-    }
-
-    // 返回搜索首页
-    const homeBtn = document.querySelector('.ms-home-btn');
-    if (homeBtn) {
-      homeBtn.addEventListener('click', () => {
-        DP.showPage('元数据搜索');
       });
     }
 
@@ -1123,7 +1817,7 @@ DP.pages.metaSearchResult = {
       });
     });
 
-    // 目录 tab 切换（资源目录 / 数据源目录）
+    // 目录 tab 切换（数据目录 / 数据源目录）
     document.querySelectorAll('.ms-ctab').forEach((tab, idx) => {
       tab.addEventListener('click', () => {
         document.querySelectorAll('.ms-ctab').forEach(t => t.classList.remove('active'));
@@ -1150,7 +1844,10 @@ DP.pages.metaSearchResult = {
       document.querySelectorAll('.ms-tree .ms-toggle').forEach(toggle => {
         toggle.addEventListener('click', (e) => {
           e.stopPropagation();
-          toggle.closest('.ms-tnode')?.classList.toggle('open');
+          const node = toggle.closest('.ms-tnode');
+          node?.classList.toggle('open');
+          const icon = toggle.querySelector('i');
+          if (icon && node) icon.className = node.classList.contains('open') ? 'bi bi-chevron-down' : 'bi bi-chevron-right';
         });
       });
       document.querySelectorAll('.ms-tree .ms-tnode').forEach(node => {
@@ -1174,6 +1871,8 @@ DP.pages.metaSearchResult = {
         const card = document.getElementById('msCardView');
         const detail = document.getElementById('msDetailPanel');
         if (btn.dataset.view === 'card') {
+          _closeTagPopover();
+          _closeAssetPopover();
           if (list) list.style.display = 'none';
           if (card) card.style.display = 'block';
           if (detail) detail.style.display = 'none';
@@ -1187,6 +1886,10 @@ DP.pages.metaSearchResult = {
 
     // 点击表名或卡片进入详情（初始绑定，后续由 _applySearchContent 重新绑定）
     _normalizeActionCells();
+    _enhanceAssetCardCells();
+    _enhanceTagCells();
+    _bindAssetCardInteractions();
+    _bindTagInteractions();
     _bindRowClicks();
 
     // 返回列表
