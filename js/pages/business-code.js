@@ -29,11 +29,18 @@ DP.pages.businessCode = (function () {
     status: '',
     keyword: ''
   };
+  var logDetailId = '';
   var dataDialogState = {
     rowId: '',
     group: 'all'
   };
+  var dataPageState = createDataPageState('');
   var editorState = null;
+  var syncState = {
+    running: false,
+    progress: 0,
+    timer: null
+  };
 
   function makeValues(items) {
     return items.map(function (item, index) {
@@ -192,6 +199,14 @@ DP.pages.businessCode = (function () {
     train: ['train_order', 'train_station'],
     ods_cec: ['ods_order', 'ods_vehicle']
   };
+
+  var standardCodeOptions = [
+    { code: 'CV03.00.114', name: '每日饮水量代码表' },
+    { code: 'CV03.00.110', name: '每年食用的食物食用频次代码表' },
+    { code: 'CV03.00.109', name: '每天食用的食物食用频次代码表' },
+    { code: 'CV03.00.108', name: '体检项目类型标准代码' },
+    { code: 'CV03.00.107', name: '工单类型标准代码' }
+  ];
 
   var tableFields = {
     ads_driver_stats: [
@@ -520,10 +535,34 @@ DP.pages.businessCode = (function () {
     return '2026-05-21 10:00:00';
   }
 
+  function createDataPageState(rowId) {
+    return {
+      rowId: rowId || '',
+      tab: 'list',
+      keyword: '',
+      selected: {},
+      standard: null,
+      rowStandards: {},
+      picker: {
+        type: '',
+        rowValue: '',
+        keyword: ''
+      }
+    };
+  }
+
   function walkCatalog(items, cb) {
     items.forEach(function (item) {
       cb(item);
       if (item.children) walkCatalog(item.children, cb);
+    });
+  }
+
+  function walkTree(items, cb, path) {
+    items.forEach(function (item) {
+      var currentPath = (path || []).concat(item);
+      cb(item, currentPath);
+      if (item.children) walkTree(item.children, cb, currentPath);
     });
   }
 
@@ -549,6 +588,24 @@ DP.pages.businessCode = (function () {
   function getCatalogName(id) {
     var item = findCatalog(id);
     return item ? item.name : '数仓组';
+  }
+
+  function getTreePath(items, id) {
+    var result = [];
+    walkTree(items, function (item, path) {
+      if (item.id === id) result = path;
+    });
+    return result;
+  }
+
+  function getDatabaseName(id) {
+    var path = getTreePath(databaseTree, id);
+    return path.length ? path[path.length - 1].name : id;
+  }
+
+  function getDatabasePathText(id) {
+    var path = getTreePath(databaseTree, id);
+    return path.map(function (item) { return item.name; }).join(' / ');
   }
 
   function getCatalogCount(id) {
@@ -727,6 +784,71 @@ DP.pages.businessCode = (function () {
     }
   }
 
+  function buildLogPrefix(flowId) {
+    return '21-05-2026 10:24:18 CST data-code-flow-' + flowId + ' INFO - ';
+  }
+
+  function buildBusinessCodeTechnicalLog(item) {
+    var rawId = String(item.id || '0').replace(/\D/g, '').slice(-6) || '000001';
+    var flowId = 'bc-' + rawId.padStart(6, '0') + '-c4d8f21a9037e65b';
+    var prefix = buildLogPrefix(flowId);
+    var sourceFile = item.property === '导出' ? '/data/export/business_code/' + item.fileName : '/data/upload/business_code/' + item.fileName;
+    var targetTable = item.property === '同步' ? 'dim_business_code_mapping' : (item.property === '导出' ? 'tmp_export_business_code' : 'ods_business_code_import_tmp');
+    var lines = [
+      prefix + 'Starting job data-code-flow-' + flowId + ' at 1747794258201',
+      prefix + 'job JVM args: -Ddataplat.flowid=data-asset-business-code -Ddataplat.execid=' + rawId.padStart(6, '0') + ' -Ddataplat.jobid=' + flowId,
+      prefix + 'effective user is metadata_admin',
+      prefix + 'Building command job executor.',
+      prefix + 'Memory granted for job data-code-flow-' + flowId,
+      prefix + 'BusinessCodeTask - operation type: ' + item.property,
+      prefix + 'BusinessCodeTask - begin read file: ' + sourceFile,
+      prefix + 'BusinessCodeTask - template columns: code,name,parent_id,type_name,type_id,status,remark',
+      prefix + 'BusinessCodeTask - total rows parsed: ' + item.total,
+      prefix + 'HiveWriter$Task - begin do write...',
+      prefix + 'HiveWriter$Task - write to file: hdfs://192.168.5.118:8020/user/dp/tmp/business_code/' + flowId + '/part-00000',
+      prefix + 'HiveWriter$Task - insertCmd ---> insert overwrite table metadata.' + targetTable + ' partition(dt=20260521) select code,name,parent_id,type_name,type_id,status,remark from tmp_' + flowId.replace(/-/g, '_'),
+      prefix + 'UserGroupInformation - Login successful for user metadata_admin using keytab file /home/dataplat/keytab/metadata.keytab',
+      prefix + 'HiveConnection - Will try to open client transport with JDBC Uri: jdbc:hive2://192.168.5.119:10000/metadata;principal=hive/_HOST@DATAPLAT.COM',
+      prefix + 'StandAloneJobContainerCommunicator - total ' + item.success + ' records, failed ' + item.fail + ' records, total bytes ' + (Math.max(item.success, 1) * 96) + ', speed 0B/s, progress ' + (item.status === '处理中' ? '62.00%' : '100.00%')
+    ];
+    (item.detail || []).forEach(function (line) {
+      lines.push(prefix + 'BusinessCodeTask - ' + line);
+    });
+    if (item.status === '处理失败' || item.fail > 0) {
+      lines.push(prefix + 'ERROR - duplicate business code detected or required mapping is missing.');
+      lines.push(prefix + 'BusinessCodeTask - job finished with validation errors.');
+    } else if (item.status === '处理中') {
+      lines.push(prefix + 'BusinessCodeTask - waiting for downstream metadata refresh.');
+      lines.push(prefix + 'BusinessCodeTask - heartbeat received from worker thread business-code-worker-02.');
+    } else {
+      lines.push(prefix + 'BusinessCodeTask - commit business code changes success.');
+      lines.push(prefix + 'BusinessCodeTask - job finished successfully.');
+    }
+    return lines.join('\n');
+  }
+
+  function renderLogDetailView() {
+    var item = findLog(logDetailId);
+    if (!item) {
+      return '<div class="bc-log-empty"><button class="btn btn-outline" type="button" data-bc-action="back-log"><i class="bi bi-arrow-left"></i><span>返回</span></button><span>未找到日志记录</span></div>';
+    }
+    return '<div class="bc-log-view">' +
+      '<div class="bc-log-header">' +
+        '<button class="btn btn-outline" type="button" data-bc-action="back-log"><i class="bi bi-arrow-left"></i><span>返回</span></button>' +
+        '<div><h3>任务处理日志</h3><p title="' + escapeHtml(item.fileName) + '">' + escapeHtml(item.fileName) + '</p></div>' +
+      '</div>' +
+      '<pre class="bc-tech-log">' + escapeHtml(buildBusinessCodeTechnicalLog(item)) + '</pre>' +
+    '</div>';
+  }
+
+  function renderLogDetail() {
+    var panel = pageEl.querySelector('[data-bc-panel="log"]');
+    var detail = pageEl.querySelector('#bcLogDetail');
+    if (panel) panel.classList.toggle('bc-log-detail-mode', !!logDetailId);
+    if (!detail) return;
+    detail.innerHTML = logDetailId ? renderLogDetailView() : '';
+  }
+
   function updateCheckAll() {
     var checkAll = pageEl.querySelector('#bcCheckAll');
     var visibleRows = getFilteredRows();
@@ -743,11 +865,10 @@ DP.pages.businessCode = (function () {
     pageEl.querySelectorAll('[data-bc-panel]').forEach(function (panel) {
       panel.classList.toggle('active', panel.dataset.bcPanel === activeTab);
     });
+    renderLogDetail();
   }
 
   function renderAll() {
-    var current = pageEl.querySelector('#bcCurrentCatalog');
-    if (current) current.textContent = getCatalogName(selectedCatalog);
     renderTree();
     renderTab();
     renderListTable();
@@ -791,14 +912,6 @@ DP.pages.businessCode = (function () {
     ];
   }
 
-  function flattenLeafCatalog() {
-    var list = [];
-    walkCatalog(catalogTree, function (node) {
-      if (!node.children || !node.children.length) list.push(node);
-    });
-    return list;
-  }
-
   function renderEditorTreeNodes(items, activeId, chooseAction, keyword) {
     return items.map(function (item) {
       var children = item.children ? renderEditorTreeNodes(item.children, activeId, chooseAction, keyword) : '';
@@ -835,41 +948,71 @@ DP.pages.businessCode = (function () {
     }).join('');
   }
 
+  function renderTableOptionRows(keyword) {
+    var options = getEditorTables().filter(function (name) {
+      return !keyword || normalize(name).indexOf(keyword) >= 0;
+    });
+    if (!options.length) {
+      return '<li class="bc-editor-empty">暂无匹配表</li>';
+    }
+    return options.map(function (name) {
+      var active = editorState && editorState.table === name ? ' active' : '';
+      return '<li>' +
+        '<button class="bc-editor-table-option' + active + '" type="button" data-bc-action="choose-editor-table" data-bc-table="' + escapeHtml(name) + '">' +
+          '<i class="bi bi-table"></i>' +
+          '<span title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</span>' +
+        '</button>' +
+      '</li>';
+    }).join('');
+  }
+
   function renderEditorPicker(type) {
     if (!editorState) return '';
     var isCategory = type === 'category';
     var open = isCategory ? editorState.categoryOpen : editorState.databaseOpen;
-    var value = isCategory ? getCatalogName(editorState.category) : editorState.database;
+    var value = isCategory ? getCatalogName(editorState.category) : getDatabaseName(editorState.database);
     var placeholder = isCategory ? '请选择数据分类' : '请选择数据库';
     var keywordId = isCategory ? 'bcCategorySearch' : 'bcDatabaseSearch';
     var keyword = isCategory ? editorState.categoryKeyword : editorState.databaseKeyword;
     var treeHtml = isCategory
       ? renderEditorTreeNodes(catalogTree, editorState.category, 'choose-editor-category', normalize(keyword))
       : renderDatabaseTreeNodes(databaseTree, normalize(keyword));
+    var pathText = isCategory ? '' : getDatabasePathText(editorState.database);
 
     return '<div class="bc-editor-picker' + (open ? ' open' : '') + '">' +
-      '<button class="bc-editor-selectbox" type="button" data-bc-action="toggle-editor-picker" data-bc-picker="' + type + '" aria-label="选择' + (isCategory ? '数据分类' : '数据库') + '">' +
+      '<button class="bc-editor-selectbox" type="button" data-bc-action="toggle-editor-picker" data-bc-picker="' + type + '" aria-label="选择' + (isCategory ? '数据分类' : '数据库') + '" title="' + escapeHtml(pathText || value || placeholder) + '">' +
+        '<i class="bi ' + (isCategory ? 'bi-tags' : 'bi-database') + '"></i>' +
         '<span class="' + (value ? '' : 'is-placeholder') + '">' + escapeHtml(value || placeholder) + '</span>' +
         '<i class="bi bi-chevron-down"></i>' +
       '</button>' +
       (open ? '<div class="bc-editor-dropdown">' +
-        '<div class="bc-editor-dropdown-search"><input id="' + keywordId + '" type="text" value="' + escapeHtml(keyword) + '" placeholder="关键字搜索"><button type="button"><i class="bi bi-search"></i></button></div>' +
-        '<ul class="bc-editor-tree">' + treeHtml + '</ul>' +
+        '<div class="bc-editor-dropdown-search"><input id="' + keywordId + '" type="text" value="' + escapeHtml(keyword) + '" placeholder="输入关键字搜索"><button type="button" aria-label="搜索"><i class="bi bi-search"></i></button></div>' +
+        '<ul class="bc-editor-tree">' + (treeHtml || '<li class="bc-editor-empty">暂无匹配目录</li>') + '</ul>' +
       '</div>' : '') +
     '</div>';
   }
 
-  function renderTableSelect() {
+  function renderTablePicker() {
     if (!editorState || !editorState.database) {
-      return '<select id="bcEditTable"><option value="">请选择</option></select>';
+      return '<div class="bc-editor-table-picker disabled">' +
+        '<button class="bc-editor-selectbox" type="button" disabled>' +
+          '<i class="bi bi-table"></i><span class="is-placeholder">请先选择数据库</span><i class="bi bi-chevron-down"></i>' +
+        '</button>' +
+      '</div>';
     }
-    var options = getEditorTables();
-    return '<select id="bcEditTable">' +
-      '<option value="">请选择</option>' +
-      options.map(function (name) {
-        return '<option value="' + escapeHtml(name) + '"' + (name === editorState.table ? ' selected' : '') + '>' + escapeHtml(name) + '</option>';
-      }).join('') +
-    '</select>';
+    var keyword = editorState.tableKeyword || '';
+    var value = editorState.table;
+    return '<div class="bc-editor-table-picker' + (editorState.tableOpen ? ' open' : '') + '">' +
+      '<button class="bc-editor-selectbox" type="button" data-bc-action="toggle-editor-table" aria-label="选择表" title="' + escapeHtml(value || '请选择表') + '">' +
+        '<i class="bi bi-table"></i>' +
+        '<span class="' + (value ? '' : 'is-placeholder') + '">' + escapeHtml(value || '请选择表') + '</span>' +
+        '<i class="bi bi-chevron-down"></i>' +
+      '</button>' +
+      (editorState.tableOpen ? '<div class="bc-editor-dropdown bc-editor-table-dropdown">' +
+        '<div class="bc-editor-dropdown-search"><input id="bcTableSearch" type="text" value="' + escapeHtml(keyword) + '" placeholder="输入表名搜索"><button type="button" aria-label="搜索"><i class="bi bi-search"></i></button></div>' +
+        '<ul class="bc-editor-table-list">' + renderTableOptionRows(normalize(keyword)) + '</ul>' +
+      '</div>' : '') +
+    '</div>';
   }
 
   function renderConfigSelect(rowIndex, isBatch) {
@@ -943,7 +1086,7 @@ DP.pages.businessCode = (function () {
           codeRows +
           editorRow('数据分类', renderEditorPicker('category'), '', true) +
           editorRow('数据库', renderEditorPicker('database'), '', false) +
-          editorRow('表', renderTableSelect(), isBatch ? '<i class="bi bi-check-circle-fill"></i><span>根据编码类型ID/类型名称，自动生产多套编码数据</span>' : '', false) +
+          editorRow('表', renderTablePicker(), isBatch ? '<i class="bi bi-check-circle-fill"></i><span>根据编码类型ID/类型名称，自动生产多套编码数据</span>' : '', false) +
           editorRow('配置', renderConfigTable(), '', false, 'bc-config-editor-row') +
           editorRow('描述',
             '<textarea id="bcEditDesc" maxlength="500" placeholder="长度不超过500个字符">' + escapeHtml(editorState.desc) + '</textarea>',
@@ -960,12 +1103,10 @@ DP.pages.businessCode = (function () {
     var addMode = pageEl.querySelector('#bcEditAddMode');
     var code = pageEl.querySelector('#bcEditCode');
     var name = pageEl.querySelector('#bcEditName');
-    var table = pageEl.querySelector('#bcEditTable');
     var desc = pageEl.querySelector('#bcEditDesc');
     if (addMode) editorState.addMode = addMode.value;
     if (code) editorState.code = code.value;
     if (name) editorState.name = name.value;
-    if (table) editorState.table = table.value;
     if (desc) editorState.desc = desc.value;
   }
 
@@ -983,8 +1124,10 @@ DP.pages.businessCode = (function () {
       desc: item ? item.desc : '',
       categoryOpen: false,
       databaseOpen: false,
+      tableOpen: false,
       categoryKeyword: '',
-      databaseKeyword: ''
+      databaseKeyword: '',
+      tableKeyword: ''
     };
     pageEl.classList.add('bc-editor-mode');
     renderEditor();
@@ -1129,6 +1272,154 @@ DP.pages.businessCode = (function () {
     }).join('');
   }
 
+  function getDataPageValues(item) {
+    var keyword = normalize(dataPageState.keyword);
+    return (item.values || []).filter(function (value) {
+      var text = normalize(value.value + ' ' + value.name + ' ' + value.desc);
+      return !keyword || text.indexOf(keyword) >= 0;
+    });
+  }
+
+  function getActiveStandard() {
+    return dataPageState.standard || standardCodeOptions[4];
+  }
+
+  function getRowStandard(value, index) {
+    return dataPageState.rowStandards[value.value] || {
+      code: String(index + 1),
+      name: value.name
+    };
+  }
+
+  function getStandardOptions(keyword) {
+    var key = normalize(keyword);
+    return standardCodeOptions.filter(function (item) {
+      return !key || normalize(item.name + ' ' + item.code).indexOf(key) >= 0;
+    });
+  }
+
+  function getRowStandardOptions(item, keyword) {
+    var key = normalize(keyword);
+    return (item.values || []).map(function (value, index) {
+      return { code: String(index + 1), name: value.name };
+    }).filter(function (option) {
+      return !key || normalize(option.name + ' ' + option.code).indexOf(key) >= 0;
+    });
+  }
+
+  function renderStandardPickerOptions(type, rowValue, item) {
+    var keyword = dataPageState.picker.keyword;
+    var options = type === 'row' ? getRowStandardOptions(item, keyword) : getStandardOptions(keyword);
+    if (!options.length) return '<div class="bc-std-picker-empty">暂无匹配数据</div>';
+    return options.map(function (option, index) {
+      var active = index === 1 ? ' active' : '';
+      return '<button class="bc-std-picker-option' + active + '" type="button" data-bc-action="choose-standard-option" data-bc-std-type="' + escapeHtml(type) + '" data-bc-row-value="' + escapeHtml(rowValue || '') + '" data-bc-std-code="' + escapeHtml(option.code) + '" data-bc-std-name="' + escapeHtml(option.name) + '">' +
+        '<span title="' + escapeHtml(option.name) + '">' + escapeHtml(option.name) + '</span>' +
+        '<b>' + escapeHtml(option.code) + '</b>' +
+      '</button>';
+    }).join('');
+  }
+
+  function renderStandardPicker(type, rowValue, item) {
+    var isOpen = dataPageState.picker.type === type && (type !== 'row' || dataPageState.picker.rowValue === rowValue);
+    if (!isOpen) return '';
+    var inputId = type === 'row' ? 'bcRowStandardSearch' : 'bcStandardSearch';
+    var placeholder = type === 'row' ? '搜索标准编码' : '搜索标准代码';
+    return '<div class="bc-std-picker' + (type === 'row' ? ' bc-std-picker-row' : '') + '">' +
+      '<div class="bc-std-picker-search"><input id="' + inputId + '" type="text" value="' + escapeHtml(dataPageState.picker.keyword) + '" placeholder="' + placeholder + '"><button type="button" aria-label="搜索"><i class="bi bi-search"></i></button></div>' +
+      '<div class="bc-std-picker-list">' + renderStandardPickerOptions(type, rowValue, item) + '</div>' +
+    '</div>';
+  }
+
+  function renderDataPageRows(item) {
+    var values = getDataPageValues(item);
+    if (!values.length) {
+      return '<tr class="bc-empty-row"><td colspan="6">暂无匹配的数据</td></tr>';
+    }
+    return values.map(function (value, index) {
+      var standard = getRowStandard(value, index);
+      return '<tr>' +
+        '<td class="bc-data-check"><input type="checkbox" data-bc-data-check="' + escapeHtml(value.value) + '"' + (dataPageState.selected[value.value] ? ' checked' : '') + ' aria-label="选择数据"></td>' +
+        '<td title="' + escapeHtml(value.value) + '">' + escapeHtml(value.value) + '</td>' +
+        '<td title="' + escapeHtml(value.name) + '">' + escapeHtml(value.name) + '</td>' +
+        '<td>-</td>' +
+        '<td class="bc-data-std-cell"><button class="bc-data-link" type="button" data-bc-action="toggle-row-standard-picker" data-bc-row-value="' + escapeHtml(value.value) + '">' + escapeHtml(standard.code) + '</button>' + renderStandardPicker('row', value.value, item) + '</td>' +
+        '<td title="' + escapeHtml(standard.name) + '">' + escapeHtml(standard.name) + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function renderAiRows(item) {
+    var rows = [
+      { batch: 'AI-' + item.code.slice(-4) + '-001', content: '识别编码名称并补全标准编码映射', status: '处理成功', operator: '当前用户', time: '2026-05-21 10:18:32' },
+      { batch: 'AI-' + item.code.slice(-4) + '-002', content: '校验父子级编码关系与重复值', status: '处理成功', operator: '演示-测试', time: '2026-05-20 16:42:08' }
+    ];
+    return rows.map(function (row) {
+      return '<tr>' +
+        '<td title="' + escapeHtml(row.batch) + '">' + escapeHtml(row.batch) + '</td>' +
+        '<td title="' + escapeHtml(row.content) + '">' + escapeHtml(row.content) + '</td>' +
+        '<td><span class="tag tag-green">' + escapeHtml(row.status) + '</span></td>' +
+        '<td>' + escapeHtml(row.operator) + '</td>' +
+        '<td>' + escapeHtml(row.time) + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function renderDataPage() {
+    var panel = pageEl.querySelector('#bcDataPage');
+    if (!panel || !dataPageState.rowId) return;
+    var item = findRow(dataPageState.rowId);
+    if (!item) return;
+    var values = getDataPageValues(item);
+    var isAi = dataPageState.tab === 'ai';
+    var activeStandard = getActiveStandard();
+    panel.innerHTML =
+      '<div class="bc-data-page-tabs">' +
+        '<button class="bc-data-page-tab' + (!isAi ? ' active' : '') + '" type="button" data-bc-action="data-tab" data-bc-data-tab="list">数据列表</button>' +
+        '<button class="bc-data-page-tab' + (isAi ? ' active' : '') + '" type="button" data-bc-action="data-tab" data-bc-data-tab="ai">AI处理记录</button>' +
+      '</div>' +
+      '<div class="bc-data-page-toolbar">' +
+        '<div class="bc-data-page-actions">' +
+          '<button class="btn btn-primary" type="button" data-bc-action="data-add"><i class="bi bi-plus-lg"></i><span>新增</span></button>' +
+          '<button class="btn btn-primary" type="button" data-bc-action="data-import"><i class="bi bi-upload"></i><span>导入</span></button>' +
+          '<button class="btn btn-primary" type="button" data-bc-action="data-export"><i class="bi bi-download"></i><span>导出</span></button>' +
+          '<button class="btn btn-danger" type="button" data-bc-action="data-delete"><i class="bi bi-trash3"></i><span>删除</span></button>' +
+          '<button class="btn btn-primary" type="button" data-bc-action="data-ai"><i class="bi bi-stars"></i><span>AI智能处理</span></button>' +
+        '</div>' +
+        '<div class="bc-query-box bc-data-page-query"><input id="bcDataKeyword" type="text" value="' + escapeHtml(dataPageState.keyword) + '" placeholder="编码/名称" aria-label="编码或名称"><button class="btn btn-primary" type="button" data-bc-action="search-data"><i class="bi bi-search"></i><span>查询</span></button><button class="btn btn-primary" type="button" data-bc-action="back-data"><i class="bi bi-arrow-left"></i><span>返回</span></button></div>' +
+      '</div>' +
+      (!isAi ? '<div class="bc-data-standard"><span>标准代码</span><div class="bc-data-standard-picker"><button class="bc-data-standard-link" type="button" data-bc-action="toggle-standard-picker">' + escapeHtml(activeStandard.name + '（' + activeStandard.code + '）') + '</button>' + renderStandardPicker('standard', '', item) + '</div></div>' +
+      '<div class="bc-data-page-table-wrap">' +
+        '<table class="bc-data-page-table">' +
+          '<colgroup><col class="bc-data-w-check"><col class="bc-data-w-code"><col class="bc-data-w-name"><col class="bc-data-w-parent"><col class="bc-data-w-std-code"><col class="bc-data-w-std-name"></colgroup>' +
+          '<thead><tr><th class="bc-data-check"><input id="bcDataCheckAll" type="checkbox" aria-label="全选"></th><th><span>编码</span><i class="bi bi-caret-up-fill bc-data-sort-icon active"></i></th><th><span>名称</span><i class="bi bi-caret-down-fill bc-data-sort-icon"></i></th><th><span>父类编码</span><i class="bi bi-caret-down-fill bc-data-sort-icon"></i></th><th><span>标准编码</span><i class="bi bi-caret-down-fill bc-data-sort-icon"></i></th><th><span>标准名称</span><i class="bi bi-caret-down-fill bc-data-sort-icon"></i></th></tr></thead>' +
+          '<tbody>' + renderDataPageRows(item) + '</tbody>' +
+        '</table>' +
+      '</div>' +
+      '<div class="bc-data-page-pagination">显示第 ' + (values.length ? 1 : 0) + ' 到第 ' + values.length + ' 条记录，总共 ' + values.length + ' 条记录</div>'
+      : '<div class="bc-data-page-table-wrap">' +
+        '<table class="bc-data-page-table bc-ai-page-table">' +
+          '<colgroup><col class="bc-ai-w-batch"><col class="bc-ai-w-content"><col class="bc-ai-w-status"><col class="bc-ai-w-user"><col class="bc-ai-w-time"></colgroup>' +
+          '<thead><tr><th>处理批次</th><th>处理内容</th><th>状态</th><th>提交人</th><th>处理时间</th></tr></thead>' +
+          '<tbody>' + renderAiRows(item) + '</tbody>' +
+        '</table>' +
+      '</div>' +
+      '<div class="bc-data-page-pagination">显示第 1 到第 2 条记录，总共 2 条记录</div>');
+  }
+
+  function openDataPage(rowId) {
+    if (!findRow(rowId)) return;
+    dataPageState = createDataPageState(rowId);
+    pageEl.classList.add('bc-data-mode');
+    renderDataPage();
+  }
+
+  function closeDataPage() {
+    dataPageState = createDataPageState('');
+    pageEl.classList.remove('bc-data-mode');
+    renderAll();
+  }
+
   function refreshDataDialog() {
     var item = findRow(dataDialogState.rowId);
     if (!item) return;
@@ -1208,6 +1499,107 @@ DP.pages.businessCode = (function () {
     pageEl.appendChild(modal);
   }
 
+  function openImportDialog() {
+    closeModal();
+    var modal = document.createElement('div');
+    modal.className = 'bc-modal-mask';
+    modal.setAttribute('data-bc-modal', 'import');
+    modal.innerHTML =
+      '<div class="bc-modal bc-import-modal" role="dialog" aria-modal="true" aria-label="导入">' +
+        '<div class="bc-modal-head bc-import-head">' +
+          '<h3><span>导入</span></h3>' +
+          '<button class="bc-modal-close" type="button" data-bc-action="close-modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button>' +
+        '</div>' +
+        '<div class="bc-import-body">' +
+          '<div class="bc-import-row">' +
+            '<label><span>*</span>覆盖机制</label>' +
+            '<div class="bc-import-control">' +
+              '<select id="bcImportMode" aria-label="覆盖机制">' +
+                '<option value="overwrite">重复覆盖</option>' +
+                '<option value="skip">重复跳过</option>' +
+              '</select>' +
+            '</div>' +
+            '<button class="bc-import-template" type="button" data-bc-action="download-import-template"><i class="bi bi-download"></i><span>下载模板</span></button>' +
+          '</div>' +
+          '<div class="bc-import-row">' +
+            '<label><span>*</span>上传文件</label>' +
+            '<div class="bc-import-control">' +
+              '<input id="bcImportFile" type="file" accept=".xls,.xlsx" aria-label="上传文件">' +
+            '</div>' +
+            '<div class="bc-import-tip"><i class="bi bi-info-circle-fill"></i><span>文件格式为excel，大小不超过50M</span></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="bc-modal-footer bc-import-footer">' +
+          '<button class="btn btn-primary" type="button" data-bc-action="save-import"><i class="bi bi-check-lg"></i><span>保存</span></button>' +
+          '<button class="btn btn-outline" type="button" data-bc-action="close-modal"><i class="bi bi-x-lg"></i><span>取消</span></button>' +
+        '</div>' +
+      '</div>';
+    pageEl.appendChild(modal);
+  }
+
+  function openDataAddDialog() {
+    closeModal();
+    var item = findRow(dataPageState.rowId);
+    var parentOptions = item ? (item.values || []).slice(0, 6) : [];
+    var modal = document.createElement('div');
+    modal.className = 'bc-modal-mask';
+    modal.setAttribute('data-bc-modal', 'data-add');
+    modal.innerHTML =
+      '<div class="bc-modal bc-data-add-modal" role="dialog" aria-modal="true" aria-label="新建">' +
+        '<div class="bc-modal-head bc-data-add-head">' +
+          '<h3><span>新建</span></h3>' +
+          '<button class="bc-modal-close" type="button" data-bc-action="close-modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button>' +
+        '</div>' +
+        '<div class="bc-data-add-body">' +
+          '<div class="bc-data-form-row"><label><span>*</span>编码</label><input type="text" placeholder="长度不超过50个字符"><div class="bc-data-form-hint"><i class="bi bi-check-circle-fill"></i><span>50个字符以内</span></div></div>' +
+          '<div class="bc-data-form-row"><label><span>*</span>名称</label><input type="text" placeholder="长度不超过50个字符，允许数字/字母/汉字/下划线，下划线不能开头!"><div class="bc-data-form-hint"><i class="bi bi-check-circle-fill"></i><span>50个字符以内</span></div></div>' +
+          '<div class="bc-data-form-row bc-parent-row"><label>父类编码</label>' +
+            '<div class="bc-parent-select">' +
+              '<button class="bc-parent-selectbox" type="button" data-bc-action="toggle-parent-picker"><span data-bc-parent-text>请选择</span><i class="bi bi-chevron-down"></i></button>' +
+              '<div class="bc-parent-dropdown">' +
+                '<div class="bc-parent-search"><input id="bcParentSearch" type="text" placeholder="搜索父类编码" aria-label="搜索父类编码"><button type="button" aria-label="搜索"><i class="bi bi-search"></i></button></div>' +
+                '<button class="bc-parent-option active" type="button" data-bc-action="choose-parent-code" data-bc-parent-label="请选择">请选择</button>' +
+                parentOptions.map(function (value) {
+                  var label = value.name + '(' + value.value + ')';
+                  return '<button class="bc-parent-option" type="button" data-bc-action="choose-parent-code" data-bc-parent-label="' + escapeHtml(label) + '">' + escapeHtml(label) + '</button>';
+                }).join('') +
+              '</div>' +
+            '</div><div></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="bc-modal-footer bc-data-add-footer">' +
+          '<button class="btn btn-primary" type="button" data-bc-action="save-data-add"><i class="bi bi-check-lg"></i><span>保存</span></button>' +
+          '<button class="btn btn-outline" type="button" data-bc-action="close-modal"><i class="bi bi-x-lg"></i><span>关闭</span></button>' +
+        '</div>' +
+      '</div>';
+    pageEl.appendChild(modal);
+  }
+
+  function openDataAiDialog() {
+    closeModal();
+    var modal = document.createElement('div');
+    modal.className = 'bc-modal-mask';
+    modal.setAttribute('data-bc-modal', 'data-ai');
+    modal.innerHTML =
+      '<div class="bc-modal bc-data-ai-modal" role="dialog" aria-modal="true" aria-label="AI智能处理">' +
+        '<div class="bc-modal-head bc-data-ai-head">' +
+          '<h3><span>AI智能处理</span></h3>' +
+          '<button class="bc-modal-close" type="button" data-bc-action="close-modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button>' +
+        '</div>' +
+        '<div class="bc-data-ai-body">' +
+          '<div class="bc-ai-info"><strong>AI智能处理:</strong><span>调用AI大模型，智能标准代码引用关联;</span></div>' +
+          '<div class="bc-ai-form-row"><label>填充机制:</label><div class="bc-ai-select">' +
+            '<select class="bc-ai-native-select"><option>有值覆盖</option><option>有值跳过</option></select>' +
+          '</div></div>' +
+        '</div>' +
+        '<div class="bc-modal-footer bc-data-ai-footer">' +
+          '<button class="btn btn-primary" type="button" data-bc-action="save-data-ai"><i class="bi bi-check-lg"></i><span>确定</span></button>' +
+          '<button class="btn btn-outline" type="button" data-bc-action="close-modal"><i class="bi bi-x-lg"></i><span>取消</span></button>' +
+        '</div>' +
+      '</div>';
+    pageEl.appendChild(modal);
+  }
+
   function deleteRows(ids) {
     if (!ids.length) {
       showToast('请先选择要删除的业务代码');
@@ -1243,6 +1635,48 @@ DP.pages.businessCode = (function () {
     renderLogTable();
   }
 
+  function updateSyncButton() {
+    if (!pageEl) return;
+    var button = pageEl.querySelector('[data-bc-action="sync"]');
+    if (!button) return;
+    if (syncState.running) {
+      button.disabled = true;
+      button.classList.add('bc-syncing');
+      button.innerHTML = '<i class="bi bi-arrow-repeat"></i><span>同步中(' + syncState.progress + '%)...</span>';
+    } else {
+      button.disabled = false;
+      button.classList.remove('bc-syncing');
+      button.innerHTML = '<i class="bi bi-arrow-repeat"></i><span>同步</span>';
+    }
+  }
+
+  function startSync() {
+    if (syncState.running) return;
+    var steps = [12, 28, 43, 56, 72, 88, 100];
+    var index = 0;
+    syncState.running = true;
+    syncState.progress = 0;
+    updateSyncButton();
+    showToast('同步任务已提交');
+    if (syncState.timer) clearInterval(syncState.timer);
+    syncState.timer = setInterval(function () {
+      syncState.progress = steps[index] || 100;
+      updateSyncButton();
+      index += 1;
+      if (syncState.progress >= 100) {
+        clearInterval(syncState.timer);
+        syncState.timer = null;
+        setTimeout(function () {
+          syncState.running = false;
+          syncState.progress = 0;
+          addLog('同步', '处理成功', '业务代码_同步_' + nowText().slice(0, 10).replace(/-/g, '') + '.xlsx', getFilteredRows().length, 0, getFilteredRows().length, ['同步任务执行完成。', '已比对业务代码与标准代码映射关系。', '同步结果已写入静态原型记录。']);
+          updateSyncButton();
+          showToast('同步完成');
+        }, 280);
+      }
+    }, 420);
+  }
+
   function handleAction(actionEl) {
     var action = actionEl.dataset.bcAction;
     var id = actionEl.dataset.bcId;
@@ -1263,19 +1697,22 @@ DP.pages.businessCode = (function () {
     } else if (action === 'new') {
       openEditor('');
     } else if (action === 'import') {
-      activeTab = 'log';
-      renderTab();
-      showToast('已切换到导入导出记录');
+      openImportDialog();
     } else if (action === 'export') {
       addLog('导出', '处理成功', '业务代码_导出_' + nowText().slice(0, 10).replace(/-/g, '') + '.xlsx', getFilteredRows().length, 0, getFilteredRows().length, ['导出范围：当前筛选结果。', '文件已生成，可在导入导出记录中查看。']);
-      activeTab = 'log';
-      renderTab();
-      showToast('导出任务已生成');
+      showToast('导出文件已生成');
+    } else if (action === 'download-import-template') {
+      showToast('业务代码导入模板已生成');
+    } else if (action === 'save-import') {
+      var importMode = pageEl.querySelector('#bcImportMode');
+      var importFile = pageEl.querySelector('#bcImportFile');
+      var fileName = importFile && importFile.files && importFile.files.length ? importFile.files[0].name : '业务代码_导入模板.xlsx';
+      var modeText = importMode && importMode.value === 'skip' ? '重复跳过' : '重复覆盖';
+      addLog('导入', '处理成功', fileName, 8, 0, 8, ['覆盖机制：' + modeText + '。', '读取文件成功，共 8 条业务代码数据。', '校验编码唯一性通过。']);
+      closeModal('import');
+      showToast('业务代码导入成功');
     } else if (action === 'sync') {
-      addLog('同步', '处理中', '业务代码_同步_' + nowText().slice(0, 10).replace(/-/g, '') + '.xlsx', 3, 0, getFilteredRows().length, ['同步任务已提交。', '正在比对业务代码与标准代码映射关系。']);
-      activeTab = 'log';
-      renderTab();
-      showToast('同步任务已提交');
+      startSync();
     } else if (action === 'delete-selected') {
       deleteRows(Object.keys(selectedIds));
     } else if (action === 'search-list') {
@@ -1290,11 +1727,82 @@ DP.pages.businessCode = (function () {
       logFilters.property = propertySelect ? propertySelect.value : '';
       logFilters.status = statusSelect ? statusSelect.value : '';
       logFilters.keyword = keywordInputLog ? keywordInputLog.value : '';
+      logDetailId = '';
+      renderLogDetail();
       renderLogTable();
     } else if (action === 'edit') {
       openEditor(id);
     } else if (action === 'data') {
-      openDataDialog(id);
+      openDataPage(id);
+    } else if (action === 'back-data') {
+      closeDataPage();
+    } else if (action === 'data-tab') {
+      dataPageState.tab = actionEl.dataset.bcDataTab || 'list';
+      dataPageState.picker = { type: '', rowValue: '', keyword: '' };
+      renderDataPage();
+    } else if (action === 'search-data') {
+      var dataKeyword = pageEl.querySelector('#bcDataKeyword');
+      dataPageState.keyword = dataKeyword ? dataKeyword.value : '';
+      dataPageState.selected = {};
+      dataPageState.picker = { type: '', rowValue: '', keyword: '' };
+      renderDataPage();
+    } else if (action === 'toggle-standard-picker') {
+      var isStandardOpen = dataPageState.picker.type === 'standard';
+      dataPageState.picker = isStandardOpen ? { type: '', rowValue: '', keyword: '' } : { type: 'standard', rowValue: '', keyword: '' };
+      renderDataPage();
+    } else if (action === 'toggle-row-standard-picker') {
+      var rowValue = actionEl.dataset.bcRowValue || '';
+      var isRowOpen = dataPageState.picker.type === 'row' && dataPageState.picker.rowValue === rowValue;
+      var dataItemForPicker = findRow(dataPageState.rowId);
+      var rowValues = dataItemForPicker ? (dataItemForPicker.values || []) : [];
+      var rowIndex = rowValues.findIndex(function (value) { return value.value === rowValue; });
+      var rowStandard = rowIndex >= 0 ? getRowStandard(rowValues[rowIndex], rowIndex) : { code: '', name: '' };
+      dataPageState.picker = isRowOpen ? { type: '', rowValue: '', keyword: '' } : { type: 'row', rowValue: rowValue, keyword: rowStandard.code };
+      renderDataPage();
+    } else if (action === 'choose-standard-option') {
+      var chosen = {
+        code: actionEl.dataset.bcStdCode || '',
+        name: actionEl.dataset.bcStdName || ''
+      };
+      if (actionEl.dataset.bcStdType === 'row') {
+        dataPageState.rowStandards[actionEl.dataset.bcRowValue || ''] = chosen;
+      } else {
+        dataPageState.standard = chosen;
+      }
+      dataPageState.picker = { type: '', rowValue: '', keyword: '' };
+      renderDataPage();
+    } else if (action === 'data-add') {
+      openDataAddDialog();
+    } else if (action === 'data-import') {
+      openImportDialog();
+    } else if (action === 'data-export') {
+      showToast('当前数据已导出');
+    } else if (action === 'data-delete') {
+      var count = Object.keys(dataPageState.selected || {}).length;
+      showToast(count ? '已删除选中的 ' + count + ' 条数据' : '请先选择要删除的数据');
+    } else if (action === 'data-ai') {
+      openDataAiDialog();
+    } else if (action === 'save-data-add') {
+      closeModal('data-add');
+      showToast('数据已新增');
+    } else if (action === 'save-data-ai') {
+      closeModal('data-ai');
+      dataPageState.tab = 'ai';
+      renderDataPage();
+      showToast('AI智能处理任务已生成');
+    } else if (action === 'toggle-parent-picker') {
+      var parentSelect = actionEl.closest('.bc-parent-select');
+      if (parentSelect) parentSelect.classList.toggle('open');
+    } else if (action === 'choose-parent-code') {
+      var parentWrap = actionEl.closest('.bc-parent-select');
+      var parentText = parentWrap ? parentWrap.querySelector('[data-bc-parent-text]') : null;
+      if (parentText) parentText.textContent = actionEl.dataset.bcParentLabel || '请选择';
+      if (parentWrap) {
+        parentWrap.querySelectorAll('.bc-parent-option').forEach(function (option) {
+          option.classList.toggle('active', option === actionEl);
+        });
+        parentWrap.classList.remove('open');
+      }
     } else if (action === 'refs') {
       var item = findRow(id);
       showToast(item && item.refCount ? item.name + ' 已关联 ' + item.refCount + ' 处引用' : '当前业务代码暂无关联引用');
@@ -1312,10 +1820,19 @@ DP.pages.businessCode = (function () {
       if (actionEl.dataset.bcPicker === 'category') {
         editorState.categoryOpen = !editorState.categoryOpen;
         editorState.databaseOpen = false;
+        editorState.tableOpen = false;
       } else {
         editorState.databaseOpen = !editorState.databaseOpen;
         editorState.categoryOpen = false;
+        editorState.tableOpen = false;
       }
+      renderEditor();
+    } else if (action === 'toggle-editor-table') {
+      if (!editorState) return;
+      syncEditorFromForm();
+      editorState.tableOpen = !editorState.tableOpen;
+      editorState.categoryOpen = false;
+      editorState.databaseOpen = false;
       renderEditor();
     } else if (action === 'choose-editor-category') {
       if (!editorState) return;
@@ -1328,19 +1845,32 @@ DP.pages.businessCode = (function () {
       syncEditorFromForm();
       editorState.database = id || '';
       editorState.table = '';
+      editorState.tableKeyword = '';
       editorState.databaseOpen = false;
+      renderEditor();
+    } else if (action === 'choose-editor-table') {
+      if (!editorState) return;
+      syncEditorFromForm();
+      editorState.table = actionEl.dataset.bcTable || '';
+      editorState.tableOpen = false;
       renderEditor();
     } else if (action === 'clear-editor-db') {
       if (!editorState) return;
       syncEditorFromForm();
       editorState.database = '';
       editorState.table = '';
+      editorState.tableKeyword = '';
       renderEditor();
     } else if (action === 'value-tree') {
       dataDialogState.group = actionEl.dataset.bcValueGroup || 'all';
       refreshDataDialog();
     } else if (action === 'view-log') {
-      openLogDialog(actionEl.dataset.bcLogId);
+      logDetailId = actionEl.dataset.bcLogId || '';
+      activeTab = 'log';
+      renderTab();
+    } else if (action === 'back-log') {
+      logDetailId = '';
+      renderLogDetail();
     }
   }
 
@@ -1354,6 +1884,7 @@ DP.pages.businessCode = (function () {
       var tab = e.target.closest('[data-bc-tab]');
       if (tab && pageEl.contains(tab)) {
         activeTab = tab.dataset.bcTab;
+        logDetailId = '';
         renderTab();
         return;
       }
@@ -1383,10 +1914,22 @@ DP.pages.businessCode = (function () {
         if (e.target.checked) selectedIds[id] = true;
         else delete selectedIds[id];
         updateCheckAll();
+      } else if (e.target.id === 'bcDataCheckAll') {
+        var item = findRow(dataPageState.rowId);
+        var values = item ? getDataPageValues(item) : [];
+        values.forEach(function (value) {
+          if (e.target.checked) dataPageState.selected[value.value] = true;
+          else delete dataPageState.selected[value.value];
+        });
+        renderDataPage();
+      } else if (e.target.matches('[data-bc-data-check]')) {
+        var dataId = e.target.dataset.bcDataCheck;
+        if (e.target.checked) dataPageState.selected[dataId] = true;
+        else delete dataPageState.selected[dataId];
       } else if (e.target.id === 'bcLogProperty' || e.target.id === 'bcLogStatus') {
         var query = pageEl.querySelector('[data-bc-action="search-log"]');
         if (query) query.click();
-      } else if (e.target.id === 'bcEditAddMode' || e.target.id === 'bcEditTable') {
+      } else if (e.target.id === 'bcEditAddMode') {
         syncEditorFromForm();
         renderEditor();
       }
@@ -1401,7 +1944,7 @@ DP.pages.businessCode = (function () {
         var categoryDrop = e.target.closest('.bc-editor-dropdown');
         var categoryTree = categoryDrop ? categoryDrop.querySelector('.bc-editor-tree') : null;
         if (categoryTree) {
-          categoryTree.innerHTML = renderEditorTreeNodes(catalogTree, editorState.category, 'choose-editor-category', normalize(editorState.categoryKeyword));
+          categoryTree.innerHTML = renderEditorTreeNodes(catalogTree, editorState.category, 'choose-editor-category', normalize(editorState.categoryKeyword)) || '<li class="bc-editor-empty">暂无匹配目录</li>';
         }
       } else if (e.target.id === 'bcDatabaseSearch') {
         if (!editorState) return;
@@ -1409,7 +1952,31 @@ DP.pages.businessCode = (function () {
         var databaseDrop = e.target.closest('.bc-editor-dropdown');
         var databaseTreeEl = databaseDrop ? databaseDrop.querySelector('.bc-editor-tree') : null;
         if (databaseTreeEl) {
-          databaseTreeEl.innerHTML = renderDatabaseTreeNodes(databaseTree, normalize(editorState.databaseKeyword));
+          databaseTreeEl.innerHTML = renderDatabaseTreeNodes(databaseTree, normalize(editorState.databaseKeyword)) || '<li class="bc-editor-empty">暂无匹配目录</li>';
+        }
+      } else if (e.target.id === 'bcTableSearch') {
+        if (!editorState) return;
+        editorState.tableKeyword = e.target.value;
+        var tableDrop = e.target.closest('.bc-editor-dropdown');
+        var tableList = tableDrop ? tableDrop.querySelector('.bc-editor-table-list') : null;
+        if (tableList) {
+          tableList.innerHTML = renderTableOptionRows(normalize(editorState.tableKeyword));
+        }
+      } else if (e.target.id === 'bcStandardSearch' || e.target.id === 'bcRowStandardSearch') {
+        var dataItem = findRow(dataPageState.rowId);
+        dataPageState.picker.keyword = e.target.value;
+        var picker = e.target.closest('.bc-std-picker');
+        var pickerList = picker ? picker.querySelector('.bc-std-picker-list') : null;
+        if (pickerList && dataItem) {
+          pickerList.innerHTML = renderStandardPickerOptions(dataPageState.picker.type, dataPageState.picker.rowValue, dataItem);
+        }
+      } else if (e.target.id === 'bcParentSearch') {
+        var parentKeyword = normalize(e.target.value);
+        var parentBox = e.target.closest('.bc-parent-dropdown');
+        if (parentBox) {
+          parentBox.querySelectorAll('.bc-parent-option').forEach(function (option) {
+            option.style.display = !parentKeyword || normalize(option.textContent).indexOf(parentKeyword) >= 0 ? '' : 'none';
+          });
         }
       } else if (e.target.id === 'bcValueSearch') {
         var keyword = normalize(e.target.value);
@@ -1425,6 +1992,9 @@ DP.pages.businessCode = (function () {
       if (e.target.id === 'bcKeywordInput') {
         var listBtn = pageEl.querySelector('[data-bc-action="search-list"]');
         if (listBtn) listBtn.click();
+      } else if (e.target.id === 'bcDataKeyword') {
+        var dataBtn = pageEl.querySelector('[data-bc-action="search-data"]');
+        if (dataBtn) dataBtn.click();
       } else if (e.target.id === 'bcLogKeyword') {
         var logBtn = pageEl.querySelector('[data-bc-action="search-log"]');
         if (logBtn) logBtn.click();
@@ -1456,7 +2026,6 @@ DP.pages.businessCode = (function () {
             '<button class="btn btn-danger" type="button" data-bc-action="delete-selected"><i class="bi bi-trash3"></i><span>删除</span></button>' +
           '</div>' +
           '<div class="bc-toolbar-right">' +
-            '<span class="bc-current"><i class="bi bi-folder-fill"></i><span id="bcCurrentCatalog">数仓组</span></span>' +
             '<div class="bc-query-box"><input id="bcKeywordInput" type="text" placeholder="编码/名称" aria-label="编码或名称"><button class="btn btn-primary" type="button" data-bc-action="search-list"><i class="bi bi-search"></i><span>查询</span></button></div>' +
           '</div>' +
         '</div>' +
@@ -1480,21 +2049,23 @@ DP.pages.businessCode = (function () {
         '<div class="bc-pagination" id="bcListPagination"></div>' +
       '</div>' +
       '<div class="bc-panel" data-bc-panel="log">' +
-        '<div class="bc-log-filter">' +
+        '<div class="bc-log-filter bc-log-list-part">' +
           '<select id="bcLogProperty" aria-label="属性"><option value="">属性</option><option value="导入">导入</option><option value="导出">导出</option><option value="同步">同步</option></select>' +
           '<select id="bcLogStatus" aria-label="状态"><option value="">状态</option><option value="处理成功">处理成功</option><option value="处理失败">处理失败</option><option value="处理中">处理中</option></select>' +
           '<div class="bc-query-box"><input id="bcLogKeyword" type="text" placeholder="文件名" aria-label="文件名"><button class="btn btn-primary" type="button" data-bc-action="search-log"><i class="bi bi-search"></i><span>查询</span></button></div>' +
         '</div>' +
-        '<div class="bc-table-wrap bc-log-table-wrap">' +
+        '<div class="bc-table-wrap bc-log-table-wrap bc-log-list-part">' +
           '<table class="bc-table bc-log-table">' +
             '<colgroup><col class="bc-log-file"><col class="bc-log-prop"><col class="bc-log-status"><col class="bc-log-count"><col class="bc-log-user"><col class="bc-log-time"><col class="bc-log-action"></colgroup>' +
             '<thead><tr><th>文件名</th><th>属性</th><th>状态</th><th>处理记录数(成功/失败/总量)</th><th>操作者</th><th>时间</th><th>操作</th></tr></thead>' +
             '<tbody id="bcLogTableBody"></tbody>' +
           '</table>' +
         '</div>' +
-        '<div class="bc-pagination" id="bcLogPagination"></div>' +
+        '<div class="bc-pagination bc-log-list-part" id="bcLogPagination"></div>' +
+        '<div class="bc-log-detail" id="bcLogDetail"></div>' +
       '</div>' +
       '<section class="bc-editor-panel" id="bcEditorPanel"></section>' +
+      '<section class="bc-data-page" id="bcDataPage"></section>' +
     '</section>' +
   '</div>';
 
@@ -1508,10 +2079,15 @@ DP.pages.businessCode = (function () {
       selectedIds = {};
       listFilters = { keyword: '', sortKey: '', sortDir: 'asc' };
       logFilters = { property: '', status: '', keyword: '' };
+      logDetailId = '';
       dataDialogState = { rowId: '', group: 'all' };
+      dataPageState = createDataPageState('');
       editorState = null;
+      if (syncState.timer) clearInterval(syncState.timer);
+      syncState = { running: false, progress: 0, timer: null };
       bindEvents();
       renderAll();
+      updateSyncButton();
     }
   };
 })();

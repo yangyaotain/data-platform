@@ -285,7 +285,9 @@ DP.pages.businessMetadata = (function () {
       status: '',
       keyword: ''
     },
-    logContext: null
+    logContext: null,
+    viewRowId: null,
+    editRowId: null
   };
 
   function resetState() {
@@ -301,6 +303,8 @@ DP.pages.businessMetadata = (function () {
     state.taskFilters = { attr: '', status: '', keyword: '' };
     state.aiFilters = { status: '', keyword: '' };
     state.logContext = null;
+    state.viewRowId = null;
+    state.editRowId = null;
   }
 
   function escapeHtml(value) {
@@ -524,6 +528,166 @@ DP.pages.businessMetadata = (function () {
     renderPager(rows.length);
   }
 
+  function getEditValue(item, key, fallback) {
+    return item[key] != null && item[key] !== '--' ? item[key] : fallback;
+  }
+
+  function editTextField(name, label, value, required, disabled) {
+    return '<div class="bm-edit-row">' +
+      '<label class="bm-edit-label" for="bm-edit-' + name + '">' + (required ? '<em>*</em>' : '') + label + '</label>' +
+      '<input id="bm-edit-' + name + '" class="bm-edit-control" data-bm-edit="' + name + '" value="' + escapeHtml(value) + '"' + (disabled ? ' disabled' : '') + '>' +
+      '<span class="bm-edit-tip"><i class="bi bi-info-circle-fill"></i>' + label + '</span>' +
+    '</div>';
+  }
+
+  function editTextarea(name, label, value, disabled) {
+    return '<div class="bm-edit-row bm-edit-row-area">' +
+      '<label class="bm-edit-label" for="bm-edit-' + name + '">' + label + '</label>' +
+      '<textarea id="bm-edit-' + name + '" class="bm-edit-control" data-bm-edit="' + name + '"' + (disabled ? ' disabled' : '') + '>' + escapeHtml(value) + '</textarea>' +
+      '<span class="bm-edit-tip"><i class="bi bi-info-circle-fill"></i>' + label + '</span>' +
+    '</div>';
+  }
+
+  function editSelectField(name, label, value, options, disabled) {
+    if (disabled) return editTextField(name, label, value, false, true);
+    if (value && options.indexOf(value) < 0) options = [value].concat(options);
+    var html = options.map(function (option) {
+      return '<button class="bm-combo-option' + (option === value ? ' active' : '') + '" type="button" data-bm-combo-option data-value="' + escapeHtml(option) + '">' + escapeHtml(option) + '</button>';
+    }).join('');
+    return '<div class="bm-edit-row">' +
+      '<label class="bm-edit-label" for="bm-edit-' + name + '">' + label + '</label>' +
+      '<div class="bm-combo" data-bm-combo>' +
+        '<input id="bm-edit-' + name + '" type="hidden" data-bm-edit="' + name + '" value="' + escapeHtml(value) + '">' +
+        '<button class="bm-edit-control bm-combo-trigger" type="button" data-bm-combo-trigger><span data-bm-combo-text>' + escapeHtml(value) + '</span><i class="bi bi-caret-down-fill"></i></button>' +
+        '<div class="bm-combo-panel">' +
+          '<input class="bm-combo-search" type="text" data-bm-combo-search aria-label="' + label + '搜索">' +
+          '<div class="bm-combo-options">' + html + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<span class="bm-edit-tip"><i class="bi bi-info-circle-fill"></i>' + label + '</span>' +
+    '</div>';
+  }
+
+  function renderClassTree(nodes, value) {
+    return nodes.map(function (node) {
+      var children = node.children || [];
+      var childHtml = children.length ? '<div class="bm-class-children">' + renderClassTree(children, value) + '</div>' : '';
+      return '<div class="bm-class-node" data-bm-class-node>' +
+        '<button class="bm-class-option' + (node.label === value ? ' active' : '') + '" type="button" data-bm-class-option data-value="' + escapeHtml(node.label) + '">' +
+          '<i class="bi ' + (node.icon || (children.length ? 'bi-folder2' : 'bi-bookmark')) + '"></i><span>' + escapeHtml(node.label) + '</span>' +
+        '</button>' +
+        childHtml +
+      '</div>';
+    }).join('');
+  }
+
+  function editClassTreeField(name, label, value, disabled) {
+    if (disabled) return editTextField(name, label, value, false, true);
+    return '<div class="bm-edit-row">' +
+      '<label class="bm-edit-label" for="bm-edit-' + name + '"><em>*</em>' + label + '</label>' +
+      '<div class="bm-combo bm-class-combo" data-bm-combo>' +
+        '<input id="bm-edit-' + name + '" type="hidden" data-bm-edit="' + name + '" value="' + escapeHtml(value) + '">' +
+        '<button class="bm-edit-control bm-combo-trigger" type="button" data-bm-combo-trigger><span data-bm-combo-text>' + escapeHtml(value || '请选择') + '</span><i class="bi bi-caret-down-fill"></i></button>' +
+        '<div class="bm-combo-panel bm-class-panel">' +
+          '<input class="bm-combo-search" type="text" data-bm-combo-search aria-label="' + label + '搜索">' +
+          '<div class="bm-class-tree">' + renderClassTree(catalogTree, value) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<span class="bm-edit-tip"><i class="bi bi-info-circle-fill"></i>' + label + '</span>' +
+    '</div>';
+  }
+
+  function getFormData(item) {
+    var isField = item.metaModel === '字段模型';
+    var isDatabase = item.metaModel === '库模型';
+    var shortName = item.name;
+    if (!isField && item.name) {
+      var parts = item.name.split('.');
+      shortName = parts[parts.length - 1];
+    }
+    return {
+      code: getEditValue(item, 'code', ''),
+      name: isField ? getEditValue(item, 'name', 'Code') : getEditValue(item, 'name', shortName),
+      alias: isField ? getEditValue(item, 'alias', 'Code') : getEditValue(item, 'alias', isDatabase ? shortName : item.alias),
+      remark: isField ? getEditValue(item, 'remark', '网格编码') : getEditValue(item, 'remark', ''),
+      dataType: getEditValue(item, 'dataType', 'varchar'),
+      dataLength: getEditValue(item, 'dataLength', '20'),
+      dataPrecision: getEditValue(item, 'dataPrecision', '0'),
+      standard: getEditValue(item, 'standard', '网络id (date_00000027)'),
+      bizCode: getEditValue(item, 'bizCode', '工单类型 (ASDF_RER012101)'),
+      desensitizeRule: getEditValue(item, 'desensitizeRule', '请选择'),
+      qualityRule: getEditValue(item, 'qualityRule', '请选择'),
+      encryptRule: getEditValue(item, 'encryptRule', '请选择'),
+      dataClass: getEditValue(item, 'dataClass', ''),
+      dataLevel: getEditValue(item, 'dataLevel', '请选择')
+    };
+  }
+
+  function renderBasicMetaSection(data, readonly) {
+    return '<section class="bm-edit-section">' +
+      '<h3>基本信息</h3>' +
+      editTextField('code', '编码', data.code, true, true) +
+      editTextField('name', '英文名', data.name, true, true) +
+      editTextField('alias', '别名', data.alias, true, readonly) +
+      editTextarea('remark', '描述', data.remark, readonly) +
+    '</section>';
+  }
+
+  function renderBusinessSection(data, readonly, isFieldModel) {
+    return '<section class="bm-edit-section bm-edit-section-last">' +
+      '<h3>业务信息</h3>' +
+      editClassTreeField('dataClass', '数据分类', data.dataClass, readonly) +
+      (isFieldModel ? editSelectField('dataLevel', '数据分级', data.dataLevel, ['请选择', '绝密数据(L4)', '机密数据(L3)', '对内公开(L2)', '公开数据(L1)'], readonly) : '') +
+      (readonly ? '' : '<div class="bm-edit-footer">' +
+        '<button class="btn btn-primary" type="button" data-bm-action="save-edit"><i class="bi bi-save"></i> 保存</button>' +
+        '<button class="btn btn-outline" type="button" data-bm-action="back-detail"><i class="bi bi-x-lg"></i> 取消</button>' +
+      '</div>') +
+    '</section>';
+  }
+
+  function renderFieldTechnicalSection(data, readonly) {
+    return '<section class="bm-edit-section">' +
+      '<h3>技术信息</h3>' +
+      editTextField('dataType', '数据类型', data.dataType, false, true) +
+      editTextField('dataLength', '长度', data.dataLength, false, true) +
+      editTextField('dataPrecision', '精度', data.dataPrecision, false, true) +
+      editSelectField('standard', '引用标准', data.standard, ['网络id (date_00000027)', '请选择', '创建时间(order_00000012)', '时间段ID(order_00000019)', '当日支出(order_00000022)', '主键ID(order_00000007)', '调度中心ID(order_00000020)', '时间间隔ID(order_00000023)'], readonly) +
+      editSelectField('bizCode', '引用业务代码', data.bizCode, ['工单类型 (ASDF_RER012101)', '请选择', '车队编码(MZ_FD_023)', '设备类型(DSF_DFD012101)'], readonly) +
+      editSelectField('desensitizeRule', '脱敏规则', data.desensitizeRule, ['请选择', '车牌号(车牌号正则脱敏)', '地址(地址正则脱敏)', '座机号(座机号正则脱敏)', '身份证号(身份证号正则脱敏)', '密码(密码正则脱敏)', '银行卡号(银行卡号正则脱敏)'], readonly) +
+      editSelectField('qualityRule', '质量规则', data.qualityRule, ['请选择', '长度校验(模型字段长度规范值)', '取值范围约束(模型字段是否在有限的取值范围内)', '大小值校验(模型字段值在某个取值范围)', '身份证号校验(18位)(二代身份证校验)', '及时性校验(判断当前模型时间标识字段是否是晚于截止日期)', '唯一性校验(找出模型重复数据)'], readonly) +
+      editSelectField('encryptRule', '加密规则', data.encryptRule, ['请选择', '同态加密(同态加密)', '国密SM2(国密SM2)', '3DES加密(3DES加密)', 'DES加密(DES加密)', 'AES192加密(AES192加密)', 'MD5加密(MD5加密)'], readonly) +
+    '</section>';
+  }
+
+  function renderMetadataFormPage(mode) {
+    var rowId = mode === 'view' ? state.viewRowId : state.editRowId;
+    var item = getRowById(rowId);
+    if (!item) {
+      state.viewRowId = null;
+      state.editRowId = null;
+      return renderDataList();
+    }
+    var data = getFormData(item);
+    var readonly = mode === 'view';
+    var isFieldModel = item.metaModel === '字段模型';
+    var header = readonly
+      ? '<div class="bm-edit-head bm-view-head"><div class="bm-edit-actions">' +
+          '<button class="btn btn-outline" type="button" data-bm-action="back-detail"><i class="bi bi-arrow-left"></i> 返回</button>' +
+          '<button class="btn btn-primary" type="button" data-bm-action="edit-from-view" data-id="' + item.id + '"><i class="bi bi-pencil-square"></i> 编辑</button>' +
+          '<button class="btn btn-danger" type="button" data-bm-action="delete-row" data-id="' + item.id + '"><i class="bi bi-trash3"></i> 删除</button>' +
+        '</div></div>'
+      : '<div class="bm-edit-head"><div class="bm-edit-title"><i class="bi bi-list"></i><span>编辑</span></div>' +
+          '<div class="bm-edit-actions"><button class="btn btn-outline" type="button" data-bm-action="back-detail"><i class="bi bi-arrow-left"></i> 返回</button></div></div>';
+    return '<div class="bm-edit-page' + (readonly ? ' bm-view-page' : '') + '" data-edit-id="' + item.id + '">' +
+      header +
+      '<div class="bm-edit-scroll">' +
+        renderBasicMetaSection(data, readonly) +
+        (isFieldModel ? renderFieldTechnicalSection(data, readonly) : '') +
+        renderBusinessSection(data, readonly, isFieldModel) +
+      '</div>' +
+    '</div>';
+  }
+
   function renderTaskStatus(status) {
     var cls = status === '处理成功' ? 'success' : (status === '处理中' ? 'running' : 'failed');
     return '<span class="bm-task-status ' + cls + '">' + status + '</span>';
@@ -725,7 +889,9 @@ DP.pages.businessMetadata = (function () {
     var view = page.querySelector('[data-bm-view]');
     if (tabs) tabs.innerHTML = renderMainTabs();
     if (!view) return;
-    if (state.activeTab === 'log') view.innerHTML = renderLogView();
+    if (state.viewRowId && state.activeTab === 'list') view.innerHTML = renderMetadataFormPage('view');
+    else if (state.editRowId && state.activeTab === 'list') view.innerHTML = renderMetadataFormPage('edit');
+    else if (state.activeTab === 'log') view.innerHTML = renderLogView();
     else if (state.activeTab === 'task') view.innerHTML = renderTaskView();
     else if (state.activeTab === 'ai') view.innerHTML = renderAiView();
     else view.innerHTML = renderDataList();
@@ -788,25 +954,13 @@ DP.pages.businessMetadata = (function () {
   }
 
   function openViewModal(page, rowId) {
-    var item = getRowById(rowId);
-    if (!item) return;
     closeModal(page);
-    page.insertAdjacentHTML('beforeend',
-      '<div class="bm-modal-mask" data-bm-modal-mask>' +
-        '<div class="bm-modal bm-detail-modal" role="dialog" aria-modal="true" aria-label="业务元数据详情">' +
-          '<div class="bm-modal-header"><h3>业务元数据详情</h3><button class="bm-modal-close" data-bm-action="close-modal" type="button" aria-label="关闭"><i class="bi bi-x-lg"></i></button></div>' +
-          '<div class="bm-detail-grid">' +
-            renderInfoItem('编码', item.code) +
-            renderInfoItem('名称', item.name) +
-            renderInfoItem('别名', item.alias) +
-            renderInfoItem('元模型', item.metaModel) +
-            renderInfoItem('引用标准', item.standard) +
-            renderInfoItem('引用业务代码', item.bizCode) +
-            renderInfoItem('备注', item.remark) +
-          '</div>' +
-          '<div class="bm-modal-footer"><button class="btn btn-primary" data-bm-action="close-modal" type="button"><i class="bi bi-check-lg"></i> 确定</button></div>' +
-        '</div>' +
-      '</div>');
+    if (!getRowById(rowId)) return;
+    state.viewRowId = rowId;
+    state.editRowId = null;
+    state.activeTab = 'list';
+    state.logContext = null;
+    renderContent(page);
   }
 
   function inputRow(name, label, value) {
@@ -814,27 +968,13 @@ DP.pages.businessMetadata = (function () {
   }
 
   function openEditModal(page, rowId) {
-    var item = getRowById(rowId);
-    if (!item) return;
     closeModal(page);
-    page.insertAdjacentHTML('beforeend',
-      '<div class="bm-modal-mask" data-bm-modal-mask>' +
-        '<div class="bm-modal" role="dialog" aria-modal="true" aria-label="编辑业务元数据" data-edit-id="' + item.id + '">' +
-          '<div class="bm-modal-header"><h3>编辑业务元数据</h3><button class="bm-modal-close" data-bm-action="close-modal" type="button" aria-label="关闭"><i class="bi bi-x-lg"></i></button></div>' +
-          '<div class="bm-modal-body">' +
-            inputRow('code', '编码', item.code) +
-            inputRow('name', '名称', item.name) +
-            inputRow('alias', '别名', item.alias) +
-            inputRow('standard', '引用标准', item.standard) +
-            inputRow('bizCode', '业务代码', item.bizCode) +
-            '<label class="bm-form-row"><span>元模型</span><select data-bm-edit="metaModel"><option value="库模型">库模型</option><option value="表模型">表模型</option><option value="字段模型">字段模型</option></select></label>' +
-            '<label class="bm-form-row bm-form-area"><span>备注</span><textarea data-bm-edit="remark">' + escapeHtml(item.remark) + '</textarea></label>' +
-          '</div>' +
-          '<div class="bm-modal-footer"><button class="btn btn-primary" data-bm-action="save-edit" type="button"><i class="bi bi-save"></i> 保存</button><button class="btn btn-outline" data-bm-action="close-modal" type="button"><i class="bi bi-x-lg"></i> 取消</button></div>' +
-        '</div>' +
-      '</div>');
-    var select = page.querySelector('[data-bm-edit="metaModel"]');
-    if (select) select.value = item.metaModel;
+    if (!getRowById(rowId)) return;
+    state.viewRowId = null;
+    state.editRowId = rowId;
+    state.activeTab = 'list';
+    state.logContext = null;
+    renderContent(page);
   }
 
   function openImportModal(page) {
@@ -900,6 +1040,8 @@ DP.pages.businessMetadata = (function () {
     var doDelete = function () {
       metadataRows = metadataRows.filter(function (item) { return ids.indexOf(String(item.id)) < 0; });
       state.selectedIds = {};
+      if (state.viewRowId && ids.indexOf(String(state.viewRowId)) >= 0) state.viewRowId = null;
+      if (state.editRowId && ids.indexOf(String(state.editRowId)) >= 0) state.editRowId = null;
       renderContent(page);
       showToast(page, '已删除选中的业务元数据');
     };
@@ -911,15 +1053,16 @@ DP.pages.businessMetadata = (function () {
   }
 
   function saveEdit(page) {
-    var modal = page.querySelector('[data-edit-id]');
-    if (!modal) return;
-    var item = getRowById(modal.getAttribute('data-edit-id'));
+    var editPage = page.querySelector('[data-edit-id]');
+    if (!editPage) return;
+    var item = getRowById(editPage.getAttribute('data-edit-id'));
     if (!item) return;
-    ['code', 'name', 'alias', 'standard', 'bizCode', 'metaModel', 'remark'].forEach(function (key) {
-      var input = modal.querySelector('[data-bm-edit="' + key + '"]');
+    ['code', 'name', 'alias', 'standard', 'bizCode', 'remark', 'dataType', 'dataLength', 'dataPrecision', 'desensitizeRule', 'qualityRule', 'encryptRule', 'dataClass', 'dataLevel'].forEach(function (key) {
+      var input = editPage.querySelector('[data-bm-edit="' + key + '"]');
       if (input) item[key] = input.value.trim() || '--';
     });
-    closeModal(page);
+    state.viewRowId = null;
+    state.editRowId = null;
     renderContent(page);
     showToast(page, '业务元数据已保存');
   }
@@ -985,8 +1128,60 @@ DP.pages.businessMetadata = (function () {
     showToast(page, '候选标准已创建并完成引用');
   }
 
+  function closeEditCombos(page, except) {
+    page.querySelectorAll('[data-bm-combo].open').forEach(function (combo) {
+      if (combo !== except) combo.classList.remove('open');
+    });
+  }
+
+  function filterCombo(combo, keyword) {
+    keyword = keyword.trim().toLowerCase();
+    combo.querySelectorAll('[data-bm-combo-option], [data-bm-class-node]').forEach(function (item) {
+      var text = item.textContent.toLowerCase();
+      item.style.display = !keyword || text.indexOf(keyword) >= 0 ? '' : 'none';
+    });
+  }
+
+  function selectComboValue(combo, value) {
+    var input = combo.querySelector('[data-bm-edit]');
+    var text = combo.querySelector('[data-bm-combo-text]');
+    if (input) input.value = value;
+    if (text) text.textContent = value || '请选择';
+    combo.querySelectorAll('.active').forEach(function (item) { item.classList.remove('active'); });
+    combo.querySelectorAll('[data-value]').forEach(function (item) {
+      if (item.getAttribute('data-value') === value) item.classList.add('active');
+    });
+    combo.classList.remove('open');
+  }
+
   function bindEvents(page) {
     page.addEventListener('click', function (e) {
+      var comboTrigger = e.target.closest('[data-bm-combo-trigger]');
+      if (comboTrigger) {
+        var combo = comboTrigger.closest('[data-bm-combo]');
+        if (!combo) return;
+        var isOpen = combo.classList.contains('open');
+        closeEditCombos(page, combo);
+        combo.classList.toggle('open', !isOpen);
+        var comboSearch = combo.querySelector('[data-bm-combo-search]');
+        if (!isOpen && comboSearch) {
+          comboSearch.value = '';
+          filterCombo(combo, '');
+          setTimeout(function () { comboSearch.focus(); }, 0);
+        }
+        return;
+      }
+
+      var comboOption = e.target.closest('[data-bm-combo-option], [data-bm-class-option]');
+      if (comboOption) {
+        var optionCombo = comboOption.closest('[data-bm-combo]');
+        if (!optionCombo) return;
+        selectComboValue(optionCombo, comboOption.getAttribute('data-value') || comboOption.textContent.trim());
+        return;
+      }
+
+      if (!e.target.closest('[data-bm-combo]')) closeEditCombos(page);
+
       var sideTab = e.target.closest('[data-bm-side-tab]');
       if (sideTab) {
         state.sideTab = sideTab.getAttribute('data-bm-side-tab');
@@ -1023,6 +1218,8 @@ DP.pages.businessMetadata = (function () {
       if (mainTab) {
         state.activeTab = mainTab.getAttribute('data-bm-main-tab');
         state.logContext = null;
+        state.viewRowId = null;
+        state.editRowId = null;
         renderContent(page);
         return;
       }
@@ -1087,6 +1284,13 @@ DP.pages.businessMetadata = (function () {
         deleteRows(page, [String(id)]);
       } else if (actionName === 'close-modal') {
         closeModal(page);
+      } else if (actionName === 'back-detail') {
+        state.viewRowId = null;
+        state.editRowId = null;
+        renderContent(page);
+      } else if (actionName === 'edit-from-view') {
+        state.viewRowId = null;
+        openEditModal(page, id);
       } else if (actionName === 'save-edit') {
         saveEdit(page);
       } else if (actionName === 'save-import') {
@@ -1152,6 +1356,10 @@ DP.pages.businessMetadata = (function () {
     page.addEventListener('input', function (e) {
       if (e.target.matches('[data-bm-tree-search]')) {
         applyTreeSearch(page);
+      }
+      if (e.target.matches('[data-bm-combo-search]')) {
+        var combo = e.target.closest('[data-bm-combo]');
+        if (combo) filterCombo(combo, e.target.value);
       }
     });
 
