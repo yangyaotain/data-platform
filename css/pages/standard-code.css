@@ -1,0 +1,667 @@
+/* ============================================================
+   数据中台 V4.0 - 数据资产 / 数据标准管理 / 标准代码
+   复用业务代码模块基础样式，补充标准代码页面差异
+   ============================================================ */
+
+.page-standard-code .sc-left-panel {
+  width: 270px;
+}
+
+.page-standard-code .sc-tree-scroll {
+  padding-top: 8px;
+}
+
+.page-standard-code .sc-tree .bc-tree-row {
+  justify-content: flex-start;
+}
+
+.page-standard-code .sc-tree .bc-tree-icon {
+  color: #e7a723;
+}
+
+.page-standard-code.sc-form-mode {
+  gap: 0;
+  padding: 0;
+  background: #fff;
+}
+
+.page-standard-code.sc-form-mode .sc-left-panel {
+  display: none;
+}
+
+.page-standard-code.sc-form-mode .sc-main-panel {
+  border: none;
+  box-shadow: none;
+}
+
+.page-standard-code.sc-form-mode .sc-editor-panel {
+  display: flex;
+  flex: 1;
+}
+
+.page-standard-code .sc-list-table {
+  min-width: 1580px;
+}
+
+.page-standard-code .sc-list-table-wrap {
+  padding: 12px 16px 0;
+}
+
+.page-standard-code .sc-list-table th:first-child,
+.page-standard-code .sc-list-table td:first-child,
+.page-standard-code .sc-io-table th:first-child,
+.page-standard-code .sc-io-table td:first-child {
+  border-left: 1px solid #dfe5ec;
+}
+
+.page-standard-code .sc-list-table th,
+.page-standard-code .sc-list-table td {
+  height: 43px;
+}
+
+.page-standard-code .sc-w-check { width: 42px; }
+.page-standard-code .sc-w-code { width: 120px; }
+.page-standard-code .sc-w-name { width: 440px; }
+.page-standard-code .sc-w-type { width: 120px; }
+.page-standard-code .sc-w-desc { width: 200px; }
+.page-standard-code .sc-w-user { width: 120px; }
+.page-standard-code .sc-w-time { width: 200px; }
+.page-standard-code .sc-w-count { width: 120px; }
+.page-standard-code .sc-w-action { width: 210px; }
+
+.page-standard-code .sc-icon-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.page-standard-code .sc-icon-actions button {
+  width: 24px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.page-standard-code .sc-icon-actions button:hover {
+  background: #edf5ff;
+}
+
+.page-standard-code .sc-icon-actions button i {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.page-standard-code .sc-icon-actions button.danger {
+  color: #ff4d5f;
+}
+
+.page-standard-code .sc-icon-actions button.danger:hover {
+  background: #fff1f3;
+}
+
+.page-standard-code .sc-pagination {
+  justify-content: space-between;
+  min-height: 58px;
+  border-top: none;
+}
+
+.page-standard-code .sc-page-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.page-standard-code .sc-page-info select {
+  width: 58px;
+  height: 34px;
+  margin: 0 4px;
+  padding: 0 8px;
+  border: 1px solid #d9dfe6;
+  border-radius: 3px;
+  background: #fff;
+  color: #1f2d3d;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.page-standard-code .sc-page-nav {
+  display: inline-flex;
+  align-items: center;
+}
+
+.page-standard-code .sc-page-nav button {
+  min-width: 36px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d9dfe6;
+  border-left: none;
+  background: #fff;
+  color: #3d4f5f;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.page-standard-code .sc-page-nav button:first-child,
+.page-standard-code .sc-page-nav .sc-page-num:first-of-type {
+  border-left: 1px solid #d9dfe6;
+}
+
+.page-standard-code .sc-page-nav button:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.page-standard-code .sc-page-nav button:disabled {
+  color: #c3ccd6;
+  cursor: not-allowed;
+  border-color: #d9dfe6;
+}
+
+.page-standard-code .sc-page-nav .active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.page-standard-code .sc-page-jump {
+  width: 44px;
+  height: 34px;
+  margin-left: 10px;
+  padding: 0 8px;
+  border: 1px solid #9aa3ad;
+  color: #1f2d3d;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.page-standard-code .sc-editor-panel {
+  background: #fff;
+}
+
+.page-standard-code .sc-standard-form {
+  width: min(1120px, 100%);
+}
+
+.page-standard-code .sc-standard-form .bc-editor-row {
+  grid-template-columns: 110px minmax(520px, 625px) minmax(180px, 1fr);
+  column-gap: 28px;
+  margin-bottom: 26px;
+}
+
+.page-standard-code .sc-standard-form .bc-editor-row > label {
+  min-height: 42px;
+}
+
+.page-standard-code .sc-standard-form .bc-editor-control input,
+.page-standard-code .sc-standard-form .bc-editor-control select {
+  height: 43px;
+  border-radius: 0;
+}
+
+.page-standard-code .sc-standard-form .bc-editor-control textarea {
+  height: 168px;
+  border-radius: 0;
+}
+
+.page-standard-code .sc-standard-form .bc-editor-hint {
+  color: #2f3b4a;
+}
+
+.page-standard-code .sc-standard-form .bc-editor-hint i {
+  color: #737373;
+}
+
+.page-standard-code .sc-editor-row-area {
+  align-items: start;
+}
+
+.page-standard-code .sc-editor-actions {
+  margin-left: 138px;
+}
+
+.page-standard-code .sc-category-picker {
+  position: relative;
+  width: 100%;
+}
+
+.page-standard-code .sc-category-trigger {
+  width: 100%;
+  height: 43px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid #dfe3e8;
+  border-radius: 0;
+  background: #fff;
+  color: #1f2d3d;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.page-standard-code .sc-category-trigger i {
+  color: #8b95a1;
+  font-size: 15px;
+}
+
+.page-standard-code .sc-category-picker.open .sc-category-trigger {
+  border-color: var(--primary);
+}
+
+.page-standard-code .sc-category-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 44px;
+  z-index: 30;
+  display: none;
+  padding: 4px 0;
+  border: 1px solid #d9dfe6;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
+}
+
+.page-standard-code .sc-category-picker.open .sc-category-menu {
+  display: block;
+}
+
+.page-standard-code .sc-category-menu button {
+  width: 100%;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: none;
+  background: #fff;
+  color: #3d4f5f;
+  font-family: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.page-standard-code .sc-category-menu button:hover {
+  background: #edf5ff;
+  color: var(--primary);
+}
+
+.page-standard-code .sc-io-filter {
+  justify-content: flex-end;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.page-standard-code .sc-io-table-wrap {
+  padding: 0 16px;
+}
+
+.page-standard-code .sc-io-table {
+  min-width: 1320px;
+}
+
+.page-standard-code .sc-io-file { width: 360px; }
+.page-standard-code .sc-io-attr { width: 90px; }
+.page-standard-code .sc-io-status { width: 90px; }
+.page-standard-code .sc-io-count { width: 210px; }
+.page-standard-code .sc-io-user { width: 120px; }
+.page-standard-code .sc-io-time { width: 180px; }
+.page-standard-code .sc-io-action { width: 180px; }
+
+.page-standard-code .sc-link-text,
+.page-standard-code .sc-text-actions button {
+  color: var(--primary);
+}
+
+.page-standard-code .sc-io-status.success,
+.page-standard-code .sc-io-status.running {
+  color: #00a99d;
+}
+
+.page-standard-code .sc-io-status.failed,
+.page-standard-code .sc-text-actions button.danger {
+  color: #ff4d5f;
+}
+
+.page-standard-code .sc-text-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.page-standard-code .sc-text-actions button {
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.page-standard-code .sc-text-actions button:hover {
+  text-decoration: underline;
+}
+
+.page-standard-code .sc-data-toolbar {
+  padding: 12px 16px;
+}
+
+.page-standard-code .sc-data-toolbar .bc-data-page-query {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.page-standard-code .sc-data-toolbar .bc-data-page-query input {
+  border-radius: 2px;
+}
+
+.page-standard-code .sc-value-table-wrap {
+  margin-top: 0;
+}
+
+.page-standard-code .sc-value-table {
+  min-width: 1280px;
+}
+
+.page-standard-code .sc-v-check { width: 44px; }
+.page-standard-code .sc-v-code { width: 330px; }
+.page-standard-code .sc-v-name { width: 330px; }
+.page-standard-code .sc-v-desc { width: auto; }
+.page-standard-code .sc-v-property { width: 130px; }
+.page-standard-code .sc-v-valid { width: 100px; }
+.page-standard-code .sc-v-date { width: 110px; }
+.page-standard-code .sc-v-action { width: 120px; }
+
+.page-standard-code .sc-sort-mark {
+  float: right;
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 10px;
+}
+
+.sc-modal-mask {
+  background: rgba(0, 0, 0, 0.66);
+}
+
+.page-standard-code .sc-modal-head {
+  height: 48px;
+  border-top: 3px solid var(--primary);
+}
+
+.page-standard-code .sc-modal-head h3 {
+  gap: 0;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.page-standard-code .sc-import-modal {
+  width: 1000px;
+  border-radius: 2px;
+}
+
+.page-standard-code .sc-import-body {
+  padding: 26px 88px 26px;
+}
+
+.page-standard-code .sc-import-row {
+  grid-template-columns: 90px 370px minmax(180px, 1fr);
+  gap: 22px;
+}
+
+.page-standard-code .sc-import-row label {
+  justify-content: flex-end;
+}
+
+.page-standard-code .sc-import-footer {
+  min-height: 72px;
+  padding-right: 16px;
+}
+
+.page-standard-code .sc-value-modal {
+  width: 1000px;
+  overflow: visible;
+  border-radius: 2px;
+}
+
+.page-standard-code .sc-value-body {
+  padding: 36px 98px 26px;
+  overflow: visible;
+}
+
+.page-standard-code .sc-value-form-row {
+  display: grid;
+  grid-template-columns: 86px minmax(380px, 452px) minmax(140px, 1fr);
+  align-items: center;
+  gap: 22px;
+  margin-bottom: 20px;
+}
+
+.page-standard-code .sc-value-form-row.area {
+  align-items: start;
+}
+
+.page-standard-code .sc-value-form-row > label {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  color: #1f2d3d;
+  font-size: 14px;
+}
+
+.page-standard-code .sc-value-form-row > label span {
+  color: #ff4d4f;
+}
+
+.page-standard-code .sc-value-control {
+  position: relative;
+  min-width: 0;
+}
+
+.page-standard-code .sc-value-control input,
+.page-standard-code .sc-value-control select,
+.page-standard-code .sc-value-control textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #d9dfe6;
+  border-radius: 0;
+  background: #fff;
+  color: #1f2d3d;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.page-standard-code .sc-value-control input,
+.page-standard-code .sc-value-control select {
+  height: 38px;
+  padding: 0 10px;
+}
+
+.page-standard-code .sc-value-control textarea {
+  height: 112px;
+  padding: 9px 10px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.page-standard-code .sc-value-control input:focus,
+.page-standard-code .sc-value-control select:focus,
+.page-standard-code .sc-value-control textarea:focus {
+  border-color: var(--primary);
+}
+
+.page-standard-code .sc-value-hint {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.page-standard-code .sc-value-hint i {
+  color: #737373;
+}
+
+.page-standard-code .sc-value-footer {
+  min-height: 72px;
+}
+
+.page-standard-code .sc-date-control {
+  position: relative;
+}
+
+.page-standard-code .sc-date-picker {
+  position: absolute;
+  left: 0;
+  top: 42px;
+  z-index: 10030;
+  width: 610px;
+  border: 1px solid #d9dfe6;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
+}
+
+.page-standard-code .sc-date-head {
+  height: 50px;
+  display: grid;
+  grid-template-columns: 34px 34px 1fr 1fr 34px 34px;
+  align-items: center;
+  background: #5288e8;
+  color: #fff;
+}
+
+.page-standard-code .sc-date-head button {
+  height: 50px;
+  border: none;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+
+.page-standard-code .sc-date-head i {
+  font-size: 18px;
+}
+
+.page-standard-code .sc-date-head strong {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.page-standard-code .sc-date-months {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.page-standard-code .sc-date-month + .sc-date-month {
+  border-left: 1px solid #e3e7ef;
+}
+
+.page-standard-code .sc-date-week,
+.page-standard-code .sc-date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.page-standard-code .sc-date-week span {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #2f3b4a;
+  font-size: 15px;
+}
+
+.page-standard-code .sc-date-grid button {
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-family: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.page-standard-code .sc-date-grid button:hover {
+  background: #e8f1ff;
+  color: var(--primary);
+}
+
+.page-standard-code .sc-date-grid button.muted {
+  color: #cfd3da;
+}
+
+.page-standard-code .sc-date-grid button.active {
+  background: #5288e8;
+  color: #fff;
+}
+
+.page-standard-code .sc-date-foot {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px 0 20px;
+  border-top: 1px solid #e3e7ef;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.page-standard-code .sc-date-foot div {
+  display: flex;
+  gap: 6px;
+}
+
+.page-standard-code .sc-date-foot button {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid #d9dfe6;
+  border-radius: 2px;
+  background: #fff;
+  color: #4b5563;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.page-standard-code .sc-date-foot button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+@media (max-width: 1360px) {
+  .page-standard-code .sc-left-panel {
+    width: 250px;
+  }
+
+  .page-standard-code .sc-list-table-wrap,
+  .page-standard-code .sc-io-table-wrap {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .page-standard-code .sc-standard-form .bc-editor-row {
+    grid-template-columns: 104px minmax(360px, 1fr) 170px;
+  }
+
+  .page-standard-code .sc-value-modal,
+  .page-standard-code .sc-import-modal {
+    width: min(1000px, 94vw);
+  }
+}

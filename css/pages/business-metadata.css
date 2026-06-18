@@ -480,13 +480,13 @@
 .bm-edit-title {
   gap: 7px;
   color: #111827;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
 }
 
 .bm-edit-title i {
   color: var(--primary);
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .bm-edit-actions {
@@ -509,23 +509,23 @@
 
 .bm-edit-section {
   max-width: 1180px;
-  margin: 0 0 34px 64px;
+  margin: 0 0 28px 64px;
 }
 
 .bm-edit-section h3 {
-  margin: 0 0 26px;
+  margin: 0 0 22px;
   color: var(--primary);
-  font-size: 20px;
+  font-size: 16px;
   line-height: 1;
   font-weight: 700;
 }
 
 .bm-edit-row {
   display: grid;
-  grid-template-columns: 118px minmax(320px, 600px) minmax(120px, 240px);
+  grid-template-columns: 112px minmax(320px, 600px) minmax(120px, 240px);
   align-items: center;
-  column-gap: 20px;
-  margin-bottom: 30px;
+  column-gap: 18px;
+  margin-bottom: 22px;
 }
 
 .bm-edit-row-area {
@@ -534,8 +534,8 @@
 
 .bm-edit-label {
   color: #111827;
-  font-size: 16px;
-  line-height: 46px;
+  font-size: 14px;
+  line-height: 38px;
   text-align: right;
   white-space: nowrap;
 }
@@ -548,7 +548,7 @@
 
 .bm-edit-control {
   width: 100%;
-  height: 46px;
+  height: 38px;
   min-width: 0;
   padding: 0 10px;
   border: 1px solid #dde3ea;
@@ -556,7 +556,7 @@
   background: #fff;
   color: #111827;
   font-family: inherit;
-  font-size: 16px;
+  font-size: 14px;
   outline: none;
 }
 
@@ -618,7 +618,7 @@ select.bm-edit-control {
 
 .bm-combo-search {
   width: calc(100% - 12px);
-  height: 36px;
+  height: 32px;
   margin: 6px;
   padding: 0 8px;
   border: 3px solid #202020;
@@ -626,7 +626,7 @@ select.bm-edit-control {
   background: #fff;
   color: #111827;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 14px;
   outline: none;
 }
 
@@ -638,7 +638,7 @@ select.bm-edit-control {
 .bm-combo-option,
 .bm-class-option {
   width: 100%;
-  min-height: 40px;
+  min-height: 34px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -647,7 +647,7 @@ select.bm-edit-control {
   background: #fff;
   color: #333;
   font-family: inherit;
-  font-size: 16px;
+  font-size: 14px;
   text-align: left;
   cursor: pointer;
 }
@@ -683,7 +683,7 @@ select.bm-edit-control {
 
 .bm-class-option i {
   color: #e0a32c;
-  font-size: 15px;
+  font-size: 13px;
 }
 
 .bm-class-option.active i {
@@ -691,8 +691,8 @@ select.bm-edit-control {
 }
 
 textarea.bm-edit-control {
-  height: 240px;
-  padding: 12px 10px;
+  height: 96px;
+  padding: 9px 10px;
   line-height: 1.5;
   resize: vertical;
 }
@@ -716,27 +716,27 @@ textarea.bm-edit-control {
   gap: 5px;
   min-width: 0;
   color: #4b5563;
-  font-size: 16px;
+  font-size: 14px;
   white-space: nowrap;
 }
 
 .bm-edit-tip i {
   color: #6f7782;
-  font-size: 15px;
+  font-size: 13px;
 }
 
 .bm-edit-footer {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-left: 138px;
+  padding-left: 130px;
 }
 
 .bm-edit-footer .btn {
-  height: 46px;
-  padding: 0 18px;
+  height: 38px;
+  padding: 0 16px;
   border-radius: 4px;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 @media (max-width: 1280px) {

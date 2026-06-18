@@ -1,774 +1,446 @@
 /**
- * 数据中台 V4.0 - 数据治理 / 标准审核
+ * 数据中台 V4.0 - 数据资产 / 元数据管理 / 标准稽查
+ * 静态高保真原型：稽查结果列表、标准替换确认、右侧详情切换
  */
 window.DP = window.DP || {};
 DP.pages = DP.pages || {};
 
 DP.pages.standardAudit = (function () {
-  var rows = {
-    pending: [
-      {
-        title: 'shipping_method（配送方式）【交易域/订单交易/dw_ods（贴源库）/ods_order_main（订单主表）】',
-        object: 'ods_order_main',
-        objectCode: 'MD202605110001',
-        reason: '新增配送方式字段，需同步更新表结构元数据',
-        changeType: '发布',
-        beforeVersion: '--',
-        afterVersion: 'V1.0',
-        applicant: '张伟',
-        applyTime: '2026-05-10 09:30:00',
-        finishTime: '--',
-        status: '待审核',
-        statusClass: 'ma-status-blue'
-      },
-      {
-        title: 'customer_phone（客户手机号）【客户域/客户信息/dw_dwd（明细库）/dwd_customer_base（客户基础表）】',
-        object: 'customer_phone',
-        objectCode: 'MD202605100082',
-        reason: '补充字段口径和脱敏说明，便于业务侧查询理解',
-        changeType: '变更',
-        beforeVersion: 'V1.0',
-        afterVersion: 'V1.1',
-        applicant: '王敏',
-        applyTime: '2026-05-10 10:18:00',
-        finishTime: '--',
-        status: '待审核',
-        statusClass: 'ma-status-blue'
-      },
-      {
-        title: 'customer_id（客户编号）【客户域/客户信息/meta_model（元模型库）/customer_domain_model（客户域模型）】',
-        object: 'customer_domain_model',
-        objectCode: 'MD202605090126',
-        reason: '发布客户域元模型 V2.1，支持后续资产标准化采集',
-        changeType: '发布',
-        beforeVersion: '--',
-        afterVersion: 'V1.0',
-        applicant: '李娜',
-        applyTime: '2026-05-09 16:42:00',
-        finishTime: '--',
-        status: '待审核',
-        statusClass: 'ma-status-blue'
-      },
-      {
-        title: 'sku_id（商品编号）【交易域/订单交易/dw_dwd（明细库）/dwd_trade_order_detail_di（交易订单明细表）】',
-        object: 'dwd_trade_order_detail_di',
-        objectCode: 'MD202605090088',
-        reason: '补充中文名称、业务说明和负责人信息',
-        changeType: '变更',
-        beforeVersion: 'V1.2',
-        afterVersion: 'V1.3',
-        applicant: '赵磊',
-        applyTime: '2026-05-09 11:05:00',
-        finishTime: '--',
-        status: '待审核',
-        statusClass: 'ma-status-blue'
-      },
-      {
-        title: 'id_card_no（身份证号码）【客户域/身份认证/dw_dwd（明细库）/dwd_customer_identity（客户身份表）】',
-        object: 'id_card_no',
-        objectCode: 'MD202605080037',
-        reason: '申请下线身份证号码字段，删除历史冗余元数据',
-        changeType: '废止',
-        beforeVersion: 'V1.0',
-        afterVersion: '--',
-        applicant: '陈晨',
-        applyTime: '2026-05-08 14:26:00',
-        finishTime: '--',
-        status: '待审核',
-        statusClass: 'ma-status-blue'
-      }
-    ],
-    processed: [
-      {
-        title: 'order_status（订单状态）【交易域/订单交易/dw_ods（贴源库）/ods_order_main（订单主表）】',
-        object: 'ods_order_main',
-        objectCode: 'MD202605060021',
-        reason: '补充字段变更说明并同步采集时间',
-        changeType: '变更',
-        beforeVersion: 'V1.0',
-        afterVersion: 'V1.1',
-        applicant: '张伟',
-        applyTime: '2026-05-06 10:00:00',
-        finishTime: '2026-05-07 11:20:00',
-        status: '审核通过',
-        statusClass: 'ma-status-green'
-      },
-      {
-        title: 'gmv_amount（GMV交易金额）【经营域/经营分析/dw_dws（汇总库）/dws_trade_summary_1d（交易汇总表）】',
-        object: 'gmv_amount',
-        objectCode: 'MD202605050063',
-        reason: '统一退款订单扣减口径，避免报表口径不一致',
-        changeType: '变更',
-        beforeVersion: 'V2.0',
-        afterVersion: 'V2.1',
-        applicant: '王敏',
-        applyTime: '2026-05-05 15:10:00',
-        finishTime: '2026-05-06 09:45:00',
-        status: '审核通过',
-        statusClass: 'ma-status-green'
-      },
-      {
-        title: 'member_address（会员收货地址）【客户域/客户信息/dw_ods（贴源库）/ods_member_address（会员地址表）】',
-        object: 'member_address',
-        objectCode: 'MD202605030019',
-        reason: '敏感级别说明不完整，需补充使用范围',
-        changeType: '废止',
-        beforeVersion: 'V1.0',
-        afterVersion: '--',
-        applicant: '熊华',
-        applyTime: '2026-05-03 09:22:00',
-        finishTime: '2026-05-04 13:35:00',
-        status: '审核驳回',
-        statusClass: 'ma-status-orange'
-      },
-      {
-        title: 'campaign_id（活动编号）【营销域/活动运营/meta_model（元模型库）/marketing_domain（营销主题域）】',
-        object: 'marketing_domain',
-        objectCode: 'MD202605020077',
-        reason: '主题域边界需调整，增加渠道投放实体',
-        changeType: '发布',
-        beforeVersion: '--',
-        afterVersion: 'V1.0',
-        applicant: '李娜',
-        applyTime: '2026-05-02 17:08:00',
-        finishTime: '2026-05-03 10:30:00',
-        status: '审核通过',
-        statusClass: 'ma-status-green'
-      },
-      {
-        title: 'sale_date（销售日期）【经营域/经营分析/dw_ads（应用库）/ads_sales_daily_report（销售日报表）】',
-        object: 'ads_sales_daily_report',
-        objectCode: 'MD202604300018',
-        reason: '资产负责人由营销组调整为经营分析组',
-        changeType: '变更',
-        beforeVersion: 'V1.0',
-        afterVersion: 'V1.1',
-        applicant: '赵磊',
-        applyTime: '2026-04-30 13:56:00',
-        finishTime: '2026-05-01 09:10:00',
-        status: '审核驳回',
-        statusClass: 'ma-status-orange'
-      }
-    ],
-    started: [
-      {
-        title: 'pay_channel_code（支付渠道编码）【交易域/支付结算/dw_ods（贴源库）/ods_payment_record（支付流水表）】',
-        object: 'ods_payment_record',
-        objectCode: 'MD202605090102',
-        reason: '新增支付渠道编码字段，申请同步元数据说明',
-        changeType: '发布',
-        beforeVersion: '--',
-        afterVersion: 'V1.0',
-        applicant: '张伟',
-        applyTime: '2026-05-09 10:00:00',
-        finishTime: '2026-05-10 10:00:00',
-        status: '待审核',
-        statusClass: 'ma-status-blue'
-      },
-      {
-        title: 'product_category_name（商品类目名称）【商品域/商品基础/dw_dim（维度库）/dim_product_category（商品类目维表）】',
-        object: 'product_category_name',
-        objectCode: 'MD202605080075',
-        reason: '修正字段释义，明确一级、二级类目展示规则',
-        changeType: '变更',
-        beforeVersion: 'V1.0',
-        afterVersion: 'V1.1',
-        applicant: '王敏',
-        applyTime: '2026-05-08 10:00:00',
-        finishTime: '2026-05-09 10:00:00',
-        status: '待审核',
-        statusClass: 'ma-status-blue'
-      },
-      {
-        title: 'supplier_id（供应商编号）【供应链域/供应商管理/meta_model（元模型库）/supply_chain_model（供应链模型）】',
-        object: 'supply_chain_model',
-        objectCode: 'MD202605070044',
-        reason: '申请发布供应链元模型，用于资源目录归类',
-        changeType: '发布',
-        beforeVersion: '--',
-        afterVersion: 'V1.0',
-        applicant: '李娜',
-        applyTime: '2026-05-07 10:00:00',
-        finishTime: '2026-05-08 10:00:00',
-        status: '审核通过',
-        statusClass: 'ma-status-green'
-      },
-      {
-        title: 'region_code（区域编码）【公共域/行政区划/dw_dim（维度库）/dim_region（区域维度表）】',
-        object: 'dim_region',
-        objectCode: 'MD202605060031',
-        reason: '补充表中文名称、业务描述和数据负责人',
-        changeType: '变更',
-        beforeVersion: 'V1.0',
-        afterVersion: 'V1.1',
-        applicant: '赵磊',
-        applyTime: '2026-05-06 10:00:00',
-        finishTime: '2026-05-07 10:00:00',
-        status: '审核驳回',
-        statusClass: 'ma-status-orange'
-      },
-      {
-        title: 'bank_card_no（银行卡号）【交易域/支付结算/dw_dwd（明细库）/dwd_payment_account（支付账户表）】',
-        object: 'bank_card_no',
-        objectCode: 'MD202605050066',
-        reason: '申请调整为高敏感字段，并绑定展示脱敏策略',
-        changeType: '变更',
-        beforeVersion: 'V1.1',
-        afterVersion: 'V1.2',
-        applicant: '陈晨',
-        applyTime: '2026-05-05 10:00:00',
-        finishTime: '2026-05-06 10:00:00',
-        status: '审核通过',
-        statusClass: 'ma-status-green'
-      },
-      {
-        title: 'active_member_tag（活跃会员标签）【客户域/客户标签/dw_dws（汇总库）/dws_member_tag_1d（会员标签汇总表）】',
-        object: 'active_member_tag',
-        objectCode: 'MD202605040025',
-        reason: '更新活跃会员统计周期和标签定义说明',
-        changeType: '变更',
-        beforeVersion: 'V1.0',
-        afterVersion: 'V1.1',
-        applicant: '周琳',
-        applyTime: '2026-05-04 10:00:00',
-        finishTime: '2026-05-05 10:00:00',
-        status: '审核驳回',
-        statusClass: 'ma-status-orange'
-      },
-      {
-        title: 'profile_score（画像评分）【客户域/客户画像/dw_dws（汇总库）/dws_customer_profile_1d（客户画像日汇总表）】',
-        object: 'dws_customer_profile_1d',
-        objectCode: 'MD202605030089',
-        reason: '调整资源目录归属至客户域画像目录',
-        changeType: '变更',
-        beforeVersion: 'V2.0',
-        afterVersion: 'V2.1',
-        applicant: '孙琪',
-        applyTime: '2026-05-03 10:00:00',
-        finishTime: '2026-05-04 10:00:00',
-        status: '审核通过',
-        statusClass: 'ma-status-green'
-      }
-    ]
+  var state = {
+    selectedIds: {},
+    treeKey: 'master_id',
+    keyword: '',
+    detailId: null
   };
 
-  function parseTitle(title) {
-    var match = String(title || '').match(/^(.+?)【(.+?)\/(.+?)\/(.+?)\/(.+?)】$/);
-    if (!match) {
-      return { fieldName: title || '--', layer: '--', database: '--', tableName: '--' };
+  var treeData = [
+    {
+      key: 'biz',
+      label: '业务部 (1)',
+      icon: 'bi-folder-fill',
+      open: true,
+      children: [
+        { key: 'master_id', label: '主数据编码', icon: 'bi-card-list', active: true }
+      ]
+    },
+    {
+      key: 'dw',
+      label: '数仓组 (2)',
+      icon: 'bi-folder-fill',
+      open: true,
+      children: [
+        { key: 'phone', label: '手机号码', icon: 'bi-card-list' },
+        { key: 'grid_id', label: '网格id', icon: 'bi-card-list' }
+      ]
     }
+  ];
+
+  var rows = [
+    {
+      id: 1,
+      code: 'order_00000026',
+      englishName: 'tms_demo.a_template_city_distance.id',
+      metaEnglish: 'id',
+      standardEnglish: 'master_id',
+      standardCode: 'order_00000008',
+      alias: '主数据编码',
+      description: '主数据编码',
+      category: '业务部',
+      consistency: { match: 7, mismatch: 4, total: 11, rate: '63.64%' },
+      remark: '主数据编码',
+      dataType: 'bigint',
+      length: '19',
+      precision: '0',
+      desensitizeRule: '',
+      qualityRule: '',
+      encryptRule: '',
+      dataLevel: '',
+      dataClass: '业务部 (order)'
+    },
+    {
+      id: 2,
+      code: 'order_00000025',
+      englishName: 'aierp_pro_test.appversion.Id',
+      metaEnglish: 'Id',
+      standardEnglish: 'master_id',
+      standardCode: 'order_00000008',
+      alias: '主数据编码',
+      description: '主数据编码',
+      category: '业务部',
+      consistency: { match: 7, mismatch: 4, total: 11, rate: '63.64%' },
+      remark: '主数据编码',
+      dataType: 'bigint',
+      length: '19',
+      precision: '0',
+      desensitizeRule: '',
+      qualityRule: '',
+      encryptRule: '',
+      dataLevel: '',
+      dataClass: '业务部 (order)'
+    }
+  ];
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function getCurrentStandard() {
     return {
-      fieldName: match[1],
-      layer: match[2] + '/' + match[3],
-      database: match[4],
-      tableName: match[5]
+      name: '主数据编码',
+      english: 'master_id',
+      code: 'order_00000008',
+      schedule: '5 28 14 17 6 ? 2026'
     };
   }
 
-  function renderApplyContent(row) {
-    var info = parseTitle(row.title);
-    return '<div class="ma-apply-content">' +
-      '<div><span>字段：</span>' + info.fieldName + '</div>' +
-      '<div><span>表：</span>' + info.tableName + '</div>' +
-      '<div><span>归属：</span>' + info.layer + '/' + info.database + '</div>' +
-      '</div>';
+  function getFilteredRows() {
+    var keyword = state.keyword.trim().toLowerCase();
+    if (!keyword) return rows.slice();
+    return rows.filter(function (item) {
+      return [item.code, item.englishName, item.alias, item.remark].some(function (text) {
+        return String(text).toLowerCase().indexOf(keyword) >= 0;
+      });
+    });
   }
 
-  function renderCurrentFieldLine(row) {
-    var info = parseTitle(row.title);
-    return '<div class="ma-current-field">' +
-      '<span><b>字段：</b>' + info.fieldName + '</span>' +
-      '<span><b>表：</b>' + info.tableName + '</span>' +
-      '<span><b>归属：</b>' + info.layer + '/' + info.database + '</span>' +
-      '</div>';
+  function getSelectedRows() {
+    return rows.filter(function (item) { return state.selectedIds[item.id]; });
   }
 
-  function renderSummary(row) {
-    return '<div class="ma-reason">' + row.reason + '</div>';
+  function getRowById(id) {
+    return rows.filter(function (item) { return String(item.id) === String(id); })[0] || rows[0];
   }
 
-  function getChangeTypeClass(changeType) {
-    if (changeType === '发布') return 'ma-change-add';
-    if (changeType === '废止') return 'ma-change-delete';
-    return 'ma-change-edit';
+  function renderTreeNodes(nodes) {
+    return nodes.map(function (node) {
+      var hasChildren = node.children && node.children.length;
+      var childHtml = hasChildren ? '<ul>' + renderTreeNodes(node.children) + '</ul>' : '';
+      return '<li class="sa-tree-node ' + (node.open ? 'open' : '') + '">' +
+        '<button class="sa-tree-row ' + (state.treeKey === node.key ? 'active' : '') + '" type="button" data-sa-tree="' + node.key + '">' +
+          (hasChildren ? '<i class="bi bi-chevron-down sa-tree-arrow"></i>' : '<span class="sa-tree-spacer"></span>') +
+          '<i class="bi ' + node.icon + ' sa-tree-icon"></i>' +
+          '<span>' + escapeHtml(node.label) + '</span>' +
+        '</button>' +
+        childHtml +
+      '</li>';
+    }).join('');
   }
 
-  function renderChangeType(row) {
-    return '<span class="ma-change-type ' + getChangeTypeClass(row.changeType) + '">' + row.changeType + '</span>';
+  function renderLeftPanel() {
+    return '<aside class="sa-left-panel">' +
+      '<div class="sa-tree-search">' +
+        '<input type="text" placeholder="关键字搜索" data-sa-tree-search>' +
+        '<button type="button" data-sa-action="tree-search" aria-label="搜索"><i class="bi bi-search"></i></button>' +
+      '</div>' +
+      '<div class="sa-tree-wrap"><ul class="sa-tree">' + renderTreeNodes(treeData) + '</ul></div>' +
+    '</aside>';
   }
 
-  function renderRows(type) {
-    var showCheckbox = type === 'pending';
-    var showFinishTime = type !== 'pending';
-    var data = rows[type] || [];
-    var html = data.map(function (row, index) {
+  function renderStatusHeader() {
+    var standard = getCurrentStandard();
+    return '<div class="sa-summary">' +
+      '<div class="sa-summary-main">' +
+        '<h2>' + standard.name + '【' + standard.english + '】【' + standard.code + '】</h2>' +
+        '<div class="sa-summary-meta">' +
+          '<span>稽查结果（一致/不一致/全部）： <b class="ok">0</b> / <b class="bad">2</b> / <b>2</b></span>' +
+          '<span>一致率： <b>0%</b></span>' +
+          '<span>调度任务： ' + standard.schedule + ' 执行 <a href="javascript:;" data-sa-action="schedule">启动调度</a></span>' +
+          '<span>状态： <b class="success">执行成功</b></span>' +
+        '</div>' +
+      '</div>' +
+      '<button class="btn btn-primary sa-run-btn" type="button" data-sa-action="run-now"><i class="bi bi-play-fill"></i> 立即执行</button>' +
+    '</div>';
+  }
+
+  function renderToolbar() {
+    return '<div class="sa-toolbar">' +
+      '<button class="btn btn-primary" type="button" data-sa-action="batch-replace"><i class="bi bi-arrow-repeat"></i> 标准替换</button>' +
+      '<div class="sa-search-box">' +
+        '<input type="text" value="' + escapeHtml(state.keyword) + '" placeholder="编码/名称/备注" data-sa-keyword>' +
+        '<button class="btn btn-primary" type="button" data-sa-action="query"><i class="bi bi-search"></i> 查询</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderConsistency(item) {
+    return '<span class="sa-rate"><b>' + item.consistency.match + '</b>/<em>' + item.consistency.mismatch + '</em>/' + item.consistency.total + '(' + item.consistency.rate + ')</span>';
+  }
+
+  function renderTableRows() {
+    var data = getFilteredRows();
+    return data.map(function (item) {
       return '<tr>' +
-        (showCheckbox ? '<td class="ma-col-ck"><input type="checkbox" data-ma-row-check data-ma-index="' + index + '" aria-label="选择第' + (index + 1) + '条"></td>' : '') +
-        '<td class="ma-col-content">' + renderApplyContent(row) + '</td>' +
-        '<td class="ma-col-summary">' + renderSummary(row) + '</td>' +
-        '<td class="ma-col-change">' + renderChangeType(row) + '</td>' +
-        '<td class="ma-col-status"><span class="ma-status ' + row.statusClass + '">' + row.status + '</span></td>' +
-        '<td class="ma-col-user">' + row.applicant + '</td>' +
-        '<td class="ma-col-time">' + row.applyTime + '</td>' +
-        (showFinishTime ? '<td class="ma-col-time">' + row.finishTime + '</td>' : '') +
-        '<td class="ma-col-action">' + (type === 'pending' ? '<button class="ma-op-btn" data-ma-action="handle" data-ma-tab="' + type + '" data-ma-index="' + index + '"><i class="bi bi-check2-square"></i><span>处理</span></button>' : '<button class="ma-op-btn" data-ma-action="detail" data-ma-tab="' + type + '" data-ma-index="' + index + '"><i class="bi bi-eye"></i><span>查看详情</span></button>') + '</td>' +
+        '<td class="sa-col-check"><input type="checkbox" data-sa-row-check="' + item.id + '" ' + (state.selectedIds[item.id] ? 'checked' : '') + ' aria-label="选择' + escapeHtml(item.code) + '"></td>' +
+        '<td>' + escapeHtml(item.code) + '</td>' +
+        '<td title="' + escapeHtml(item.englishName) + '">' + escapeHtml(item.englishName) + '</td>' +
+        '<td>' + escapeHtml(item.alias) + '</td>' +
+        '<td>' + escapeHtml(item.category) + '</td>' +
+        '<td>' + renderConsistency(item) + '</td>' +
+        '<td>' + escapeHtml(item.remark) + '</td>' +
+        '<td class="sa-actions">' +
+          '<button type="button" data-sa-action="single-replace" data-id="' + item.id + '"><i class="bi bi-arrow-repeat"></i> 标准替换</button>' +
+          '<button type="button" data-sa-action="view-detail" data-id="' + item.id + '"><i class="bi bi-eye"></i> 查看详情</button>' +
+        '</td>' +
       '</tr>';
     }).join('');
-
-    for (var i = data.length; i < 10; i++) {
-      var emptyCellCount = getColumns(type).length;
-      html += '<tr class="ma-empty-row">' +
-        (showCheckbox ? '<td class="ma-col-ck"></td>' : '') +
-        Array(emptyCellCount - (showCheckbox ? 1 : 0)).fill('<td></td>').join('') +
-      '</tr>';
-    }
-    return html;
   }
 
-  function getColumns(type) {
-    var showCheckbox = type === 'pending';
-    var showFinishTime = type !== 'pending';
-    var columns = [];
-    if (showCheckbox) columns.push({ cls: 'ma-col-ck', title: '<input type="checkbox" data-ma-check-all aria-label="全选">', width: 46, min: 46 });
-    columns.push({ cls: 'ma-col-content', title: '申请内容', width: 300, min: 240 });
-    columns.push({ cls: 'ma-col-summary', title: '申请理由', width: null, min: 180, flexible: true });
-    columns.push({ cls: 'ma-col-change', title: '类型', width: 78, min: 70 });
-    columns.push({ cls: 'ma-col-status', title: '流转状态', width: 138, min: 118 });
-    columns.push({ cls: 'ma-col-user', title: '申请人', width: 120, min: 100 });
-    columns.push({ cls: 'ma-col-time', title: '申请时间', width: 145, min: 125 });
-    if (showFinishTime) columns.push({ cls: 'ma-col-time', title: '完成时间', width: 145, min: 125 });
-    columns.push({ cls: 'ma-col-action', title: '操作', width: 152, min: 132 });
-    return columns;
-  }
-
-  function renderColgroup(columns) {
-    return '<colgroup>' + columns.map(function (col) {
-      var style = col.width ? ' style="width:' + col.width + 'px;"' : '';
-      var flex = col.flexible ? ' data-flexible="true"' : '';
-      return '<col class="' + col.cls + '"' + style + ' data-min-width="' + col.min + '"' + flex + '>';
-    }).join('') + '</colgroup>';
-  }
-
-  function renderHeader(columns) {
-    return '<thead><tr>' + columns.map(function (col) {
-      return '<th class="' + col.cls + '">' + col.title + '</th>';
-    }).join('') + '</tr></thead>';
-  }
-
-  function renderTable(type) {
-    var columns = getColumns(type);
-    return '<table class="ma-table">' +
-      renderColgroup(columns) +
-      renderHeader(columns) +
-      '<tbody id="maTableBody">' + renderRows(type) + '</tbody>' +
-    '</table>';
-  }
-
-  function initResizableColumns(page) {
-    var table = page.querySelector('.ma-table');
-    var wrap = page.querySelector('.ma-table-wrap');
-    if (!table) return;
-    var cols = table.querySelectorAll('col');
-    var flexibleCol = table.querySelector('col[data-flexible="true"]');
-
-    function getFixedWidth(excludedCol) {
-      return Array.prototype.reduce.call(cols, function (sum, col) {
-        if (col === flexibleCol || col === excludedCol) return sum;
-        return sum + (parseInt(col.style.width, 10) || col.offsetWidth || 0);
-      }, 0);
-    }
-
-    function getMaxWidth(col) {
-      var wrapWidth = wrap ? wrap.clientWidth : 0;
-      var minReasonWidth = flexibleCol ? (parseInt(flexibleCol.getAttribute('data-min-width'), 10) || 180) : 0;
-      if (!wrapWidth || col === flexibleCol) return Infinity;
-      return Math.max(parseInt(col.getAttribute('data-min-width'), 10) || 80, wrapWidth - getFixedWidth(col) - minReasonWidth);
-    }
-
-    table.querySelectorAll('th').forEach(function (th, index) {
-      var col = cols[index];
-      if (!col) return;
-      if (col.getAttribute('data-flexible') === 'true') return;
-      var handle = document.createElement('span');
-      handle.className = 'ma-col-resizer';
-      th.appendChild(handle);
-
-      handle.addEventListener('mousedown', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        var startX = e.clientX;
-        var startWidth = parseInt(col.style.width, 10) || th.offsetWidth;
-        var minWidth = parseInt(col.getAttribute('data-min-width'), 10) || 80;
-        var maxWidth = getMaxWidth(col);
-        table.classList.add('resizing');
-
-        function onMove(moveEvent) {
-          var delta = moveEvent.clientX - startX;
-          var nextWidth = Math.min(maxWidth, Math.max(minWidth, startWidth + delta));
-          col.style.width = nextWidth + 'px';
-        }
-
-        function onUp() {
-          table.classList.remove('resizing');
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-        }
-
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-      });
-    });
-  }
-
-  var lastListTab = 'pending';
-
-  function renderTabs(type) {
-    var activeType = type || 'pending';
-    return '<div class="ma-tabs">' +
-      '<a class="ma-tab ' + (activeType === 'pending' ? 'active' : '') + '" data-ma-tab="pending">待处理</a>' +
-      '<a class="ma-tab ' + (activeType === 'processed' ? 'active' : '') + '" data-ma-tab="processed">已处理</a>' +
-      '<a class="ma-tab ' + (activeType === 'started' ? 'active' : '') + '" data-ma-tab="started">已发起</a>' +
-    '</div>';
-  }
-
-  function renderToolbar(type) {
-    return '<div class="ma-toolbar-left">' +
-      (type === 'pending' ? '<button class="btn btn-primary ma-batch-btn" data-ma-action="batch-handle" disabled><i class="bi bi-check2-square"></i> 批量处理</button><span class="ma-selected-count">已选 0 条</span>' : '') +
-    '</div>' +
-    '<div class="ma-toolbar-right">' +
-      '<div class="ma-filter"><span>类型:</span><select class="ma-select ma-select-sm"><option>请选择</option><option>发布</option><option>变更</option><option>废止</option></select></div>' +
-      '<div class="ma-filter"><span>流程状态:</span><select class="ma-select"><option>请选择</option><option>待审核</option><option>审核通过</option><option>审核驳回</option></select></div>' +
-      '<div class="ma-search-box"><input class="ma-search" type="text" placeholder="标题关键字搜索"><button class="btn btn-primary">查询</button></div>' +
-    '</div>';
-  }
-
-  function setTab(page, type) {
-    lastListTab = type || 'pending';
-    page.querySelectorAll('.ma-tab').forEach(function (tab) {
-      tab.classList.toggle('active', tab.getAttribute('data-ma-tab') === type);
-    });
-    page.querySelector('.ma-toolbar').innerHTML = renderToolbar(type);
-    page.querySelector('.ma-table-wrap').innerHTML = renderTable(type);
-    initResizableColumns(page);
-    updateBatchState(page);
-  }
-
-  function getMetaGroups(row) {
-    var info = parseTitle(row.title);
-    return [
-      {
-        title: '业态分类',
-        items: [
-          { name: '华润中心', before: '华润置地', after: '华润置地' },
-          { name: '业态', before: '商业地产', after: '商业地产' }
-        ]
-      },
-      {
-        title: '主题分类',
-        items: [
-          { name: '业务主题', before: '客户管理', after: '客户管理' },
-          { name: '业务子主题', before: '客户资料', after: '客户信息', changed: true },
-          { name: '业务细分类别', before: '客户基础资料', after: '客户基础信息', changed: true }
-        ]
-      },
-      {
-        title: '基础信息',
-        items: [
-          { name: '标准项编码', before: row.objectCode, after: row.objectCode },
-          { name: '中文名称', before: '客户电话', after: '客户手机号', changed: true },
-          { name: '英文名称', before: row.object, after: info.fieldName },
-          { name: '常用名称', before: '手机', after: '手机号码', changed: true },
-          { name: '代码编号', before: 'CUS_PHONE', after: 'CUS_MOBILE', changed: true },
-          { name: '代码名称', before: '客户电话代码', after: '客户手机号代码', changed: true }
-        ]
-      },
-      {
-        title: '技术信息',
-        items: [
-          { name: '业务定义', before: '客户联系电话，用于业务人员联系客户。', after: '客户手机号，用于客户身份确认、业务联系和服务通知。', changed: true },
-          { name: '业务规则', before: '允许为空，按原系统同步。', after: '非空时必须符合大陆手机号格式，展示时按敏感规则脱敏。', changed: true },
-          { name: '参考标准', before: 'GB/T 35273-2020 个人信息安全规范', after: 'GB/T 35273-2020 个人信息安全规范' },
-          { name: '定义依据', before: '客户主数据管理规范 V1.0', after: '客户主数据管理规范 V1.1', changed: true },
-          { name: '数据类型', before: 'varchar', after: 'varchar' },
-          { name: '数据格式', before: '文本', after: '手机号格式', changed: true },
-          { name: '数据长度', before: '32', after: '20', changed: true }
-        ]
-      },
-      {
-        title: '管控信息',
-        items: [
-          { name: '业务责任部门', before: '客户运营部', after: '客户运营部' },
-          { name: '参与编制部门', before: '数据治理部', after: '数据治理部' },
-          { name: '版本', before: row.beforeVersion || 'V1.0', after: row.afterVersion || 'V1.1', changed: true },
-          { name: '修订人', before: '王敏', after: row.applicant, changed: true },
-          { name: '修订时间', before: '2026-03-15 10:00:00', after: row.applyTime, changed: true }
-        ]
-      },
-      {
-        title: '其它',
-        items: [
-          { name: '备注', before: '沿用原标准说明。', after: row.reason, changed: true }
-        ]
-      }
-    ];
-  }
-
-  function renderMetaChangeRows(row) {
-    var groups = getMetaGroups(row);
-    return groups.map(function (group) {
-      var rowsHtml = group.items.map(function (item) {
-        return '<tr' + (item.changed ? ' class="ma-diff-row"' : '') + '>' +
-          '<td class="ma-diff-name">' + item.name + (item.changed ? '<span>变更</span>' : '') + '</td>' +
-          '<td class="ma-diff-before">' + item.before + '</td>' +
-          '<td class="ma-diff-after">' + item.after + '</td>' +
-        '</tr>';
-      }).join('');
-      return '<tr class="ma-diff-group"><td colspan="3">' + group.title + '</td></tr>' + rowsHtml;
-    }).join('');
-  }
-
-  function renderMetaCurrentRows(row) {
-    var groups = getMetaGroups(row);
-    var valueKey = row.changeType === '废止' ? 'before' : 'after';
-    return groups.map(function (group) {
-      var rowsHtml = group.items.map(function (item) {
-        return '<tr>' +
-          '<td class="ma-diff-name">' + item.name + '</td>' +
-          '<td class="ma-current-value">' + item[valueKey] + '</td>' +
-        '</tr>';
-      }).join('');
-      return '<tr class="ma-diff-group"><td colspan="2">' + group.title + '</td></tr>' + rowsHtml;
-    }).join('');
-  }
-
-  function renderAuditRecords(row, mode) {
-    if (mode === 'detail') {
-      var recordStateClass = row.status === '审核通过' ? 'success' : (row.status === '审核驳回' ? 'reject' : '');
-      return '<div class="ma-record-list">' +
-        '<div class="ma-record-item"><div class="ma-record-dot"></div><div class="ma-record-main"><div class="ma-record-top"><span class="ma-record-state ' + recordStateClass + '">' + row.status + '</span><b>王敏</b><span>' + row.finishTime + '</span></div><div class="ma-record-desc">处理说明：' + (row.status === '审核通过' ? '审核通过，标准内容符合治理规范。' : (row.status === '审核驳回' ? '审核驳回，请补充依据后重新提交。' : '等待当前审核人处理。')) + '</div></div></div>' +
-        '<div class="ma-record-item"><div class="ma-record-dot"></div><div class="ma-record-main"><div class="ma-record-top"><span class="ma-record-state success">审核通过</span><b>李娜</b><span>2026-05-10 10:05:00</span></div><div class="ma-record-desc">处理说明：一级审核通过，标准口径调整合理。</div></div></div>' +
-        '<div class="ma-record-item"><div class="ma-record-dot"></div><div class="ma-record-main"><div class="ma-record-top"><span class="ma-record-state submit">提交申请</span><b>张伟</b><span>' + row.applyTime + '</span></div><div class="ma-record-desc">申请说明：' + row.reason + '</div></div></div>' +
-      '</div>';
-    }
-    return '<div class="ma-record-list">' +
-      '<div class="ma-record-item"><div class="ma-record-dot muted"></div><div class="ma-record-main"><div class="ma-record-top"><span class="ma-record-state">待审核</span><b>王敏</b><span>--</span></div><div class="ma-record-desc">处理说明：等待当前审核人处理。</div></div></div>' +
-      '<div class="ma-record-item"><div class="ma-record-dot"></div><div class="ma-record-main"><div class="ma-record-top"><span class="ma-record-state success">审核通过</span><b>李娜</b><span>2026-05-10 10:05:00</span></div><div class="ma-record-desc">处理说明：一级审核通过，标准口径调整合理。</div></div></div>' +
-      '<div class="ma-record-item"><div class="ma-record-dot"></div><div class="ma-record-main"><div class="ma-record-top"><span class="ma-record-state submit">提交申请</span><b>张伟</b><span>' + row.applyTime + '</span></div><div class="ma-record-desc">申请说明：' + row.reason + '</div></div></div>' +
-    '</div>';
-  }
-
-  function renderVersionTag(version, extraClass) {
-    return '<span class="ma-version-tag ' + (extraClass || '') + '">' + (version || '--') + '</span>';
-  }
-
-  function renderHandlePage(row, mode) {
-    mode = mode || 'handle';
-    var isDetail = mode === 'detail';
-    var isModify = row.changeType === '变更';
-    var auditContentTable = isModify
-      ? '<table class="ma-diff-table"><thead><tr><th>标准属性</th><th>修改前 ' + renderVersionTag(row.beforeVersion, 'ma-version-old') + '</th><th>修改后 ' + renderVersionTag(row.afterVersion, 'ma-version-next') + '</th></tr></thead><tbody>' + renderMetaChangeRows(row) + '</tbody></table>'
-      : '<table class="ma-diff-table ma-current-table"><thead><tr><th>标准属性</th><th>当前内容</th></tr></thead><tbody>' + renderMetaCurrentRows(row) + '</tbody></table>';
-    return '<div class="ma-handle-page">' +
-      '<div class="ma-handle-header">' +
-        '<div class="ma-handle-title"><button class="btn btn-outline btn-sm" data-ma-action="back-list"><i class="bi bi-arrow-left"></i> 返回</button><span>' + (isDetail ? '标准审核详情' : '标准审核处理') + '</span><span class="ma-status ' + row.statusClass + '">' + row.status + '</span></div>' +
-        '<div class="ma-handle-sub"><span class="ma-current-label">当前字段：</span>' + renderCurrentFieldLine(row) + '</div>' +
+  function renderListView() {
+    return renderStatusHeader() +
+      renderToolbar() +
+      '<div class="sa-table-wrap">' +
+        '<table class="sa-table">' +
+          '<colgroup><col class="sa-w-check"><col class="sa-w-code"><col class="sa-w-name"><col class="sa-w-alias"><col class="sa-w-category"><col class="sa-w-rate"><col class="sa-w-remark"><col class="sa-w-action"></colgroup>' +
+          '<thead><tr>' +
+            '<th class="sa-col-check"><input type="checkbox" data-sa-check-all aria-label="全选"></th>' +
+            '<th>编码</th><th>英文名称</th><th>别名</th><th>数据分类</th><th>一致性</th><th>备注</th><th>操作</th>' +
+          '</tr></thead>' +
+          '<tbody>' + renderTableRows() + '</tbody>' +
+        '</table>' +
       '</div>' +
-      '<div class="ma-handle-body">' +
-        '<section class="ma-compare-panel">' +
-          '<div class="ma-panel-header"><span><i class="bi bi-file-diff"></i> 待审核内容 ' + renderChangeType(row) + '</span></div>' +
-          '<div class="ma-diff-wrap">' + auditContentTable + '</div>' +
-        '</section>' +
-        '<aside class="ma-handle-side">' +
-          '<section class="ma-apply-reason-card">' +
-            '<div class="ma-panel-header"><span><i class="bi bi-chat-square-text"></i> 申请理由</span></div>' +
-            '<div class="ma-apply-reason-text">' + row.reason + '</div>' +
-          '</section>' +
-          (isDetail ? '' : '<section class="ma-approve-panel">' +
-            '<div class="ma-panel-header"><span><i class="bi bi-check2-square"></i> 审核操作</span></div>' +
-            '<div class="ma-approve-body">' +
-              '<div class="ma-approve-row"><span class="ma-approve-label">处理意见</span><select class="ma-approve-select"><option>审核通过</option><option>审核驳回</option></select></div>' +
-              '<div class="ma-approve-label">处理说明</div>' +
-              '<textarea class="ma-approve-textarea" placeholder="请输入处理说明"></textarea>' +
-              '<div class="ma-approve-actions"><button class="btn btn-outline" data-ma-action="back-list">取消</button><button class="btn btn-primary" data-ma-action="submit-handle">提交处理</button></div>' +
-            '</div>' +
-          '</section>') +
-          '<section class="ma-record-panel">' +
-            '<div class="ma-panel-header"><span><i class="bi bi-clock-history"></i> 审核记录</span></div>' +
-            renderAuditRecords(row, mode) +
-          '</section>' +
-        '</aside>' +
+      '<div class="sa-footnote">显示第 1 到第 ' + getFilteredRows().length + ' 条记录，总共 ' + getFilteredRows().length + ' 条记录</div>';
+  }
+
+  function infoTip(text, blocked) {
+    var copy = blocked ? text + ' 元数据技术属性不能替换' : text;
+    return '<span class="sa-field-tip"><i class="bi bi-info-circle-fill"></i> ' + escapeHtml(copy) + '</span>';
+  }
+
+  function renderField(label, meta, standard, options) {
+    options = options || {};
+    var tag = options.area ? 'textarea' : (options.select ? 'select' : 'div');
+    var metaClass = options.diff ? ' diff' : '';
+    var standardClass = options.diff ? ' diff' : '';
+    var metaControl = tag === 'textarea'
+      ? '<textarea class="sa-field-control' + metaClass + '" readonly>' + escapeHtml(meta) + '</textarea>'
+      : tag === 'select'
+        ? '<select class="sa-field-control" disabled><option>' + escapeHtml(meta || '') + '</option></select>'
+        : '<div class="sa-field-control' + metaClass + '">' + escapeHtml(meta) + '</div>';
+    var standardControl = tag === 'textarea'
+      ? '<textarea class="sa-field-control' + standardClass + '" readonly>' + escapeHtml(standard) + '</textarea>'
+      : tag === 'select'
+        ? '<select class="sa-field-control" disabled><option>' + escapeHtml(standard || '') + '</option></select>'
+        : '<div class="sa-field-control' + standardClass + '">' + escapeHtml(standard) + '</div>';
+    return '<div class="sa-detail-row ' + (options.area ? 'area' : '') + '">' +
+      '<div class="sa-detail-label">' + escapeHtml(label) + ':</div>' +
+      metaControl +
+      standardControl +
+      infoTip(label, options.blocked) +
+    '</div>';
+  }
+
+  function renderDetailGroup(title, rowsHtml) {
+    return '<section class="sa-detail-section"><h3>' + escapeHtml(title) + '</h3>' + rowsHtml + '</section>';
+  }
+
+  function renderDetailView(row) {
+    row = row || rows[0];
+    return '<div class="sa-detail-view" data-sa-detail-id="' + row.id + '">' +
+      '<div class="sa-detail-top">' +
+        '<div class="sa-detail-headings"><span>元数据</span><span>数据标准</span></div>' +
+        '<div class="sa-detail-actions">' +
+          '<button class="btn btn-primary" type="button" data-sa-action="single-replace" data-id="' + row.id + '"><i class="bi bi-arrow-repeat"></i> 标准替换</button>' +
+          '<button class="btn btn-outline" type="button" data-sa-action="back-list"><i class="bi bi-arrow-left"></i> 返回</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="sa-detail-scroll">' +
+        renderDetailGroup('基本信息',
+          renderField('编码', row.code, row.standardCode, { blocked: true }) +
+          renderField('英文名', row.metaEnglish, row.standardEnglish, { diff: true, blocked: true }) +
+          renderField('别名', row.alias, row.alias) +
+          renderField('描述', row.description, row.remark, { area: true })
+        ) +
+        renderDetailGroup('技术信息',
+          renderField('数据类型', row.dataType, '', { diff: true, blocked: true }) +
+          renderField('长度', row.length, '', { diff: true, blocked: true }) +
+          renderField('精度', row.precision, '', { diff: true, blocked: true }) +
+          renderField('脱敏规则', row.desensitizeRule, '', { select: true }) +
+          renderField('质量规则', row.qualityRule, '', { select: true }) +
+          renderField('加密规则', row.encryptRule, '', { select: true })
+        ) +
+        renderDetailGroup('业务信息',
+          renderField('数据分类', row.dataClass, row.dataClass, { select: true }) +
+          renderField('数据分级', row.dataLevel, '', { select: true })
+        ) +
       '</div>' +
     '</div>';
   }
 
-  function getSelectedPendingRows(page) {
-    return Array.prototype.map.call(page.querySelectorAll('[data-ma-row-check]:checked'), function (checkbox) {
-      var index = parseInt(checkbox.getAttribute('data-ma-index'), 10);
-      return rows.pending[index];
-    }).filter(Boolean);
+  function renderRight(page) {
+    var right = page.querySelector('[data-sa-right]');
+    if (!right) return;
+    right.innerHTML = state.detailId ? renderDetailView(getRowById(state.detailId)) : renderListView();
+    updateCheckAll(page);
   }
 
-  function updateBatchState(page) {
-    var rowChecks = page.querySelectorAll('[data-ma-row-check]');
-    var checkedCount = page.querySelectorAll('[data-ma-row-check]:checked').length;
-    var checkAll = page.querySelector('[data-ma-check-all]');
-    var batchBtn = page.querySelector('[data-ma-action="batch-handle"]');
-    var selectedCount = page.querySelector('.ma-selected-count');
-
+  function updateCheckAll(page) {
+    var checkAll = page.querySelector('[data-sa-check-all]');
+    var visible = getFilteredRows();
+    var checked = visible.filter(function (item) { return state.selectedIds[item.id]; }).length;
     if (checkAll) {
-      checkAll.checked = rowChecks.length > 0 && checkedCount === rowChecks.length;
-      checkAll.indeterminate = checkedCount > 0 && checkedCount < rowChecks.length;
-    }
-    if (batchBtn) {
-      batchBtn.disabled = checkedCount === 0;
-    }
-    if (selectedCount) {
-      selectedCount.textContent = '已选 ' + checkedCount + ' 条';
+      checkAll.checked = visible.length > 0 && checked === visible.length;
+      checkAll.indeterminate = checked > 0 && checked < visible.length;
     }
   }
 
-  function renderBatchModal(count) {
-    return '<div class="ma-batch-mask" data-ma-batch-mask>' +
-      '<div class="ma-batch-modal" role="dialog" aria-modal="true" aria-label="批量处理">' +
-        '<div class="ma-batch-header">' +
-          '<div><h3>批量处理</h3><p>您选择 <b>' + count + '</b> 条记录</p></div>' +
-          '<button class="ma-batch-close" data-ma-action="close-batch" aria-label="关闭"><i class="bi bi-x-lg"></i></button>' +
+  function showToast(page, text) {
+    var oldToast = page.querySelector('.sa-toast');
+    if (oldToast) oldToast.remove();
+    page.insertAdjacentHTML('beforeend', '<div class="sa-toast">' + escapeHtml(text) + '</div>');
+    var toast = page.querySelector('.sa-toast');
+    setTimeout(function () { toast.classList.add('show'); }, 20);
+    setTimeout(function () { if (toast) toast.remove(); }, 1800);
+  }
+
+  function renderConfirmModal(type, row) {
+    var message = type === 'batch'
+      ? '<strong>确定要替换这些记录吗</strong><span>替换后将无法恢复，请谨慎操作！</span>'
+      : '<strong>您确定要将' + escapeHtml(row.metaEnglish) + '【' + escapeHtml(row.alias) + '】的<br>元数据替换成标准吗?</strong>';
+    return '<div class="sa-confirm-mask" data-sa-confirm-mask>' +
+      '<div class="sa-confirm" role="dialog" aria-modal="true" aria-label="标准替换确认">' +
+        '<button class="sa-confirm-close" type="button" data-sa-action="close-confirm" aria-label="关闭"><i class="bi bi-x-lg"></i></button>' +
+        '<div class="sa-confirm-body">' +
+          '<div class="sa-confirm-icon"><i class="bi bi-exclamation-lg"></i></div>' +
+          '<div class="sa-confirm-text">' + message + '</div>' +
         '</div>' +
-        '<div class="ma-batch-body">' +
-          '<div class="ma-approve-row"><span class="ma-approve-label">处理意见</span><select class="ma-approve-select"><option>审核通过</option><option>审核驳回</option></select></div>' +
-          '<div class="ma-approve-label">处理说明</div>' +
-          '<textarea class="ma-approve-textarea" placeholder="请输入处理说明"></textarea>' +
-        '</div>' +
-        '<div class="ma-batch-footer">' +
-          '<button class="btn btn-outline" data-ma-action="close-batch">取消</button>' +
-          '<button class="btn btn-primary" data-ma-action="submit-batch">提交处理</button>' +
+        '<div class="sa-confirm-footer">' +
+          '<button class="btn btn-outline" type="button" data-sa-action="close-confirm"><i class="bi bi-x-lg"></i> 取消</button>' +
+          '<button class="btn btn-primary" type="button" data-sa-action="confirm-replace"><i class="bi bi-check-lg"></i> 确定</button>' +
         '</div>' +
       '</div>' +
     '</div>';
   }
 
-  function openBatchModal(page) {
-    var selectedRows = getSelectedPendingRows(page);
-    if (!selectedRows.length) return;
-    closeBatchModal(page);
-    page.insertAdjacentHTML('beforeend', renderBatchModal(selectedRows.length));
+  function openConfirm(page, type, row) {
+    closeConfirm(page);
+    page.setAttribute('data-sa-confirm-type', type);
+    page.setAttribute('data-sa-confirm-row', row ? row.id : '');
+    page.insertAdjacentHTML('beforeend', renderConfirmModal(type, row));
   }
 
-  function closeBatchModal(page) {
-    var modal = page.querySelector('[data-ma-batch-mask]');
-    if (modal) modal.remove();
+  function closeConfirm(page) {
+    var mask = page.querySelector('[data-sa-confirm-mask]');
+    if (mask) mask.remove();
   }
 
-  function clearSelection(page) {
-    page.querySelectorAll('[data-ma-row-check]').forEach(function (checkbox) {
-      checkbox.checked = false;
+  function applyReplace(page) {
+    var type = page.getAttribute('data-sa-confirm-type');
+    var rowId = page.getAttribute('data-sa-confirm-row');
+    var targets = type === 'batch' ? getSelectedRows() : [getRowById(rowId)];
+    targets.forEach(function (item) {
+      if (!item) return;
+      item.metaEnglish = item.standardEnglish;
+      item.code = item.standardCode;
+      item.dataType = '';
+      item.length = '';
+      item.precision = '';
+      item.consistency = { match: 11, mismatch: 0, total: 11, rate: '100%' };
     });
-    updateBatchState(page);
+    state.selectedIds = {};
+    closeConfirm(page);
+    renderRight(page);
+    showToast(page, type === 'batch' ? '已完成批量标准替换' : '已完成标准替换');
   }
 
-  function showHandlePage(page, row, mode) {
-    page.innerHTML = renderHandlePage(row, mode);
-  }
+  function bindEvents(page) {
+    page.addEventListener('click', function (e) {
+      var actionEl = e.target.closest('[data-sa-action]');
+      var treeRow = e.target.closest('[data-sa-tree]');
 
-  function showListPage(page, type) {
-    var activeType = type || lastListTab || 'pending';
-    lastListTab = activeType;
-    page.innerHTML =
-      renderTabs(activeType) +
-      '<div class="ma-toolbar">' + renderToolbar(activeType) + '</div>' +
-      '<div class="ma-table-wrap">' + renderTable(activeType) + '</div>' +
-      '<div class="ma-pagination">' +
-        '<div class="ma-page-left"><span>第1-10条记录，共128条记录，每页显示</span><select class="ma-page-size"><option>10</option><option>20</option><option>50</option></select><span>记录</span></div>' +
-        '<div class="ma-page-nav"><a class="ma-page-btn">上一页</a><a class="ma-page-num active">1</a><a class="ma-page-num">2</a><a class="ma-page-num">3</a><a class="ma-page-num">4</a><a class="ma-page-num">5</a><span class="ma-page-ellipsis">...</span><a class="ma-page-num">89</a><a class="ma-page-btn">下一页</a></div>' +
-        '<div></div>' +
-      '</div>';
-    bindListEvents(page);
-    initResizableColumns(page);
-    updateBatchState(page);
-  }
+      if (treeRow) {
+        state.treeKey = treeRow.getAttribute('data-sa-tree');
+        page.querySelectorAll('.sa-tree-row').forEach(function (item) { item.classList.remove('active'); });
+        treeRow.classList.add('active');
+        return;
+      }
 
-  function bindListEvents(page) {
-    page.querySelectorAll('.ma-tab').forEach(function (tab) {
-      tab.addEventListener('click', function () {
-        setTab(page, tab.getAttribute('data-ma-tab'));
+      if (!actionEl) return;
+      var action = actionEl.getAttribute('data-sa-action');
+      var id = actionEl.getAttribute('data-id');
+
+      if (action === 'query') {
+        var keyword = page.querySelector('[data-sa-keyword]');
+        state.keyword = keyword ? keyword.value : '';
+        renderRight(page);
+      } else if (action === 'batch-replace') {
+        var selected = getSelectedRows();
+        if (!selected.length) {
+          showToast(page, '请先勾选需要替换的记录');
+          return;
+        }
+        openConfirm(page, 'batch');
+      } else if (action === 'single-replace') {
+        openConfirm(page, 'single', getRowById(id));
+      } else if (action === 'view-detail') {
+        state.detailId = id;
+        renderRight(page);
+      } else if (action === 'back-list') {
+        state.detailId = null;
+        renderRight(page);
+      } else if (action === 'close-confirm') {
+        closeConfirm(page);
+      } else if (action === 'confirm-replace') {
+        applyReplace(page);
+      } else if (action === 'run-now') {
+        showToast(page, '稽查任务已开始执行');
+      } else if (action === 'schedule') {
+        showToast(page, '调度任务已启动');
+      }
+    });
+
+    page.addEventListener('change', function (e) {
+      if (e.target.matches('[data-sa-check-all]')) {
+        getFilteredRows().forEach(function (item) {
+          if (e.target.checked) state.selectedIds[item.id] = true;
+          else delete state.selectedIds[item.id];
+        });
+        renderRight(page);
+      } else if (e.target.matches('[data-sa-row-check]')) {
+        var id = e.target.getAttribute('data-sa-row-check');
+        if (e.target.checked) state.selectedIds[id] = true;
+        else delete state.selectedIds[id];
+        updateCheckAll(page);
+      }
+    });
+
+    page.addEventListener('input', function (e) {
+      if (!e.target.matches('[data-sa-tree-search]')) return;
+      var keyword = e.target.value.trim().toLowerCase();
+      page.querySelectorAll('.sa-tree-node').forEach(function (node) {
+        var text = node.textContent.toLowerCase();
+        node.style.display = !keyword || text.indexOf(keyword) >= 0 ? '' : 'none';
       });
+    });
+
+    page.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && e.target.matches('[data-sa-keyword]')) {
+        var queryBtn = page.querySelector('[data-sa-action="query"]');
+        if (queryBtn) queryBtn.click();
+      }
     });
   }
 
   return {
-    html: '<div class="page-meta-audit page-standard-audit">' +
-      renderTabs('pending') +
-      '<div class="ma-toolbar">' + renderToolbar('pending') + '</div>' +
-      '<div class="ma-table-wrap">' + renderTable('pending') + '</div>' +
-      '<div class="ma-pagination">' +
-        '<div class="ma-page-left"><span>第1-10条记录，共128条记录，每页显示</span><select class="ma-page-size"><option>10</option><option>20</option><option>50</option></select><span>记录</span></div>' +
-        '<div class="ma-page-nav"><a class="ma-page-btn">上一页</a><a class="ma-page-num active">1</a><a class="ma-page-num">2</a><a class="ma-page-num">3</a><a class="ma-page-num">4</a><a class="ma-page-num">5</a><span class="ma-page-ellipsis">...</span><a class="ma-page-num">89</a><a class="ma-page-btn">下一页</a></div>' +
-        '<div></div>' +
+    html: '<div class="page-standard-audit">' +
+      '<div class="sa-layout">' +
+        renderLeftPanel() +
+        '<section class="sa-right-panel" data-sa-right></section>' +
       '</div>' +
     '</div>',
 
     init: function () {
       var page = document.querySelector('.page-standard-audit');
       if (!page) return;
-      bindListEvents(page);
-      page.addEventListener('click', function (e) {
-        var batchBtn = e.target.closest('[data-ma-action="batch-handle"]');
-        if (batchBtn) {
-          openBatchModal(page);
-          return;
-        }
-        var closeBatchBtn = e.target.closest('[data-ma-action="close-batch"]');
-        if (closeBatchBtn || e.target.hasAttribute('data-ma-batch-mask')) {
-          closeBatchModal(page);
-          return;
-        }
-        var submitBatchBtn = e.target.closest('[data-ma-action="submit-batch"]');
-        if (submitBatchBtn) {
-          closeBatchModal(page);
-          clearSelection(page);
-          return;
-        }
-        var handleBtn = e.target.closest('[data-ma-action="handle"]');
-        if (handleBtn) {
-          lastListTab = 'pending';
-          var row = rows.pending[parseInt(handleBtn.getAttribute('data-ma-index'), 10)] || rows.pending[0];
-          showHandlePage(page, row);
-          return;
-        }
-        var detailBtn = e.target.closest('[data-ma-action="detail"]');
-        if (detailBtn) {
-          var tabKey = detailBtn.getAttribute('data-ma-tab') || 'processed';
-          lastListTab = tabKey;
-          var detailRow = (rows[tabKey] || rows.processed)[parseInt(detailBtn.getAttribute('data-ma-index'), 10)] || rows.processed[0];
-          showHandlePage(page, detailRow, 'detail');
-          return;
-        }
-        var backBtn = e.target.closest('[data-ma-action="back-list"]');
-        if (backBtn) {
-          showListPage(page, lastListTab);
-          return;
-        }
-        var submitBtn = e.target.closest('[data-ma-action="submit-handle"]');
-        if (submitBtn) {
-          showListPage(page, lastListTab);
-        }
-      });
-      page.addEventListener('change', function (e) {
-        var checkAll = e.target.closest('[data-ma-check-all]');
-        if (checkAll) {
-          page.querySelectorAll('[data-ma-row-check]').forEach(function (checkbox) {
-            checkbox.checked = checkAll.checked;
-          });
-          updateBatchState(page);
-          return;
-        }
-        if (e.target.matches('[data-ma-row-check]')) {
-          updateBatchState(page);
-        }
-      });
-      initResizableColumns(page);
-      updateBatchState(page);
+      state.selectedIds = {};
+      state.keyword = '';
+      state.detailId = null;
+      bindEvents(page);
+      renderRight(page);
     }
   };
 })();
