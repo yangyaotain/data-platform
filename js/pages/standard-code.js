@@ -13,6 +13,13 @@ DP.pages.standardCode = (function () {
     mode: 'list',
     treeKey: 'business',
     treeKeyword: '',
+    treeOpen: {
+      business: true,
+      'business-base': true,
+      'health-standard': true,
+      warehouse: true,
+      'warehouse-code': true
+    },
     selectedIds: {},
     keyword: '',
     page: 1,
@@ -22,11 +29,19 @@ DP.pages.standardCode = (function () {
     formMode: '',
     formId: '',
     formCategoryOpen: false,
+    formCategoryKeyword: '',
     dataRowId: '',
     dataKeyword: '',
+    dataPage: 1,
+    dataPageSize: 10,
     dataSelected: {},
     valueModalId: '',
     datePickerOpen: false,
+    datePickerYear: 2026,
+    datePickerMonth: 6,
+    dateRangeStart: '',
+    dateRangeEnd: '',
+    logId: '',
     ioFilters: {
       attr: '',
       status: '',
@@ -34,9 +49,71 @@ DP.pages.standardCode = (function () {
     }
   };
 
-  var treeRows = [
-    { key: 'business', label: '业务部', count: 33, icon: 'bi-archive-fill' },
-    { key: 'warehouse', label: '数仓组', count: 1, icon: 'bi-archive-fill' }
+  var standardTree = [
+    {
+      key: 'business',
+      label: '业务部',
+      count: 33,
+      icon: 'bi-archive-fill',
+      children: [
+        {
+          key: 'business-base',
+          label: '基础公共代码',
+          count: 9,
+          icon: 'bi-folder-fill',
+          children: [
+            { key: 'people-id', label: '人员身份标识', count: 3, icon: 'bi-tags-fill' },
+            { key: 'people-profile', label: '人口学属性', count: 6, icon: 'bi-tags-fill' }
+          ]
+        },
+        {
+          key: 'health-standard',
+          label: '健康行为代码',
+          count: 11,
+          icon: 'bi-folder-fill',
+          children: [
+            { key: 'diet-frequency', label: '饮食运动频率', count: 7, icon: 'bi-tags-fill' },
+            { key: 'medical-history', label: '健康史记录', count: 4, icon: 'bi-tags-fill' }
+          ]
+        },
+        {
+          key: 'occupation-standard',
+          label: '职业卫生代码',
+          count: 8,
+          icon: 'bi-folder-fill',
+          children: [
+            { key: 'occupation-exposure', label: '职业照射', count: 3, icon: 'bi-tags-fill' },
+            { key: 'occupation-risk', label: '危害因素', count: 5, icon: 'bi-tags-fill' }
+          ]
+        },
+        {
+          key: 'medical-standard',
+          label: '医疗服务代码',
+          count: 5,
+          icon: 'bi-folder-fill',
+          children: [
+            { key: 'medical-service', label: '诊疗服务', count: 5, icon: 'bi-tags-fill' }
+          ]
+        }
+      ]
+    },
+    {
+      key: 'warehouse',
+      label: '数仓组',
+      count: 1,
+      icon: 'bi-archive-fill',
+      children: [
+        {
+          key: 'warehouse-code',
+          label: '标准代码仓',
+          count: 1,
+          icon: 'bi-folder-fill',
+          children: [
+            { key: 'warehouse-region', label: '行政区划层级', count: 1, icon: 'bi-tags-fill' }
+          ]
+        }
+      ]
+    }
   ];
 
   function makeValues(items) {
@@ -52,6 +129,52 @@ DP.pages.standardCode = (function () {
     });
   }
 
+  function getLogicalValueName(tableName, index) {
+    var pools = [
+      { test: /频率|食用|活动|运动|药物使用频次/, values: ['每天', '每周一次以上', '5次/周～6次/周', '3次/周～4次/周', '1次/周～2次/周', '1次/月～3次/月', '少于1次/月', '偶尔', '从不', '每日多次', '每两天一次', '每季度一次', '半年一次', '每年一次', '不适用', '不详', '其他'] },
+      { test: /饮水量/, values: ['不足500ml', '500ml～1000ml', '1000ml～1500ml', '1500ml～2000ml', '2000ml以上'] },
+      { test: /饮水类别/, values: ['白开水', '茶水', '纯净水', '矿泉水', '含糖饮料', '其他'] },
+      { test: /职业病危害因素|危害因素|危险因素/, values: ['粉尘类', '化学因素类', '物理因素类', '放射性因素类', '生物因素类', '其他因素类'] },
+      { test: /职业照射|受照/, values: ['外照射', '内照射', '混合照射', '应急照射', '医学观察照射', '事故照射'] },
+      { test: /身份证件|证件/, values: ['居民身份证', '居民户口簿', '护照', '军官证', '驾驶证', '港澳居民来往内地通行证', '台湾居民来往内地通行证', '其他法定有效证件'] },
+      { test: /地点|机构|区域|区划/, values: ['医疗卫生机构', '家庭', '社区服务中心', '乡镇卫生院', '区县机构', '市级机构', '省级机构', '其他'] },
+      { test: /疾病|病史|过敏|残疾|健康/, values: ['无', '轻度', '中度', '重度', '已控制', '未控制', '不详', '其他'] },
+      { test: /就诊|检查|随访|干预|治疗|服务/, values: ['门诊', '急诊', '住院', '远程服务', '上门服务', '电话随访', '网络随访', '其他'] },
+      { test: /婚姻/, values: ['未婚', '已婚', '丧偶', '离婚', '未说明'] },
+      { test: /文化程度/, values: ['研究生', '大学本科', '大学专科', '高中', '初中', '小学', '文盲或半文盲'] },
+      { test: /民族/, values: ['汉族', '蒙古族', '回族', '藏族', '维吾尔族', '苗族', '其他'] },
+      { test: /血型/, values: ['A型', 'B型', 'O型', 'AB型', 'Rh阴性', '不详'] }
+    ];
+    var matched = pools.filter(function (pool) { return pool.test.test(tableName); })[0];
+    var values = matched ? matched.values : ['是', '否', '不适用', '不详', '其他'];
+    var name = values[index % values.length];
+    var round = Math.floor(index / values.length);
+    return round ? name + String(round + 1).padStart(2, '0') : name;
+  }
+
+  function normalizeSampleValues(item) {
+    var target = Math.max((item.values || []).length, Number(item.recordCount) || 0);
+    var values = (item.values || []).slice();
+    var usedCodes = {};
+    values.forEach(function (value) { usedCodes[value.code] = true; });
+    var useLeadingZero = values.some(function (value) { return /^0\d+/.test(String(value.code)); });
+    for (var i = 0; values.length < target; i++) {
+      var code = useLeadingZero ? String(i + 1).padStart(2, '0') : String(i + 1);
+      if (usedCodes[code]) continue;
+      usedCodes[code] = true;
+      values.push({
+        code: code,
+        name: getLogicalValueName(item.name, values.length),
+        desc: '',
+        property: '国家标准',
+        valid: '有效',
+        validDate: ''
+      });
+    }
+    item.values = values;
+    item.recordCount = values.length;
+  }
+
   var standardCodeRows = [
     {
       id: 'cv0300110',
@@ -61,7 +184,7 @@ DP.pages.standardCode = (function () {
       desc: '',
       creator: '演示-测试',
       createdAt: '2026-04-09 18:28:13',
-      recordCount: 4,
+      recordCount: 16,
       group: 'business',
       values: makeValues([
         ['1', '每天'],
@@ -72,7 +195,7 @@ DP.pages.standardCode = (function () {
         ['3', '偶尔'],
         ['31', '1次/月～3次/月'],
         ['32', '少于1次/月'],
-        ['4', '不运动']
+        ['4', '从不']
       ])
     },
     {
@@ -344,6 +467,27 @@ DP.pages.standardCode = (function () {
     });
   });
 
+  standardCodeRows.forEach(function (item, index) {
+    if (item.group === 'warehouse') {
+      item.group = 'warehouse-region';
+    } else if (item.code.indexOf('CV02.01') === 0) {
+      item.group = 'people-id';
+    } else if (item.code >= 'CV03.00.110' && item.code <= 'CV03.00.116') {
+      item.group = 'diet-frequency';
+    } else if (item.code >= 'CV03.00.201' && item.code <= 'CV03.00.203') {
+      item.group = 'occupation-exposure';
+    } else if (/就诊|检查|服务机构|医疗/.test(item.name)) {
+      item.group = 'medical-service';
+    } else if (/过敏|既往|家族|危险|健康|干预|治疗/.test(item.name)) {
+      item.group = 'medical-history';
+    } else if (/职业|危害|照射|受照/.test(item.name)) {
+      item.group = 'occupation-risk';
+    } else {
+      item.group = index % 2 === 0 ? 'people-profile' : 'medical-history';
+    }
+    normalizeSampleValues(item);
+  });
+
   var ioRows = [
     { id: 'io-1', fileName: '标准代码导入模板.xls', attr: '导入', status: '处理完成', success: 399, fail: 0, total: 399, operator: '演示-测试', time: '2026-04-09 18:00:45' },
     { id: 'io-2', fileName: '数据标准导入模板.xls', attr: '导入', status: '处理失败', success: 0, fail: 30, total: 30, operator: '演示-测试', time: '2026-04-09 17:57:49' },
@@ -369,8 +513,56 @@ DP.pages.standardCode = (function () {
     return '2026-06-17 16:20:00';
   }
 
+  function pad2(value) {
+    return String(value).padStart(2, '0');
+  }
+
+  function formatDate(date) {
+    return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
+  }
+
+  function parseDateRangeText(text) {
+    var dates = String(text || '').match(/\d{4}-\d{2}-\d{2}/g) || [];
+    return {
+      start: dates[0] || '',
+      end: dates[1] || ''
+    };
+  }
+
+  function formatDateRangeText(start, end) {
+    if (!start) return '';
+    if (!end) return start + ' 00:00:00 - ';
+    return start + ' 00:00:00 - ' + end + ' 23:59:59';
+  }
+
+  function syncDateRangeFromInput(value) {
+    var range = parseDateRangeText(value);
+    state.dateRangeStart = range.start;
+    state.dateRangeEnd = range.end;
+    var base = range.start || '2026-06-01';
+    state.datePickerYear = Number(base.slice(0, 4)) || 2026;
+    state.datePickerMonth = Number(base.slice(5, 7)) || 6;
+  }
+
+  function shiftDatePickerMonth(delta) {
+    var base = new Date(state.datePickerYear, state.datePickerMonth - 1 + delta, 1);
+    state.datePickerYear = base.getFullYear();
+    state.datePickerMonth = base.getMonth() + 1;
+  }
+
+  function renderCurrentDatePicker() {
+    var dateControl = pageEl.querySelector('.sc-date-control');
+    var oldPicker = dateControl ? dateControl.querySelector('.sc-date-picker') : null;
+    if (oldPicker) oldPicker.remove();
+    if (state.datePickerOpen && dateControl) dateControl.insertAdjacentHTML('beforeend', renderDatePicker());
+  }
+
   function getRowById(id) {
     return standardCodeRows.filter(function (item) { return String(item.id) === String(id); })[0] || null;
+  }
+
+  function getIoById(id) {
+    return ioRows.filter(function (item) { return String(item.id) === String(id); })[0] || null;
   }
 
   function getCurrentDataRow() {
@@ -381,10 +573,59 @@ DP.pages.standardCode = (function () {
     return Object.keys(state.selectedIds).map(getRowById).filter(Boolean);
   }
 
+  function findTreeNode(nodes, key, parents) {
+    parents = parents || [];
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i];
+      if (node.key === key) return { node: node, parents: parents };
+      var found = findTreeNode(node.children || [], key, parents.concat(node));
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function collectTreeKeys(node) {
+    if (!node) return [];
+    return [node.key].concat((node.children || []).reduce(function (keys, child) {
+      return keys.concat(collectTreeKeys(child));
+    }, []));
+  }
+
+  function getFirstLeafKey(node) {
+    if (!node) return 'people-id';
+    if (!(node.children || []).length) return node.key;
+    return getFirstLeafKey(node.children[0]);
+  }
+
+  function getDefaultCategoryKey() {
+    var found = findTreeNode(standardTree, state.treeKey);
+    return getFirstLeafKey(found ? found.node : standardTree[0]);
+  }
+
+  function getCategoryPath(key) {
+    var found = findTreeNode(standardTree, key);
+    if (!found) return '业务部 / 人员身份标识';
+    return found.parents.concat(found.node).map(function (item) { return item.label; }).join(' / ');
+  }
+
+  function nodeMatchesKeyword(node, keyword) {
+    if (!keyword) return true;
+    if (normalize(node.label + ' ' + node.count).indexOf(keyword) >= 0) return true;
+    return (node.children || []).some(function (child) {
+      return nodeMatchesKeyword(child, keyword);
+    });
+  }
+
+  function isInSelectedTree(item) {
+    var found = findTreeNode(standardTree, state.treeKey);
+    if (!found) return true;
+    return collectTreeKeys(found.node).indexOf(item.group) >= 0;
+  }
+
   function getFilteredRows() {
     var keyword = normalize(state.keyword);
     var rows = standardCodeRows.filter(function (item) {
-      if (state.treeKey && item.group !== state.treeKey) return false;
+      if (state.treeKey && !isInSelectedTree(item)) return false;
       if (!keyword) return true;
       return normalize([item.code, item.name, item.dataType, item.desc].join(' ')).indexOf(keyword) >= 0;
     });
@@ -413,6 +654,14 @@ DP.pages.standardCode = (function () {
       if (!keyword) return true;
       return normalize([value.code, value.name, value.desc, value.property, value.valid].join(' ')).indexOf(keyword) >= 0;
     });
+  }
+
+  function getVisibleValues(item) {
+    var values = getFilteredValues(item);
+    var totalPages = Math.max(1, Math.ceil(values.length / state.dataPageSize));
+    if (state.dataPage > totalPages) state.dataPage = totalPages;
+    var start = (state.dataPage - 1) * state.dataPageSize;
+    return values.slice(start, start + state.dataPageSize);
   }
 
   function getIoRows() {
@@ -452,6 +701,7 @@ DP.pages.standardCode = (function () {
     if (!pageEl) return;
     pageEl.classList.toggle('sc-form-mode', state.mode === 'form');
     pageEl.classList.toggle('sc-data-mode', state.mode === 'data');
+    pageEl.classList.toggle('bc-data-mode', state.mode === 'data');
   }
 
   function sortHeader(key, label) {
@@ -461,18 +711,38 @@ DP.pages.standardCode = (function () {
     '</button>';
   }
 
+  function renderTreeNodes(nodes, keyword, mode, selectedKey) {
+    return nodes.filter(function (node) {
+      return nodeMatchesKeyword(node, keyword);
+    }).map(function (node) {
+      var children = node.children || [];
+      var hasChildren = children.length > 0;
+      var isOpen = !!keyword || !!state.treeOpen[node.key];
+      var selected = mode === 'picker' ? selectedKey === node.key : state.treeKey === node.key;
+      var childHtml = hasChildren
+        ? '<ul class="' + (mode === 'picker' ? 'sc-category-tree-children' : 'bc-tree-children') + '">' + renderTreeNodes(children, keyword, mode, selectedKey) + '</ul>'
+        : '';
+      var action = mode === 'picker' ? 'choose-category' : '';
+      var keyAttr = mode === 'picker'
+        ? ' data-sc-action="' + action + '" data-key="' + node.key + '"'
+        : ' data-sc-tree-key="' + node.key + '"';
+      return '<li class="' + (mode === 'picker' ? 'sc-category-tree-node' : 'bc-tree-node') + (isOpen ? ' open' : '') + '">' +
+        '<div class="' + (mode === 'picker' ? 'sc-category-tree-row' : 'bc-tree-row') + (selected ? ' active' : '') + '">' +
+          (hasChildren ? '<button class="sc-tree-toggle" type="button" data-sc-action="toggle-tree" data-key="' + node.key + '" aria-label="展开或收起"><i class="bi ' + (isOpen ? 'bi-caret-down-fill' : 'bi-caret-right-fill') + '"></i></button>' : '<span class="sc-tree-toggle-placeholder"></span>') +
+          '<button class="sc-tree-select" type="button"' + keyAttr + '>' +
+            '<i class="bi ' + node.icon + ' bc-tree-icon"></i>' +
+            '<span class="bc-tree-name">' + escapeHtml(node.label) + '</span>' +
+            '<span class="bc-tree-count">' + escapeHtml(node.count || 0) + '</span>' +
+          '</button>' +
+        '</div>' +
+        childHtml +
+      '</li>';
+    }).join('');
+  }
+
   function renderTree() {
     var keyword = normalize(state.treeKeyword);
-    return treeRows.filter(function (item) {
-      return !keyword || normalize(item.label + ' ' + item.count).indexOf(keyword) >= 0;
-    }).map(function (item) {
-      return '<li class="bc-tree-node">' +
-        '<button class="bc-tree-row' + (state.treeKey === item.key ? ' active' : '') + '" type="button" data-sc-tree="' + item.key + '">' +
-          '<i class="bi ' + item.icon + ' bc-tree-icon"></i>' +
-          '<span class="bc-tree-name">' + escapeHtml(item.label) + ' (' + item.count + ')</span>' +
-        '</button>' +
-      '</li>';
-    }).join('') || '<li class="bc-empty-tree">暂无匹配分类</li>';
+    return renderTreeNodes(standardTree, keyword, 'left') || '<li class="bc-empty-tree">暂无匹配分类</li>';
   }
 
   function renderTabs() {
@@ -558,7 +828,28 @@ DP.pages.standardCode = (function () {
     '</div>';
   }
 
+  function renderValuePagination(total) {
+    var totalPages = Math.max(1, Math.ceil(total / state.dataPageSize));
+    var start = total ? (state.dataPage - 1) * state.dataPageSize + 1 : 0;
+    var end = Math.min(total, state.dataPage * state.dataPageSize);
+    var nums = [];
+    for (var i = 1; i <= totalPages; i++) {
+      nums.push('<button class="sc-page-num' + (i === state.dataPage ? ' active' : '') + '" type="button" data-sc-value-page="' + i + '">' + i + '</button>');
+    }
+    return '<div class="bc-data-page-pagination sc-value-pagination">' +
+      '<div class="sc-page-info">显示第 ' + start + ' 到第 ' + end + ' 条记录，总共 ' + total + ' 条记录 每页显示 <select data-sc-value-page-size><option value="10"' + (state.dataPageSize === 10 ? ' selected' : '') + '>10</option><option value="20"' + (state.dataPageSize === 20 ? ' selected' : '') + '>20</option></select> 条记录</div>' +
+      '<div class="sc-page-nav">' +
+        '<button type="button" data-sc-value-page="prev" ' + (state.dataPage === 1 ? 'disabled' : '') + '>‹</button>' +
+        nums.join('') +
+        '<button type="button" data-sc-value-page="next" ' + (state.dataPage === totalPages ? 'disabled' : '') + '>›</button>' +
+        '<input class="sc-value-page-jump" type="text" value="' + state.dataPage + '" aria-label="页码">' +
+        '<button type="button" data-sc-action="value-page-go">GO</button>' +
+      '</div>' +
+    '</div>';
+  }
+
   function renderIoView() {
+    if (state.logId) return renderTabs() + renderLogView();
     var rows = getIoRows();
     return renderTabs() +
       '<div class="bc-panel active">' +
@@ -587,8 +878,50 @@ DP.pages.standardCode = (function () {
       '<td><span class="bc-count-success">' + item.success + '</span>/<span class="bc-count-fail">' + item.fail + '</span>/' + item.total + '</td>' +
       '<td>' + escapeHtml(item.operator) + '</td>' +
       '<td>' + escapeHtml(item.time) + '</td>' +
-      '<td><div class="sc-text-actions"><button type="button" data-sc-action="download-file" data-id="' + escapeHtml(item.id) + '">下载文件</button>' + (item.fail ? '<button class="danger" type="button" data-sc-action="view-log" data-id="' + escapeHtml(item.id) + '">查看日志</button>' : '') + '</div></td>' +
+      '<td><button class="bc-log-btn" type="button" data-sc-action="view-log" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-file-text"></i><span>查看日志</span></button></td>' +
     '</tr>';
+  }
+
+  function buildStandardCodeTechnicalLog(item) {
+    var rawId = String(item.id || 'io-0').replace(/\D/g, '') || '0';
+    var flowId = 'standard-code-' + rawId.padStart(4, '0') + '-20260617';
+    var prefix = '17-06-2026 ' + item.time.slice(11) + ' CST data-standard-code-flow-' + flowId + ' INFO - ';
+    var lines = [
+      prefix + 'Starting job data-standard-code-flow-' + flowId,
+      prefix + 'effective user is standard_admin',
+      prefix + 'StandardCodeTask - begin ' + (item.attr === '导出' ? 'export' : 'import') + ' file: /data/upload/standard-code/' + item.fileName,
+      prefix + 'template columns: code,name,data_type,description,code_property,valid_flag,valid_date',
+      prefix + 'loaded category tree: 业务部/基础公共代码, 业务部/健康行为代码, 业务部/职业卫生代码, 数仓组/标准代码仓',
+      prefix + 'validation summary: success=' + item.success + ', failed=' + item.fail + ', total=' + item.total
+    ];
+    if (item.status === '处理失败') {
+      lines.push(prefix + 'ERROR - row 12 standard_code is empty or duplicated.');
+      lines.push(prefix + 'ERROR - row 18 category path not found: 业务部/未知代码目录.');
+      lines.push(prefix + 'StandardCodeTask - job finished with validation errors.');
+    } else if (item.status === '处理中') {
+      lines.push(prefix + 'StandardCodeTask - task is still running, waiting for worker heartbeat.');
+    } else {
+      lines.push(prefix + 'HiveWriter$Task - write to table: governance.dim_standard_code');
+      lines.push(prefix + 'StandardCodeTask - commit standard code changes success.');
+      lines.push(prefix + 'StandardCodeTask - job finished successfully.');
+    }
+    return lines.join('\n');
+  }
+
+  function renderLogView() {
+    var item = getIoById(state.logId);
+    if (!item) {
+      return '<div class="bc-panel active"><div class="bc-log-empty"><button class="btn btn-outline" type="button" data-sc-action="back-log"><i class="bi bi-arrow-left"></i><span>返回</span></button><span>未找到日志记录</span></div></div>';
+    }
+    return '<div class="bc-panel active sc-log-view-panel">' +
+      '<div class="bc-log-view">' +
+        '<div class="bc-log-header">' +
+          '<button class="btn btn-outline" type="button" data-sc-action="back-log"><i class="bi bi-arrow-left"></i><span>返回</span></button>' +
+          '<div><h3>任务处理日志</h3><p title="' + escapeHtml(item.fileName) + '">' + escapeHtml(item.fileName) + '</p></div>' +
+        '</div>' +
+        '<pre class="bc-tech-log">' + escapeHtml(buildStandardCodeTechnicalLog(item)) + '</pre>' +
+      '</div>' +
+    '</div>';
   }
 
   function renderFormView() {
@@ -596,7 +929,7 @@ DP.pages.standardCode = (function () {
     var isEdit = state.formMode === 'edit' && item;
     var code = isEdit ? item.code : '';
     var name = isEdit ? item.name : '';
-    var category = isEdit && item.group === 'warehouse' ? '数仓组' : '业务部';
+    var categoryKey = isEdit ? item.group : getDefaultCategoryKey();
     var dataType = isEdit ? item.dataType : '普通数据';
     var desc = isEdit ? item.desc : '';
     return '<section class="bc-editor-panel sc-editor-panel">' +
@@ -605,7 +938,7 @@ DP.pages.standardCode = (function () {
         '<form class="bc-editor-form sc-standard-form" data-sc-form>' +
           renderFormRow('编码', '<input data-sc-form-field="code" type="text" value="' + escapeHtml(code) + '" placeholder="长度不超过50个字符">', '<i class="bi bi-check-circle-fill"></i><span>50个字符以内</span>') +
           renderFormRow('名称', '<input data-sc-form-field="name" type="text" value="' + escapeHtml(name) + '" placeholder="长度不超过50个字符，允许数字/字母/汉字/下划线，下划线不能开头!">', '<i class="bi bi-check-circle-fill"></i><span>50个字符以内</span>') +
-          renderFormRow('数据分类', renderCategoryPicker(category), '') +
+          renderFormRow('数据分类', renderCategoryPicker(categoryKey), '') +
           renderFormRow('规则类型', '<select data-sc-form-field="dataType"><option value="普通数据"' + (dataType === '普通数据' ? ' selected' : '') + '>普通数据</option><option value="多级数据"' + (dataType === '多级数据' ? ' selected' : '') + '>多级数据</option></select>', '') +
           renderFormRow('描述', '<textarea data-sc-form-field="desc" placeholder="长度不超过500个字符">' + escapeHtml(desc) + '</textarea>', '<i class="bi bi-check-circle-fill"></i><span>500个字符以内</span>', true) +
           '<div class="bc-editor-actions sc-editor-actions"><button class="btn btn-primary" type="button" data-sc-action="save-form"><i class="bi bi-check-lg"></i><span>保存</span></button><button class="btn btn-outline" type="button" data-sc-action="cancel-form"><i class="bi bi-x-lg"></i><span>取消</span></button></div>' +
@@ -622,25 +955,27 @@ DP.pages.standardCode = (function () {
     '</div>';
   }
 
-  function renderCategoryPicker(category) {
+  function renderCategoryPicker(categoryKey) {
+    var keyword = normalize(state.formCategoryKeyword);
+    var treeHtml = renderTreeNodes(standardTree, keyword, 'picker', categoryKey) || '<li class="sc-category-empty">暂无匹配目录</li>';
     return '<div class="sc-category-picker' + (state.formCategoryOpen ? ' open' : '') + '">' +
-      '<button class="sc-category-trigger" type="button" data-sc-action="toggle-category"><span data-sc-category-text>' + escapeHtml(category || '') + '</span><i class="bi bi-diagram-3"></i></button>' +
+      '<button class="sc-category-trigger" type="button" data-sc-action="toggle-category"><span data-sc-category-text>' + escapeHtml(getCategoryPath(categoryKey)) + '</span><i class="bi bi-diagram-3"></i></button>' +
       '<div class="sc-category-menu">' +
-        '<button type="button" data-sc-action="choose-category" data-value="业务部"><i class="bi bi-archive-fill"></i><span>业务部</span></button>' +
-        '<button type="button" data-sc-action="choose-category" data-value="数仓组"><i class="bi bi-archive-fill"></i><span>数仓组</span></button>' +
+        '<div class="sc-category-search"><input type="text" data-sc-category-search value="' + escapeHtml(state.formCategoryKeyword) + '" placeholder="搜索目录"><button type="button" aria-label="搜索"><i class="bi bi-search"></i></button></div>' +
+        '<ul class="sc-category-tree" data-sc-category-tree>' + treeHtml + '</ul>' +
       '</div>' +
-      '<input type="hidden" data-sc-form-field="group" value="' + (category === '数仓组' ? 'warehouse' : 'business') + '">' +
+      '<input type="hidden" data-sc-form-field="group" value="' + escapeHtml(categoryKey) + '">' +
     '</div>';
   }
 
   function renderDataView() {
     var item = getCurrentDataRow();
-    var values = getFilteredValues(item);
+    var filteredValues = getFilteredValues(item);
+    var visibleValues = getVisibleValues(item);
     return '<section class="bc-data-page sc-data-page-view">' +
       '<div class="bc-data-page-toolbar sc-data-toolbar">' +
         '<div class="bc-data-page-actions">' +
           '<button class="btn btn-primary" type="button" data-sc-action="value-new"><i class="bi bi-plus-lg"></i><span>新建</span></button>' +
-          '<button class="btn btn-primary" type="button" data-sc-action="value-edit-selected"><i class="bi bi-pencil-square"></i><span>编辑</span></button>' +
           '<button class="btn btn-primary" type="button" data-sc-action="import-data"><i class="bi bi-upload"></i><span>导入</span></button>' +
           '<button class="btn btn-primary" type="button" data-sc-action="export-data"><i class="bi bi-download"></i><span>导出</span></button>' +
           '<button class="btn btn-danger" type="button" data-sc-action="value-delete-selected"><i class="bi bi-trash3"></i><span>删除</span></button>' +
@@ -655,10 +990,10 @@ DP.pages.standardCode = (function () {
         '<table class="bc-data-page-table sc-value-table">' +
           '<colgroup><col class="sc-v-check"><col class="sc-v-code"><col class="sc-v-name"><col class="sc-v-desc"><col class="sc-v-property"><col class="sc-v-valid"><col class="sc-v-date"><col class="sc-v-action"></colgroup>' +
           '<thead><tr><th class="bc-data-check"><input type="checkbox" data-sc-value-check-all aria-label="全选"></th><th>编码 <i class="bi bi-caret-up-fill sc-sort-mark"></i></th><th>名称 <i class="bi bi-caret-down-fill sc-sort-mark"></i></th><th>描述 <i class="bi bi-caret-down-fill sc-sort-mark"></i></th><th>代码属性 <i class="bi bi-caret-down-fill sc-sort-mark"></i></th><th>是否有效 <i class="bi bi-caret-down-fill sc-sort-mark"></i></th><th>有效日期 <i class="bi bi-caret-down-fill sc-sort-mark"></i></th><th>操作</th></tr></thead>' +
-          '<tbody>' + (values.length ? values.map(renderValueRow).join('') : '<tr class="bc-empty-row"><td colspan="8">暂无匹配的代码值</td></tr>') + '</tbody>' +
+          '<tbody>' + (visibleValues.length ? visibleValues.map(renderValueRow).join('') : '<tr class="bc-empty-row"><td colspan="8">暂无匹配的代码值</td></tr>') + '</tbody>' +
         '</table>' +
       '</div>' +
-      '<div class="bc-data-page-pagination">显示第 1 到第 ' + values.length + ' 条记录，总共 ' + values.length + ' 条记录</div>' +
+      renderValuePagination(filteredValues.length) +
     '</section>';
   }
 
@@ -711,7 +1046,7 @@ DP.pages.standardCode = (function () {
 
     var valueAll = pageEl.querySelector('[data-sc-value-check-all]');
     if (valueAll && state.mode === 'data') {
-      var values = getFilteredValues(getCurrentDataRow());
+      var values = getVisibleValues(getCurrentDataRow());
       var valueChecked = values.filter(function (item) { return state.dataSelected[item.code]; }).length;
       valueAll.checked = values.length > 0 && valueChecked === values.length;
       valueAll.indeterminate = valueChecked > 0 && valueChecked < values.length;
@@ -729,6 +1064,7 @@ DP.pages.standardCode = (function () {
     state.formMode = mode;
     state.formId = id || '';
     state.formCategoryOpen = false;
+    state.formCategoryKeyword = '';
     renderMain();
   }
 
@@ -737,6 +1073,7 @@ DP.pages.standardCode = (function () {
     state.formMode = '';
     state.formId = '';
     state.formCategoryOpen = false;
+    state.formCategoryKeyword = '';
     renderAll();
   }
 
@@ -757,7 +1094,7 @@ DP.pages.standardCode = (function () {
       if (editRow) {
         editRow.code = values.code;
         editRow.name = values.name;
-        editRow.group = values.group || 'business';
+        editRow.group = values.group || getDefaultCategoryKey();
         editRow.dataType = values.dataType || '普通数据';
         editRow.desc = values.desc || '';
       }
@@ -771,7 +1108,7 @@ DP.pages.standardCode = (function () {
         creator: '演示-测试',
         createdAt: nowText(),
         recordCount: 0,
-        group: values.group || 'business',
+        group: values.group || getDefaultCategoryKey(),
         values: []
       });
     }
@@ -794,20 +1131,25 @@ DP.pages.standardCode = (function () {
 
   function openDataPage(id) {
     state.mode = 'data';
+    state.activeTab = 'list';
     state.dataRowId = id || state.dataRowId || standardCodeRows[0].id;
     state.dataKeyword = '';
+    state.dataPage = 1;
     state.dataSelected = {};
-    renderAll();
+    renderMain();
   }
 
   function backToList() {
     state.mode = 'list';
     state.formMode = '';
     state.formId = '';
+    state.formCategoryOpen = false;
+    state.formCategoryKeyword = '';
     state.dataRowId = '';
     state.dataSelected = {};
+    state.dataPage = 1;
     state.datePickerOpen = false;
-    renderAll();
+    renderMain();
   }
 
   function openImportModal(type) {
@@ -816,13 +1158,16 @@ DP.pages.standardCode = (function () {
     modal.className = 'bc-modal-mask sc-modal-mask';
     modal.setAttribute('data-sc-modal', 'import');
     var isData = type === 'data';
+    var importOptions = isData
+      ? '<option selected>重复跳过</option><option>重复覆盖</option>'
+      : '<option selected>重复覆盖</option><option>重复跳过</option>';
     modal.innerHTML =
       '<div class="bc-modal sc-import-modal" role="dialog" aria-modal="true" aria-label="导入">' +
         '<div class="bc-modal-head sc-modal-head"><h3>导入</h3><button class="bc-modal-close" type="button" data-sc-action="close-modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button></div>' +
         '<div class="bc-modal-body sc-import-body">' +
           '<div class="bc-import-row sc-import-row">' +
             '<label><span>*</span>覆盖机制</label>' +
-            '<div class="bc-import-control"><select id="scImportMode"><option>重复覆盖</option><option>重复跳过</option></select></div>' +
+            '<div class="bc-import-control"><select id="scImportMode">' + importOptions + '</select></div>' +
             '<button class="bc-import-template" type="button" data-sc-action="download-template"><i class="bi bi-download"></i><span>下载模板</span></button>' +
           '</div>' +
           '<div class="bc-import-row sc-import-row">' +
@@ -842,6 +1187,8 @@ DP.pages.standardCode = (function () {
     if (!keepState) {
       state.valueModalId = '';
       state.datePickerOpen = false;
+      state.dateRangeStart = '';
+      state.dateRangeEnd = '';
     }
   }
 
@@ -893,11 +1240,12 @@ DP.pages.standardCode = (function () {
       code: '',
       name: '',
       property: '国家标准',
-      validDate: '',
+      validDate: '2026-06-23 14:40:41 - 2027-06-23 14:40:41',
       desc: ''
     };
     state.valueModalId = code || '';
     state.datePickerOpen = false;
+    syncDateRangeFromInput(value.validDate);
     var modal = document.createElement('div');
     modal.className = 'bc-modal-mask sc-modal-mask';
     modal.setAttribute('data-sc-modal', 'value');
@@ -926,20 +1274,36 @@ DP.pages.standardCode = (function () {
 
   function renderDatePicker() {
     if (!state.datePickerOpen) return '';
+    var firstMonth = new Date(state.datePickerYear, state.datePickerMonth - 1, 1);
+    var secondMonth = new Date(state.datePickerYear, state.datePickerMonth, 1);
     return '<div class="sc-date-picker">' +
-      '<div class="sc-date-head"><button type="button" data-sc-action="date-prev"><i class="bi bi-chevron-double-left"></i></button><button type="button" data-sc-action="date-prev"><i class="bi bi-chevron-left"></i></button><strong>2026年&nbsp;&nbsp;6月</strong><strong>2026年&nbsp;&nbsp;7月</strong><button type="button" data-sc-action="date-next"><i class="bi bi-chevron-right"></i></button><button type="button" data-sc-action="date-next"><i class="bi bi-chevron-double-right"></i></button></div>' +
-      '<div class="sc-date-months">' + renderMonth([31,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,1,2,3,4,5,6,7,8,9,10,11], 17) + renderMonth([28,29,30,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,1,2,3,4,5,6,7,8], 0) + '</div>' +
-      '<div class="sc-date-foot"><span>选择时间</span><div><button type="button" data-sc-action="date-clear">清空</button><button type="button" data-sc-action="date-ok">确定</button></div></div>' +
+      '<div class="sc-date-head"><button type="button" data-sc-action="date-prev"><i class="bi bi-chevron-double-left"></i></button><button type="button" data-sc-action="date-prev"><i class="bi bi-chevron-left"></i></button><strong>' + firstMonth.getFullYear() + '年&nbsp;&nbsp;' + (firstMonth.getMonth() + 1) + '月</strong><strong>' + secondMonth.getFullYear() + '年&nbsp;&nbsp;' + (secondMonth.getMonth() + 1) + '月</strong><button type="button" data-sc-action="date-next"><i class="bi bi-chevron-right"></i></button><button type="button" data-sc-action="date-next"><i class="bi bi-chevron-double-right"></i></button></div>' +
+      '<div class="sc-date-months">' + renderMonth(firstMonth.getFullYear(), firstMonth.getMonth() + 1) + renderMonth(secondMonth.getFullYear(), secondMonth.getMonth() + 1) + '</div>' +
+      '<div class="sc-date-foot"><span>' + (state.dateRangeStart ? '开始：' + state.dateRangeStart + (state.dateRangeEnd ? '　结束：' + state.dateRangeEnd : '　请选择结束日期') : '请选择开始日期') + '</span><div><button type="button" data-sc-action="date-clear">清空</button><button type="button" data-sc-action="date-ok">确定</button></div></div>' +
     '</div>';
   }
 
-  function renderMonth(days, active) {
+  function renderMonth(year, month) {
     var week = ['日', '一', '二', '三', '四', '五', '六'];
+    var first = new Date(year, month - 1, 1);
+    var startDay = first.getDay();
+    var cells = [];
+    for (var i = 0; i < 42; i++) {
+      var dayDate = new Date(year, month - 1, i - startDay + 1);
+      cells.push({
+        day: dayDate.getDate(),
+        date: formatDate(dayDate),
+        muted: dayDate.getMonth() !== month - 1
+      });
+    }
     return '<div class="sc-date-month"><div class="sc-date-week">' + week.map(function (d) { return '<span>' + d + '</span>'; }).join('') + '</div><div class="sc-date-grid">' +
-      days.map(function (day, index) {
-        var faded = index < 1 || index > 30;
-        var activeClass = active && day === active ? ' active' : '';
-        return '<button class="' + (faded ? ' muted' : '') + activeClass + '" type="button" data-sc-action="choose-date" data-day="' + day + '">' + day + '</button>';
+      cells.map(function (cell) {
+        var classes = [];
+        if (cell.muted) classes.push('muted');
+        if (cell.date === state.dateRangeStart) classes.push('active range-start');
+        if (cell.date === state.dateRangeEnd) classes.push('active range-end');
+        if (state.dateRangeStart && state.dateRangeEnd && cell.date > state.dateRangeStart && cell.date < state.dateRangeEnd) classes.push('in-range');
+        return '<button class="' + classes.join(' ') + '" type="button" data-sc-action="choose-date" data-date="' + cell.date + '">' + cell.day + '</button>';
       }).join('') +
     '</div></div>';
   }
@@ -980,6 +1344,7 @@ DP.pages.standardCode = (function () {
         validDate: values.validDate || '',
         desc: values.desc || ''
       });
+      state.dataPage = 1;
     }
     item.recordCount = item.values.length;
     state.dataSelected = {};
@@ -1032,29 +1397,46 @@ DP.pages.standardCode = (function () {
       else backToList();
     } else if (action === 'save-form') {
       saveForm();
+    } else if (action === 'toggle-tree') {
+      var treeKey = actionEl.getAttribute('data-key') || '';
+      state.treeOpen[treeKey] = !state.treeOpen[treeKey];
+      if (actionEl.closest('.sc-category-picker')) renderMain();
+      else renderAll();
     } else if (action === 'toggle-category') {
       state.formCategoryOpen = !state.formCategoryOpen;
       renderMain();
     } else if (action === 'choose-category') {
+      var key = actionEl.getAttribute('data-key') || getDefaultCategoryKey();
       var text = pageEl.querySelector('[data-sc-category-text]');
       var input = pageEl.querySelector('[data-sc-form-field="group"]');
-      if (text) text.textContent = actionEl.getAttribute('data-value') || '业务部';
-      if (input) input.value = actionEl.getAttribute('data-value') === '数仓组' ? 'warehouse' : 'business';
+      if (text) text.textContent = getCategoryPath(key);
+      if (input) input.value = key;
       state.formCategoryOpen = false;
+      state.formCategoryKeyword = '';
       var picker = pageEl.querySelector('.sc-category-picker');
       if (picker) picker.classList.remove('open');
     } else if (action === 'query-io') {
       var ioKeyword = pageEl.querySelector('[data-sc-io-keyword]');
       state.ioFilters.keyword = ioKeyword ? ioKeyword.value.trim() : '';
+      state.logId = '';
       renderMain();
-    } else if (action === 'download-file') {
-      showToast('文件已开始下载');
     } else if (action === 'view-log') {
-      showToast('日志详情已打开');
+      state.logId = id;
+      state.activeTab = 'io';
+      renderMain();
+    } else if (action === 'back-log') {
+      state.logId = '';
+      state.activeTab = 'io';
+      renderMain();
     } else if (action === 'page-go') {
       var jump = pageEl.querySelector('.sc-page-jump');
       var totalPages = Math.max(1, Math.ceil(getFilteredRows().length / state.pageSize));
       state.page = Math.max(1, Math.min(totalPages, Number(jump && jump.value) || 1));
+      renderMain();
+    } else if (action === 'value-page-go') {
+      var valueJump = pageEl.querySelector('.sc-value-page-jump');
+      var valueTotalPages = Math.max(1, Math.ceil(getFilteredValues(getCurrentDataRow()).length / state.dataPageSize));
+      state.dataPage = Math.max(1, Math.min(valueTotalPages, Number(valueJump && valueJump.value) || 1));
       renderMain();
     } else if (action === 'value-new') {
       openValueModal('');
@@ -1071,6 +1453,7 @@ DP.pages.standardCode = (function () {
     } else if (action === 'query-data') {
       var dataKeyword = pageEl.querySelector('#scDataKeyword');
       state.dataKeyword = dataKeyword ? dataKeyword.value.trim() : '';
+      state.dataPage = 1;
       state.dataSelected = {};
       renderMain();
     } else if (action === 'import-data') {
@@ -1079,17 +1462,37 @@ DP.pages.standardCode = (function () {
       showToast('当前代码值已导出');
     } else if (action === 'toggle-date') {
       state.datePickerOpen = !state.datePickerOpen;
-      var dateControl = pageEl.querySelector('.sc-date-control');
-      var oldPicker = dateControl ? dateControl.querySelector('.sc-date-picker') : null;
-      if (oldPicker) oldPicker.remove();
-      if (state.datePickerOpen && dateControl) dateControl.insertAdjacentHTML('beforeend', renderDatePicker());
+      var currentDateInput = pageEl.querySelector('[data-sc-value-field="validDate"]');
+      if (currentDateInput) syncDateRangeFromInput(currentDateInput.value);
+      renderCurrentDatePicker();
     } else if (action === 'choose-date') {
       var inputDate = pageEl.querySelector('[data-sc-value-field="validDate"]');
-      if (inputDate) inputDate.value = '2026-06-' + String(actionEl.getAttribute('data-day')).padStart(2, '0');
+      var chosenDate = actionEl.getAttribute('data-date') || '';
+      if (!state.dateRangeStart || state.dateRangeEnd) {
+        state.dateRangeStart = chosenDate;
+        state.dateRangeEnd = '';
+      } else {
+        state.dateRangeEnd = chosenDate;
+        if (state.dateRangeEnd < state.dateRangeStart) {
+          var oldStart = state.dateRangeStart;
+          state.dateRangeStart = state.dateRangeEnd;
+          state.dateRangeEnd = oldStart;
+        }
+      }
+      if (inputDate) inputDate.value = formatDateRangeText(state.dateRangeStart, state.dateRangeEnd);
+      renderCurrentDatePicker();
     } else if (action === 'date-clear') {
       var clearDate = pageEl.querySelector('[data-sc-value-field="validDate"]');
       if (clearDate) clearDate.value = '';
+      state.dateRangeStart = '';
+      state.dateRangeEnd = '';
+      renderCurrentDatePicker();
     } else if (action === 'date-ok') {
+      var okDate = pageEl.querySelector('[data-sc-value-field="validDate"]');
+      if (okDate && state.dateRangeStart && !state.dateRangeEnd) {
+        state.dateRangeEnd = state.dateRangeStart;
+        okDate.value = formatDateRangeText(state.dateRangeStart, state.dateRangeEnd);
+      }
       state.datePickerOpen = false;
       var dateModal = pageEl.querySelector('[data-sc-modal="value"]');
       if (dateModal) {
@@ -1097,7 +1500,8 @@ DP.pages.standardCode = (function () {
         if (picker) picker.remove();
       }
     } else if (action === 'date-prev' || action === 'date-next') {
-      showToast('静态原型中已模拟月份切换');
+      shiftDatePickerMonth(action === 'date-prev' ? -1 : 1);
+      renderCurrentDatePicker();
     } else if (action === 'close-modal') {
       closeModal();
     } else if (action === 'save-import') {
@@ -1118,9 +1522,15 @@ DP.pages.standardCode = (function () {
         return;
       }
 
-      var treeRow = e.target.closest('[data-sc-tree]');
+      var actionEl = e.target.closest('[data-sc-action]');
+      if (actionEl && pageEl.contains(actionEl) && actionEl.getAttribute('data-sc-action') === 'toggle-tree') {
+        handleAction(actionEl);
+        return;
+      }
+
+      var treeRow = e.target.closest('[data-sc-tree-key]');
       if (treeRow && pageEl.contains(treeRow)) {
-        state.treeKey = treeRow.getAttribute('data-sc-tree');
+        state.treeKey = treeRow.getAttribute('data-sc-tree-key');
         state.page = 1;
         state.selectedIds = {};
         if (state.mode === 'data') state.mode = 'list';
@@ -1133,6 +1543,7 @@ DP.pages.standardCode = (function () {
         state.activeTab = tab.getAttribute('data-sc-tab');
         state.mode = 'list';
         state.selectedIds = {};
+        state.logId = '';
         renderMain();
         return;
       }
@@ -1160,7 +1571,17 @@ DP.pages.standardCode = (function () {
         return;
       }
 
-      var actionEl = e.target.closest('[data-sc-action]');
+      var valuePageBtn = e.target.closest('[data-sc-value-page]');
+      if (valuePageBtn && pageEl.contains(valuePageBtn)) {
+        var valueTotalPages = Math.max(1, Math.ceil(getFilteredValues(getCurrentDataRow()).length / state.dataPageSize));
+        var valueTarget = valuePageBtn.getAttribute('data-sc-value-page');
+        if (valueTarget === 'prev') state.dataPage = Math.max(1, state.dataPage - 1);
+        else if (valueTarget === 'next') state.dataPage = Math.min(valueTotalPages, state.dataPage + 1);
+        else state.dataPage = Number(valueTarget) || 1;
+        renderMain();
+        return;
+      }
+
       if (actionEl && pageEl.contains(actionEl)) {
         handleAction(actionEl);
       }
@@ -1188,13 +1609,20 @@ DP.pages.standardCode = (function () {
         renderMain();
         return;
       }
+      if (e.target.matches('[data-sc-value-page-size]')) {
+        state.dataPageSize = Number(e.target.value) || 10;
+        state.dataPage = 1;
+        renderMain();
+        return;
+      }
       if (e.target.matches('[data-sc-io-filter]')) {
         state.ioFilters[e.target.getAttribute('data-sc-io-filter')] = e.target.value;
+        state.logId = '';
         renderMain();
         return;
       }
       if (e.target.matches('[data-sc-value-check-all]')) {
-        getFilteredValues(getCurrentDataRow()).forEach(function (item) {
+        getVisibleValues(getCurrentDataRow()).forEach(function (item) {
           if (e.target.checked) state.dataSelected[item.code] = true;
           else delete state.dataSelected[item.code];
         });
@@ -1215,6 +1643,14 @@ DP.pages.standardCode = (function () {
         var tree = pageEl.querySelector('[data-sc-tree]');
         if (tree) tree.innerHTML = renderTree();
       }
+      if (e.target.matches('[data-sc-category-search]')) {
+        state.formCategoryKeyword = e.target.value;
+        var categoryTree = pageEl.querySelector('[data-sc-category-tree]');
+        var groupInput = pageEl.querySelector('[data-sc-form-field="group"]');
+        if (categoryTree) {
+          categoryTree.innerHTML = renderTreeNodes(standardTree, normalize(state.formCategoryKeyword), 'picker', groupInput ? groupInput.value : getDefaultCategoryKey()) || '<li class="sc-category-empty">暂无匹配目录</li>';
+        }
+      }
     });
 
     pageEl.addEventListener('keydown', function (e) {
@@ -1231,6 +1667,9 @@ DP.pages.standardCode = (function () {
       } else if (e.target.classList.contains('sc-page-jump')) {
         var go = pageEl.querySelector('[data-sc-action="page-go"]');
         if (go) go.click();
+      } else if (e.target.classList.contains('sc-value-page-jump')) {
+        var valueGo = pageEl.querySelector('[data-sc-action="value-page-go"]');
+        if (valueGo) valueGo.click();
       }
     });
   }
@@ -1240,6 +1679,13 @@ DP.pages.standardCode = (function () {
     state.mode = 'list';
     state.treeKey = 'business';
     state.treeKeyword = '';
+    state.treeOpen = {
+      business: true,
+      'business-base': true,
+      'health-standard': true,
+      warehouse: true,
+      'warehouse-code': true
+    };
     state.selectedIds = {};
     state.keyword = '';
     state.page = 1;
@@ -1249,11 +1695,19 @@ DP.pages.standardCode = (function () {
     state.formMode = '';
     state.formId = '';
     state.formCategoryOpen = false;
+    state.formCategoryKeyword = '';
     state.dataRowId = '';
     state.dataKeyword = '';
+    state.dataPage = 1;
+    state.dataPageSize = 10;
     state.dataSelected = {};
     state.valueModalId = '';
     state.datePickerOpen = false;
+    state.datePickerYear = 2026;
+    state.datePickerMonth = 6;
+    state.dateRangeStart = '';
+    state.dateRangeEnd = '';
+    state.logId = '';
     state.ioFilters = { attr: '', status: '', keyword: '' };
   }
 

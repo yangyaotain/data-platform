@@ -1,0 +1,263 @@
+/* ============================================================
+   数据中台 V4.0 - 公共 SQL 编辑器
+   参考数据开发 / 在线编程 SQL 编辑器交互与视觉
+   ============================================================ */
+
+.dp-sql-editor {
+  --dp-sql-bg: #1e2a3a;
+  --dp-sql-toolbar-bg: #252f3e;
+  --dp-sql-border: #2a3a4e;
+  --dp-sql-control-bg: #374354;
+  --dp-sql-control-border: #4a5568;
+  --dp-sql-control-text: #cdd6e0;
+  --dp-sql-control-hover-bg: #4a5a6e;
+  --dp-sql-control-hover-text: #fff;
+  --dp-sql-input-bg: #1e2a3a;
+  --dp-sql-text: #e0e0e0;
+  --dp-sql-muted: #8a9bb0;
+  --dp-sql-gutter-text: #5a6a7a;
+  --dp-sql-caret: #fff;
+  --dp-sql-scrollbar: #3a4a5a;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e5e8ee;
+  background: var(--dp-sql-bg);
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.dp-sql-editor.theme-light {
+  --dp-sql-bg: #fafbfc;
+  --dp-sql-toolbar-bg: #f0f2f5;
+  --dp-sql-border: #dce0e6;
+  --dp-sql-control-bg: #fff;
+  --dp-sql-control-border: #c8cdd4;
+  --dp-sql-control-text: #333;
+  --dp-sql-control-hover-bg: #e8f0fe;
+  --dp-sql-control-hover-text: #1a1a1a;
+  --dp-sql-input-bg: #fff;
+  --dp-sql-text: #1e1e1e;
+  --dp-sql-muted: #666;
+  --dp-sql-gutter-text: #999;
+  --dp-sql-caret: #333;
+  --dp-sql-scrollbar: #c8cdd4;
+}
+
+.dp-sql-editor.theme-dark {
+  --dp-sql-bg: #1e2a3a;
+  --dp-sql-toolbar-bg: #252f3e;
+  --dp-sql-border: #2a3a4e;
+  --dp-sql-control-bg: #374354;
+  --dp-sql-control-border: #4a5568;
+  --dp-sql-control-text: #cdd6e0;
+  --dp-sql-control-hover-bg: #4a5a6e;
+  --dp-sql-control-hover-text: #fff;
+  --dp-sql-input-bg: #1e2a3a;
+  --dp-sql-text: #e0e0e0;
+  --dp-sql-muted: #8a9bb0;
+  --dp-sql-gutter-text: #5a6a7a;
+  --dp-sql-caret: #fff;
+  --dp-sql-scrollbar: #3a4a5a;
+}
+
+.dp-sql-editor-toolbar {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--dp-sql-border);
+  background: var(--dp-sql-toolbar-bg);
+  flex-shrink: 0;
+}
+
+.dp-sql-editor-toolbar > * {
+  flex-shrink: 0;
+}
+
+.dp-sql-editor .dp-sql-editor-select,
+.dp-sql-editor .dp-sql-editor-btn {
+  height: 28px;
+  min-height: 28px;
+  width: auto;
+  box-sizing: border-box;
+  border: 1px solid var(--dp-sql-control-border);
+  border-radius: 4px;
+  background: var(--dp-sql-control-bg);
+  color: var(--dp-sql-control-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 12px;
+  line-height: 26px;
+  outline: none;
+}
+
+.dp-sql-editor .dp-sql-editor-select {
+  min-width: 78px;
+  max-width: 160px;
+  padding: 0 28px 0 8px;
+  cursor: pointer;
+}
+
+.dp-sql-editor .dp-sql-editor-select:focus {
+  border-color: #69b1ff;
+}
+
+.dp-sql-editor .dp-sql-editor-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 10px;
+  margin: 0;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  white-space: nowrap;
+}
+
+.dp-sql-editor .dp-sql-editor-btn:hover {
+  border-color: #69b1ff;
+  background: var(--dp-sql-control-hover-bg);
+  color: var(--dp-sql-control-hover-text);
+}
+
+.dp-sql-editor .dp-sql-editor-btn i {
+  font-size: 13px;
+}
+
+.dp-sql-editor-searchbar {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--dp-sql-border);
+  background: var(--dp-sql-toolbar-bg);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.dp-sql-editor.search-open .dp-sql-editor-searchbar {
+  display: flex;
+}
+
+.dp-sql-editor .dp-sql-editor-input {
+  width: 120px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--dp-sql-control-border);
+  border-radius: 3px;
+  background: var(--dp-sql-input-bg);
+  color: var(--dp-sql-text);
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.dp-sql-editor .dp-sql-editor-input:focus {
+  border-color: #69b1ff;
+}
+
+.dp-sql-editor .dp-sql-editor-check {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--dp-sql-muted);
+  font-family: -apple-system, BlinkMacSystemFont, 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dp-sql-editor .dp-sql-editor-close {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: var(--dp-sql-muted);
+  cursor: pointer;
+}
+
+.dp-sql-editor-close:hover {
+  color: #fff;
+}
+
+.dp-sql-editor-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: auto;
+}
+
+.dp-sql-editor-wrap::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.dp-sql-editor-wrap::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: var(--dp-sql-scrollbar);
+}
+
+.dp-sql-editor-wrap::-webkit-scrollbar-corner {
+  background: var(--dp-sql-bg);
+}
+
+.dp-sql-editor-gutter {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 36px;
+  flex-shrink: 0;
+  padding: 12px 10px 12px 14px;
+  border-right: 1px solid var(--dp-sql-border);
+  background: var(--dp-sql-bg);
+  color: var(--dp-sql-gutter-text);
+  text-align: right;
+  user-select: none;
+}
+
+.dp-sql-editor-gutter div {
+  height: 1.6em;
+}
+
+.dp-sql-editor-content {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 12px 16px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--dp-sql-text);
+  caret-color: var(--dp-sql-caret);
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  tab-size: 2;
+  white-space: pre;
+}
+
+.dp-sql-keyword { color: #569cd6; font-weight: 600; }
+.dp-sql-string { color: #ce9178; }
+.dp-sql-comment { color: #6a9955; font-style: italic; }
+.dp-sql-var { color: #dcdcaa; }
+
+.dp-sql-editor.theme-light .dp-sql-editor-select:focus,
+.dp-sql-editor.theme-light .dp-sql-editor-input:focus {
+  border-color: #4096ff;
+}
+
+.dp-sql-editor.theme-light .dp-sql-editor-close:hover {
+  color: #333;
+}
+
+.dp-sql-editor.theme-light .dp-sql-keyword { color: #0000ff; }
+.dp-sql-editor.theme-light .dp-sql-string { color: #a31515; }
+.dp-sql-editor.theme-light .dp-sql-comment { color: #008000; }
+.dp-sql-editor.theme-light .dp-sql-var { color: #795e26; }

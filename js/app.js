@@ -13,6 +13,145 @@ document.addEventListener('DOMContentLoaded', function () {
   /* ---- 缓存内容区域引用 ---- */
   DP.contentArea = document.getElementById('contentArea');
 
+  /* ---- 轻量 hash 路由：刷新后恢复当前模块/页面 ---- */
+  function getNodeText(el) {
+    if (!el) return '';
+    var span = el.querySelector('span');
+    return (span ? span.textContent : el.textContent).trim();
+  }
+
+  function getActiveNavKey() {
+    var activeNav = document.querySelector('.nav-item.active');
+    return activeNav ? activeNav.dataset.page : '';
+  }
+
+  function getNavKeyByGroupId(groupId) {
+    for (var key in DP.menuGroupMap) {
+      if (Object.prototype.hasOwnProperty.call(DP.menuGroupMap, key) && DP.menuGroupMap[key] === groupId) {
+        return key;
+      }
+    }
+    return '';
+  }
+
+  function getNavKeyByMenuLink(link) {
+    var group = link ? link.closest('.menu-group') : null;
+    return group ? getNavKeyByGroupId(group.id) : '';
+  }
+
+  function parseHashRoute() {
+    var hash = (location.hash || '').replace(/^#/, '');
+    if (!hash) return null;
+
+    var params = new URLSearchParams(hash);
+    var page = params.get('page');
+    var nav = params.get('nav');
+    if (!page && hash.indexOf('=') < 0) {
+      page = decodeURIComponent(hash);
+    }
+
+    if (!page) return null;
+    return { nav: nav || '', page: page };
+  }
+
+  function normalizeRoutePage(route) {
+    if (!route) return '';
+    if (route.page === 'data-develop') {
+      route.nav = route.nav || 'develop';
+      return '数据开发';
+    }
+    return route.page;
+  }
+
+  function findMenuLink(menuKey, navKey) {
+    var scope = document;
+    if (navKey && DP.menuGroupMap[navKey]) {
+      scope = document.getElementById(DP.menuGroupMap[navKey]) || document;
+    }
+
+    return Array.prototype.find.call(scope.querySelectorAll('.menu-link, .sub-menu li a'), function (link) {
+      return link.dataset.menu === menuKey || getNodeText(link) === menuKey;
+    }) || null;
+  }
+
+  function getRenderableMenuKey(link, fallbackKey) {
+    var menuKey = link ? (link.dataset.menu || '') : '';
+    var menuText = getNodeText(link);
+    if (!link) return fallbackKey || '';
+    if (link.closest('.sub-menu')) return menuKey || menuText || fallbackKey;
+    if (menuKey === 'datasource' || menuKey === 'project-mgr') return menuKey;
+    return menuText || menuKey || fallbackKey;
+  }
+
+  function activateNavOnly(navKey) {
+    if (!navKey) return false;
+    var nav = document.querySelector('.nav-item[data-page="' + navKey + '"]');
+    if (!nav) return false;
+
+    navItems.forEach(function (n) { n.classList.remove('active'); });
+    nav.classList.add('active');
+    DP.switchMenuGroup(navKey);
+    return true;
+  }
+
+  function activateMenuLink(link) {
+    if (!link) return;
+    var parent = link.closest('.menu-item.has-sub');
+    if (parent) parent.classList.add('open');
+    DP.setActiveMenu(link);
+  }
+
+  DP.rememberRoute = function (menuKey, navKey) {
+    if (!menuKey) return;
+    var currentNav = navKey || getActiveNavKey();
+    var params = new URLSearchParams();
+    if (currentNav) params.set('nav', currentNav);
+    params.set('page', menuKey);
+
+    var nextHash = '#' + params.toString();
+    if (location.hash === nextHash) return;
+    history.replaceState(null, '', location.pathname + location.search + nextHash);
+  };
+
+  var rawShowPage = DP.showPage;
+  DP.showPage = function (menuKey, opts) {
+    rawShowPage.call(DP, menuKey, opts);
+    if (!opts || !opts.skipRoute) {
+      DP.rememberRoute(menuKey);
+    }
+  };
+
+  var rawShowPlaceholder = DP.showPlaceholder;
+  DP.showPlaceholder = function (title, opts) {
+    rawShowPlaceholder.call(DP, title);
+    if (!opts || !opts.skipRoute) {
+      DP.rememberRoute(title);
+    }
+  };
+
+  function restoreRouteFromHash() {
+    var route = parseHashRoute();
+    if (!route) return false;
+
+    var pageKey = normalizeRoutePage(route);
+    var link = findMenuLink(pageKey, route.nav);
+    var navKey = route.nav || getNavKeyByMenuLink(link);
+
+    if (navKey) {
+      activateNavOnly(navKey);
+      if (!link) link = findMenuLink(pageKey, navKey);
+    }
+
+    if (link) {
+      activateMenuLink(link);
+      DP.showPage(getRenderableMenuKey(link, pageKey));
+    } else {
+      DP.showPage(pageKey);
+    }
+
+    return true;
+  }
+
   /* ---- 顶部导航切换 ---- */
   var navItems = document.querySelectorAll('.nav-item');
 
@@ -106,11 +245,7 @@ document.addEventListener('DOMContentLoaded', function () {
   DP.initAiAssistant();
 
   /* ---- 根据 hash 参数或默认加载页面 ---- */
-  var hashPage = (location.hash.match(/page=([^&]+)/) || [])[1];
-  if (hashPage === 'data-develop') {
-    var devNav = document.querySelector('[data-page="develop"]');
-    if (devNav) devNav.click();
-  } else {
+  if (!restoreRouteFromHash()) {
     var workbenchNav = document.querySelector('[data-page="workbench"]');
     if (workbenchNav) {
       workbenchNav.click();

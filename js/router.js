@@ -63,6 +63,15 @@ DP.showPage = function (menuKey, opts) {
   } else if (menuKey === '维度管理') {
     c.innerHTML = DP.pages.dimensionManagement.html;
     DP.pages.dimensionManagement.init();
+  } else if (menuKey === 'quality-analysis' || menuKey === '质量分析') {
+    c.innerHTML = DP.pages.dataQualityAnalysis.html;
+    DP.pages.dataQualityAnalysis.init();
+  } else if (menuKey === 'quality-rule' || menuKey === '质量规则') {
+    c.innerHTML = DP.pages.dataQualityRule.html;
+    DP.pages.dataQualityRule.init();
+  } else if (menuKey === 'quality-inspect-task' || menuKey === '稽查任务') {
+    c.innerHTML = DP.pages.qualityInspectTask.html;
+    DP.pages.qualityInspectTask.init();
   } else if (menuKey === '元数据搜索' || menuKey === '元数据搜索结果') {
     c.innerHTML = DP.pages.metaSearchResult.html;
     DP.pages.metaSearchResult.init(opts);

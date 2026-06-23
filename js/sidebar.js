@@ -68,7 +68,7 @@ DP.initSidebar = function () {
     link.addEventListener('click', function (e) {
       e.stopPropagation();
       DP.setActiveMenu(link);
-      DP.showPage(link.textContent);
+      DP.showPage(link.dataset.menu || link.textContent.trim());
     });
   });
 
