@@ -1,14 +1,19 @@
 /**
  * 数据中台 V4.0 - 数据资产 / 数据质量 / 稽查任务
- * 静态高保真原型：稽查任务列表、目录筛选、运行控制确认弹窗
+ * 静态高保真原型：稽查任务列表、自定义稽查新增/编辑、规则选择与调度联动
  */
 window.DP = window.DP || {};
 DP.pages = DP.pages || {};
 
 DP.pages.qualityInspectTask = (function () {
   var pageEl = null;
+  var reportGaugeChart = null;
 
   var state = {
+    view: 'list',
+    formMode: 'create',
+    formKind: 'custom',
+    editingId: '',
     treeKey: 'demo',
     treeKeyword: '',
     treeOpen: {
@@ -17,19 +22,75 @@ DP.pages.qualityInspectTask = (function () {
       business: true,
       'biz-core': true,
       standard: true,
-      'standard-domain': true
+      'standard-domain': true,
+      'std-business': true,
+      'std-warehouse': true
     },
     selectedIds: {},
     page: 1,
     pageSize: 16,
     filters: {
       status: '',
+      type: '',
       keyword: ''
     },
-    modal: null
+    form: null,
+    modal: null,
+    ruleModal: null,
+    standardModal: null,
+    basicFieldModal: null,
+    reportSqlModal: null,
+    reportLogModal: null,
+    viewTaskId: '',
+    reportRunIndex: 0,
+    resultPage: 1,
+    resultPageSize: 10,
+    openPicker: '',
+    pickerKeyword: '',
+    openParamSelect: '',
+    paramKeyword: '',
+    openBasicRuleSelect: '',
+    basicRuleKeyword: '',
+    schedulePopup: '',
+    basicTimePopup: '',
+    sql: {
+      template: { theme: 'dark', font: '14px', searchOpen: false },
+      generated: { theme: 'dark', font: '14px', searchOpen: false },
+      customRule: { theme: 'dark', font: '14px', searchOpen: false },
+      basicCustom: { theme: 'dark', font: '14px', searchOpen: false },
+      reportSql: { theme: 'light', font: '14px', searchOpen: false }
+    }
   };
 
   var statuses = ['运行中', '已停止', '执行中', '异常'];
+  var taskTypes = ['自定义稽查', '基础稽查', '标准稽查'];
+  var scheduleTypes = [
+    { value: 'hourly', label: '每小时' },
+    { value: 'daily', label: '每天' },
+    { value: 'weekly', label: '每周' },
+    { value: 'monthly', label: '每月' },
+    { value: 'once', label: '执行一次' }
+  ];
+  var weekOptions = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  var dayOptions = [
+    '1号', '2号', '3号', '4号', '5号', '6号', '7号', '8号',
+    '9号', '10号', '11号', '12号', '13号', '14号', '15号', '16号',
+    '17号', '18号', '19号', '20号', '21号', '22号', '23号', '24号',
+    '25号', '26号', '27号', '28号', '29号', '30号', '31号', '最后一天'
+  ];
+  var tableOptions = ['buildinglog', 'ods_workorder_ticket', 'dwd_order_detail_di', 'crm_member_base', 'fin_settlement_bill', 'api_access_log'];
+  var fieldOptions = ['Id', 'Name', 'OrderNo', 'TicketNo', 'CreateTime', 'CloseTime', 'Status', 'Amount'];
+  var customRuleModeOptions = [
+    { value: 'existing', label: '已有规则' },
+    { value: 'custom', label: '自定义' }
+  ];
+  var reportSummary = {
+    total: 2500,
+    passed: 2302,
+    failed: 198,
+    passRate: 92.08,
+    failRate: 7.92
+  };
 
   var taskTree = [
     {
@@ -92,6 +153,191 @@ DP.pages.qualityInspectTask = (function () {
         { key: 'standard-public', label: '公共质量模板', icon: 'bi-puzzle-fill' }
       ]
     }
+  ];
+
+  var dataSourceTree = [
+    {
+      key: 'ds-root',
+      label: '数据源目录',
+      icon: 'bi-collection-fill',
+      iconClass: 'is-blue',
+      count: 18,
+      children: [
+        {
+          key: 'ds-business',
+          label: '业务系统数据源',
+          icon: 'bi-folder-fill',
+          count: 9,
+          children: [
+            { key: 'ds-workorder', label: '工单系统', icon: 'bi-database-fill', count: 3 },
+            { key: 'ds-order', label: '订单系统', icon: 'bi-database-fill', count: 4 },
+            { key: 'ds-customer', label: '客户系统', icon: 'bi-database-fill', count: 2 }
+          ]
+        },
+        {
+          key: 'ds-warehouse',
+          label: '数仓数据源',
+          icon: 'bi-folder-fill',
+          count: 6,
+          children: [
+            { key: 'ds-hive-prod', label: 'Hive 生产库', icon: 'bi-hdd-stack-fill', count: 3 },
+            { key: 'ds-starrocks', label: 'StarRocks 集群', icon: 'bi-hdd-network-fill', count: 3 }
+          ]
+        },
+        { key: 'ds-standard', label: '标准管理库', icon: 'bi-database-fill', count: 3 }
+      ]
+    }
+  ];
+
+  var ruleTree = [
+    {
+      key: 'rule-demo',
+      label: '中电数治演示',
+      icon: 'bi-layers-fill',
+      iconClass: 'is-blue',
+      children: [
+        { key: 'rule-demo-common', label: '公共稽查规则', icon: 'bi-folder-fill' }
+      ]
+    },
+    {
+      key: 'rule-business',
+      label: '业务系统',
+      icon: 'bi-hdd-network-fill',
+      iconClass: 'is-system',
+      children: [
+        { key: 'rule-workorder', label: '工单系统', icon: 'bi-ui-checks' },
+        { key: 'rule-order', label: '订单交易系统', icon: 'bi-receipt' }
+      ]
+    }
+  ];
+
+  var ruleRows = [
+    { id: 'rule-not-null', group: 'rule-business', name: '非空校验字段不能为空', desc: '非空校验（name 字段不能为空）' },
+    { id: 'rule-repeat', group: 'rule-business', name: '筛选出重复的记录', desc: '校验name字段的唯一性，筛选出重复的记录' },
+    { id: 'rule-length', group: 'rule-demo-common', name: '长度不能超过 10 个字符', desc: '长度不能超过 10 个字符' }
+  ];
+
+  var standardTree = [
+    {
+      key: 'std-business',
+      label: '业务部',
+      icon: 'bi-folder-fill',
+      iconClass: 'is-standard',
+      count: 2,
+      children: [
+        { key: 'std-warehouse', label: '数仓组', icon: 'bi-folder-fill', iconClass: 'is-blue', count: 1 }
+      ]
+    }
+  ];
+
+  var standardRows = [
+    { id: 'code_id', group: 'std-business', enName: 'code_id', alias: '网格id', desc: '网格id' },
+    { id: 'phone', group: 'std-warehouse', enName: 'phone', alias: '手机号码', desc: '手机号码' }
+  ];
+
+  var standardEntities = [
+    { name: 'aierp_pro_test.customer.Phone', alias: 'Phone', desc: '电话' },
+    { name: 'aierp_pro_test.supplier.Phone', alias: 'Phone', desc: '电话' },
+    { name: 'aierp_pro_test.useremergencycontact.Telephone', alias: 'Telephone', desc: '联系电话' }
+  ];
+
+  var standardDatasourceOptions = ['aierp_pro_test', 'ods_workorder_ticket', 'crm_member_base', 'aierp_std_test'];
+  var inspectModeOptions = ['全量稽查', '增量稽查'];
+  var basicObjectOptions = ['字段', '表'];
+  var basicParamModeOptions = ['普通设置', '自定义SQL'];
+  var basicTimeFieldOptions = ['Id', 'OutboundId', 'GoodsId', 'CurrentInventory', 'OutQuantity', 'Address', 'Remark', 'CreateTime', 'CreateUserId', 'UpdateTime', 'UpdateUserId'];
+  var basicDateFormatOptions = [
+    'YYYY-MM-DD',
+    'YYYY-MM-DD HH:mm:ss',
+    'YYYY-MM-DD HH:mm',
+    'YYYY/MM/DD',
+    'YYYY/MM/DD HH:mm:ss',
+    'YYYYMMDD',
+    'YYYYMMDDHHmmss',
+    'YYYY-MM',
+    'YYYY',
+    'HH:mm:ss',
+    '时间戳(秒)',
+    '时间戳(毫秒)'
+  ];
+  var basicOffsetUnitOptions = ['小时', '天', '周', '月'];
+  var basicRuleGroups = [
+    {
+      id: 'system',
+      label: '系统规则',
+      icon: 'bi-folder-fill',
+      children: [
+        { id: 'length', label: '长度校验', desc: '字段值长度需在配置的最小值与最大值之间' },
+        { id: 'range', label: '取值范围约束', desc: '字段值必须落在规则维护的枚举或阈值范围内' },
+        { id: 'size', label: '大小值校验', desc: '数值型字段不得超过配置的上限或低于下限' },
+        { id: 'id-card', label: '身份证号校验(18位)', desc: '身份证号需满足18位长度、出生日期和校验位规则' },
+        { id: 'timely', label: '及时性校验', desc: '时间字段需满足业务要求的采集或入仓时效' },
+        { id: 'unique', label: '唯一性校验', desc: '同一业务主键在目标范围内不得重复出现' },
+        { id: 'phone', label: '电话号码与手机号码校验(11位)码校验', desc: '电话号码或手机号需满足11位号码格式规则' },
+        { id: 'not-null', label: '非空校验', desc: '字段值不能为空、空字符串或仅包含空白字符' }
+      ]
+    },
+    {
+      id: 'business',
+      label: '业务系统',
+      icon: 'bi-layers-fill',
+      children: [
+        { id: 'field-not-null', label: '字段非空校验', desc: '稽查字段值不能为空，用于发现关键业务字段缺失记录' }
+      ]
+    }
+  ];
+  var basicEntities = [
+    { name: 'tms_demo.express_task_collect.actual_collected_time', alias: 'actual_collected_time', ruleId: 'field-not-null' },
+    { name: 'tms_demo.express_task_collect.actual_commit_time', alias: 'actual_commit_time', ruleId: 'field-not-null' },
+    { name: 'tms_demo.express_task_collect.update_time', alias: 'update_time', ruleId: 'field-not-null' }
+  ];
+  var basicFieldTree = [
+    { key: 'ads', label: 'ADS-应用层', icon: 'bi-layers-fill', type: 'layer' },
+    { key: 'dwd', label: 'DWD-数据明细层', icon: 'bi-layers-fill', type: 'layer' },
+    { key: 'dws', label: 'DWS-数据汇总层', icon: 'bi-layers-fill', type: 'layer' },
+    {
+      key: 'ods',
+      label: 'ODS-贴源层',
+      icon: 'bi-layers-fill',
+      type: 'layer',
+      children: [
+        { key: 'zd-ods', label: '中电数智_ODS', icon: 'bi-database-fill', type: 'database' },
+        {
+          key: 'workorder-ods',
+          label: '工单_ODS',
+          icon: 'bi-folder-fill',
+          type: 'database',
+          children: [
+            { key: 'dim-order-status', label: 'dim_tms_ads_trans_order_status', icon: 'bi-table', type: 'table' },
+            { key: 'dim-order-stats', label: 'dim_tms_ads_trans_order_stats', icon: 'bi-table', type: 'table' },
+            { key: 'dim-daily-cmp', label: 'dim_tms_daily_cmp_order_2026', icon: 'bi-table', type: 'table' },
+            { key: 'dim-daily-cmp-hf', label: 'dim_tms_daily_cmp_order_hf', icon: 'bi-table', type: 'table' },
+            { key: 'dim-city-stats-hf', label: 'dim_tms_dm_city_stats_hf', icon: 'bi-table', type: 'table' },
+            { key: 'dim-driver-stats-hf', label: 'dim_tms_dm_driver_stats_hf', icon: 'bi-table', type: 'table' },
+            { key: 'dim-driver-stats-test', label: 'dim_tms_dm_driver_stats_test', icon: 'bi-table', type: 'table' }
+          ]
+        }
+      ]
+    }
+  ];
+  var basicFieldRows = [
+    { id: 'dt', table: 'dim_tms_ads_trans_order_status', alias: 'dt', enName: 'dt', desc: '日期分区' },
+    { id: 'recent_days', table: 'dim_tms_ads_trans_order_status', alias: 'recent_days', enName: 'recent_days', desc: '最近统计天数' },
+    { id: 'receive_order_count', table: 'dim_tms_ads_trans_order_status', alias: 'receive_order_count', enName: 'receive_order_count', desc: '收件订单数量' },
+    { id: 'receive_order_amount', table: 'dim_tms_ads_trans_order_status', alias: 'receive_order_amount', enName: 'receive_order_amount', desc: '收件订单金额' },
+    { id: 'dispatch_order_count', table: 'dim_tms_ads_trans_order_status', alias: 'dispatch_order_count', enName: 'dispatch_order_count', desc: '派件订单数量' },
+    { id: 'dispatch_order_amount', table: 'dim_tms_ads_trans_order_status', alias: 'dispatch_order_amount', enName: 'dispatch_order_amount', desc: '派件订单金额' },
+    { id: 'ins_dt', table: 'dim_tms_ads_trans_order_status', alias: 'ins_dt', enName: 'ins_dt', desc: '入库日期' },
+    { id: 'ins_by', table: 'dim_tms_ads_trans_order_status', alias: 'ins_by', enName: 'ins_by', desc: '写入人' },
+    { id: 'stats_dt', table: 'dim_tms_ads_trans_order_stats', alias: 'dt', enName: 'dt', desc: '统计日期' },
+    { id: 'stats_order_count', table: 'dim_tms_ads_trans_order_stats', alias: 'order_count', enName: 'order_count', desc: '订单总量' },
+    { id: 'stats_finish_rate', table: 'dim_tms_ads_trans_order_stats', alias: 'finish_rate', enName: 'finish_rate', desc: '完成率' },
+    { id: 'cmp_dt', table: 'dim_tms_daily_cmp_order_2026', alias: 'dt', enName: 'dt', desc: '对账日期' },
+    { id: 'cmp_order_no', table: 'dim_tms_daily_cmp_order_2026', alias: 'order_no', enName: 'order_no', desc: '订单编号' },
+    { id: 'cmp_diff_amount', table: 'dim_tms_daily_cmp_order_2026', alias: 'diff_amount', enName: 'diff_amount', desc: '差异金额' },
+    { id: 'city_dt', table: 'dim_tms_dm_city_stats_hf', alias: 'dt', enName: 'dt', desc: '城市统计日期' },
+    { id: 'city_code', table: 'dim_tms_dm_city_stats_hf', alias: 'city_code', enName: 'city_code', desc: '城市编码' },
+    { id: 'city_order_count', table: 'dim_tms_dm_city_stats_hf', alias: 'order_count', enName: 'order_count', desc: '城市订单量' }
   ];
 
   var taskRows = [
@@ -157,6 +403,24 @@ DP.pages.qualityInspectTask = (function () {
       pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':' + pad(date.getSeconds());
   }
 
+  function highlightSQL(code) {
+    var h = escapeHtml(code);
+    h = h.replace(/(\/\/[^\n]*)/g, '<span class="dp-sql-comment">$1</span>');
+    h = h.replace(/(\/\*[\s\S]*?\*\/|\/\*[\s\S]*$)/g, '<span class="dp-sql-comment">$1</span>');
+    h = h.replace(/('[^']*'|`[^`]*`)/g, '<span class="dp-sql-string">$1</span>');
+    h = h.replace(/(\$\{[^}]+\})/g, '<span class="dp-sql-var">$1</span>');
+    h = h.replace(/\b(SET|CREATE|TABLE|WITH|SELECT|FROM|INSERT|INTO|VALUES|WHERE|AND|OR|NOT|NULL|AS|VARCHAR|INT|BIGINT|FLOAT|DOUBLE|DECIMAL|DATE|BOOLEAN|COUNT|GROUP|BY|HAVING|JOIN|LEFT|RIGHT|INNER|ON|LENGTH|IN)\b/gi,
+      '<span class="dp-sql-keyword">$1</span>');
+    return h;
+  }
+
+  function lineNumbers(code) {
+    var total = Math.max(1, String(code || '').split('\n').length);
+    var html = '';
+    for (var i = 1; i <= total; i++) html += '<div>' + i + '</div>';
+    return html;
+  }
+
   function findTreeNode(nodes, key) {
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i];
@@ -174,37 +438,47 @@ DP.pages.qualityInspectTask = (function () {
     }, []));
   }
 
-  function getTreeCount(node) {
-    var keys = collectTreeKeys(node);
-    return taskRows.filter(function (item) { return keys.indexOf(item.group) >= 0; }).length;
-  }
-
   function treeMatches(node, keyword) {
     if (!keyword) return true;
     if (normalize(node.label).indexOf(keyword) >= 0) return true;
     return (node.children || []).some(function (child) { return treeMatches(child, keyword); });
   }
 
-  function renderTreeNodes(nodes, keyword) {
+  function getTreeCount(node) {
+    var keys = collectTreeKeys(node);
+    return taskRows.filter(function (item) { return keys.indexOf(item.group) >= 0; }).length;
+  }
+
+  function getNodeCount(node) {
+    if (typeof node.count === 'number') return node.count;
+    return getTreeCount(node);
+  }
+
+  function renderTreeNodes(nodes, keyword, options) {
+    options = options || {};
     return nodes.filter(function (node) {
       return treeMatches(node, keyword);
     }).map(function (node) {
       var children = node.children || [];
       var hasChildren = children.length > 0;
-      var isOpen = !!keyword || !!state.treeOpen[node.key];
-      var isActive = state.treeKey === node.key;
-      return '<li class="dqit-tree-node' + (isOpen ? ' open' : '') + '">' +
+      var open = !!keyword || !!state.treeOpen[node.key] || !!options.forceOpen;
+      var activeKey = options.activeKey || state.treeKey;
+      var isActive = activeKey === node.key;
+      var action = options.action || 'toggle-tree';
+      var selectAction = options.selectAction || '';
+      var pickerAttr = selectAction ? ' data-dqit-action="' + selectAction + '" data-key="' + escapeHtml(node.key) + '"' : ' data-dqit-tree-key="' + escapeHtml(node.key) + '"';
+      return '<li class="dqit-tree-node' + (open ? ' open' : '') + '">' +
         '<div class="dqit-tree-row' + (isActive ? ' active' : '') + '">' +
           (hasChildren
-            ? '<button class="dqit-tree-toggle" type="button" data-dqit-action="toggle-tree" data-key="' + escapeHtml(node.key) + '" aria-label="展开或收起"><i class="bi ' + (isOpen ? 'bi-caret-down-fill' : 'bi-caret-right-fill') + '"></i></button>'
+            ? '<button class="dqit-tree-toggle" type="button" data-dqit-action="' + action + '" data-key="' + escapeHtml(node.key) + '" aria-label="展开或收起"><i class="bi ' + (open ? 'bi-caret-down-fill' : 'bi-caret-right-fill') + '"></i></button>'
             : '<span class="dqit-tree-toggle-placeholder"></span>') +
-          '<button class="dqit-tree-select" type="button" data-dqit-tree-key="' + escapeHtml(node.key) + '">' +
+          '<button class="dqit-tree-select" type="button"' + pickerAttr + '>' +
             '<i class="bi ' + escapeHtml(node.icon || 'bi-folder-fill') + ' dqit-tree-icon ' + escapeHtml(node.iconClass || '') + '"></i>' +
             '<span class="dqit-tree-name">' + escapeHtml(node.label) + '</span>' +
-            '<span class="dqit-tree-count">' + getTreeCount(node) + '</span>' +
+            '<span class="dqit-tree-count">' + getNodeCount(node) + '</span>' +
           '</button>' +
         '</div>' +
-        (hasChildren ? '<ul class="dqit-tree-children">' + renderTreeNodes(children, keyword) + '</ul>' : '') +
+        (hasChildren ? '<ul class="dqit-tree-children">' + renderTreeNodes(children, keyword, options) + '</ul>' : '') +
       '</li>';
     }).join('');
   }
@@ -223,6 +497,7 @@ DP.pages.qualityInspectTask = (function () {
     return taskRows.filter(function (item) {
       if (keys.length && keys.indexOf(item.group) < 0) return false;
       if (state.filters.status && item.status !== state.filters.status) return false;
+      if (state.filters.type && item.type !== state.filters.type) return false;
       if (keyword) {
         var text = [item.name, item.frequency, item.status, item.creator, item.createdAt, item.lastRunAt, item.type, item.target, item.desc].join(' ');
         if (normalize(text).indexOf(keyword) < 0) return false;
@@ -252,10 +527,115 @@ DP.pages.qualityInspectTask = (function () {
     return ids.map(getTaskById).filter(function (item) { return !!item; });
   }
 
+  function getViewTask() {
+    return getTaskById(state.viewTaskId) || taskRows[0];
+  }
+
+  function getReportName(item) {
+    if (!item) return 'employee_info表手机号码稽查';
+    if (item.name.indexOf('手机号码') >= 0) return 'employee_info表手机号码稽查';
+    return (item.target || 'employee_info') + '表' + item.name;
+  }
+
+  function getReportFrequency(item) {
+    if (!item) return '每小时 10';
+    if (item.name.indexOf('手机号码') >= 0) return '每小时 10';
+    return String(item.frequency || '每小时 10 分').replace(' 分', '');
+  }
+
+  function getResultTotal() {
+    return 798;
+  }
+
+  function getReportRun(index) {
+    var item = getViewTask();
+    var startDate = new Date(2026, 5, 24, 15, 10, 0);
+    startDate.setHours(startDate.getHours() - index);
+    var completeDate = new Date(startDate.getTime());
+    completeDate.setMinutes(completeDate.getMinutes() + 1);
+    completeDate.setSeconds(18 + (index % 7));
+    return {
+      index: index,
+      reportName: getReportName(item),
+      startAt: formatDateTime(startDate),
+      endAt: formatDateTime(completeDate),
+      frequency: getReportFrequency(item),
+      duration: '1分钟',
+      status: '执行成功'
+    };
+  }
+
+  function getVisibleReportRuns() {
+    var total = getResultTotal();
+    var totalPages = Math.max(1, Math.ceil(total / state.resultPageSize));
+    state.resultPage = Math.max(1, Math.min(totalPages, state.resultPage));
+    var start = (state.resultPage - 1) * state.resultPageSize;
+    var count = Math.min(state.resultPageSize, total - start);
+    var rows = [];
+    for (var i = 0; i < count; i++) rows.push(getReportRun(start + i));
+    return rows;
+  }
+
+  function getSelectedReportRun() {
+    return getReportRun(state.reportRunIndex || 0);
+  }
+
+  function getReportSql() {
+    return [
+      'SELECT COUNT(1) as total_num',
+      'FROM (',
+      '    SELECT',
+      '        *',
+      '    FROM',
+      '        `tms_demo`.`employee_info` a',
+      ') T UNION ALL SELECT COUNT(1) as total_num',
+      'FROM (SELECT * FROM (SELECT * FROM `tms_demo`.`employee_info` a) t',
+      "WHERE t.`id` IS NOT NULL OR t.`id` <> '' OR t.`id` REGEXP '^[3-9][0-9]{9}$') W"
+    ].join('\n');
+  }
+
+  function getExecutionLog(run) {
+    var task = getViewTask();
+    var flowId = 'DQ-' + String((run.index || 0) + 100238);
+    return [
+      '[' + run.startAt + '] INFO  QualityInspectJob - start task ' + flowId,
+      '[' + run.startAt + '] INFO  TaskName - ' + getReportName(task),
+      '[' + run.startAt + '] INFO  Scheduler - frequency=' + run.frequency + ', trigger=auto',
+      '[' + run.startAt + '] INFO  SQLPrepare - parse rule SQL and bind datasource tms_demo.employee_info',
+      '[' + run.startAt + '] INFO  ExecuteEngine - submit Spark SQL application app-20260624-' + String(1000 + (run.index || 0)),
+      '[' + run.endAt + '] INFO  ExecuteEngine - query finished, scanned ' + reportSummary.total + ' rows',
+      '[' + run.endAt + '] INFO  QualityResult - matched=' + reportSummary.passed + ', unmatched=' + reportSummary.failed + ', passRate=' + reportSummary.passRate.toFixed(2) + '%',
+      '[' + run.endAt + '] INFO  ReportWriter - write report snapshot to quality_report.employee_info_phone',
+      '[' + run.endAt + '] INFO  QualityInspectJob - task finished, status=SUCCESS, cost=' + run.duration
+    ].join('\n');
+  }
+
   function renderStatusOptions() {
     return '<option value="">运行状态</option>' + statuses.map(function (status) {
       return '<option value="' + escapeHtml(status) + '"' + (state.filters.status === status ? ' selected' : '') + '>' + escapeHtml(status) + '</option>';
     }).join('');
+  }
+
+  function renderTypeOptions() {
+    return '<option value="">任务类型</option>' + taskTypes.map(function (type) {
+      return '<option value="' + escapeHtml(type) + '"' + (state.filters.type === type ? ' selected' : '') + '>' + escapeHtml(type) + '</option>';
+    }).join('');
+  }
+
+  function statusClass(status) {
+    if (status === '运行中') return 'running';
+    if (status === '执行中') return 'executing';
+    if (status === '异常') return 'error';
+    return 'stopped';
+  }
+
+  function renderStatus(status) {
+    return '<span class="dqit-status ' + statusClass(status) + '">' + escapeHtml(status) + '</span>';
+  }
+
+  function renderTaskType(type) {
+    var cls = type === '自定义稽查' ? 'custom' : (type === '基础稽查' ? 'basic' : 'standard');
+    return '<span class="dqit-type-badge ' + cls + '">' + escapeHtml(type) + '</span>';
   }
 
   function renderToolbar() {
@@ -270,6 +650,7 @@ DP.pages.qualityInspectTask = (function () {
         '<button class="btn btn-danger" type="button" data-dqit-action="delete-selected"><i class="bi bi-trash3"></i><span>删除</span></button>' +
       '</div>' +
       '<div class="dqit-toolbar-right">' +
+        '<select class="dqit-type-select" data-dqit-filter="type" aria-label="任务类型">' + renderTypeOptions() + '</select>' +
         '<select class="dqit-status-select" data-dqit-filter="status" aria-label="运行状态">' + renderStatusOptions() + '</select>' +
         '<div class="dqit-query-box">' +
           '<input id="dqitKeywordInput" type="text" value="' + escapeHtml(state.filters.keyword) + '" placeholder="关键字查询" aria-label="关键字查询">' +
@@ -277,17 +658,6 @@ DP.pages.qualityInspectTask = (function () {
         '</div>' +
       '</div>' +
     '</div>';
-  }
-
-  function statusClass(status) {
-    if (status === '运行中') return 'running';
-    if (status === '执行中') return 'executing';
-    if (status === '异常') return 'error';
-    return 'stopped';
-  }
-
-  function renderStatus(status) {
-    return '<span class="dqit-status ' + statusClass(status) + '">' + escapeHtml(status) + '</span>';
   }
 
   function renderActionButtons(item) {
@@ -305,12 +675,13 @@ DP.pages.qualityInspectTask = (function () {
   function renderTableRows() {
     var rows = getVisibleRows();
     if (!rows.length) {
-      return '<tr class="dqit-empty-row"><td colspan="8">暂无匹配稽查任务</td></tr>';
+      return '<tr class="dqit-empty-row"><td colspan="9">暂无匹配稽查任务</td></tr>';
     }
     return rows.map(function (item) {
       return '<tr>' +
         '<td><input type="checkbox" data-dqit-row-check="' + escapeHtml(item.id) + '"' + (state.selectedIds[item.id] ? ' checked' : '') + ' aria-label="选择稽查任务"></td>' +
-        '<td title="' + escapeHtml(item.desc) + '"><a class="dqit-task-name" data-dqit-action="view-row" data-id="' + escapeHtml(item.id) + '">' + escapeHtml(item.name) + '</a><span>' + escapeHtml(item.type) + ' / ' + escapeHtml(item.target) + '</span></td>' +
+        '<td title="' + escapeHtml(item.desc) + '"><a class="dqit-task-name" data-dqit-action="view-row" data-id="' + escapeHtml(item.id) + '">' + escapeHtml(item.name) + '</a><span>' + escapeHtml(item.target) + '</span></td>' +
+        '<td>' + renderTaskType(item.type) + '</td>' +
         '<td>' + escapeHtml(item.frequency) + '</td>' +
         '<td>' + renderStatus(item.status) + '</td>' +
         '<td>' + escapeHtml(item.creator) + '</td>' +
@@ -328,12 +699,12 @@ DP.pages.qualityInspectTask = (function () {
     return '<div class="dqit-table-wrap">' +
       '<table class="ds-table dqit-table">' +
         '<colgroup>' +
-          '<col class="dqit-w-check"><col class="dqit-w-name"><col class="dqit-w-frequency"><col class="dqit-w-status">' +
+          '<col class="dqit-w-check"><col class="dqit-w-name"><col class="dqit-w-type"><col class="dqit-w-frequency"><col class="dqit-w-status">' +
           '<col class="dqit-w-creator"><col class="dqit-w-created"><col class="dqit-w-last"><col class="dqit-w-action">' +
         '</colgroup>' +
         '<thead><tr>' +
           '<th class="col-ck"><input type="checkbox" data-dqit-check-all' + (allChecked ? ' checked' : '') + ' aria-label="全选稽查任务"></th>' +
-          '<th>任务名称</th><th>频率</th><th>运行状态</th><th>创建人</th><th>创建时间</th><th>最后执行时间</th><th>操作</th>' +
+          '<th>任务名称</th><th>任务类型</th><th>频率</th><th>运行状态</th><th>创建人</th><th>创建时间</th><th>最后执行时间</th><th>操作</th>' +
         '</tr></thead>' +
         '<tbody>' + renderTableRows() + '</tbody>' +
       '</table>' +
@@ -361,7 +732,990 @@ DP.pages.qualityInspectTask = (function () {
     '</div>';
   }
 
-  function renderModal() {
+  function renderListShell() {
+    return '<aside class="dqit-left-panel">' +
+      '<div class="dqit-tree-search">' +
+        '<input type="text" data-dqit-tree-search placeholder="关键字搜索" aria-label="关键字搜索" value="' + escapeHtml(state.treeKeyword) + '">' +
+        '<button type="button" aria-label="搜索目录"><i class="bi bi-search"></i></button>' +
+      '</div>' +
+      '<div class="dqit-tree-scroll"><ul class="dqit-tree" data-dqit-tree>' + renderTree() + '</ul></div>' +
+    '</aside>' +
+    '<section class="dqit-main-panel">' + renderToolbar() + renderTable() + renderFooter() + '</section>';
+  }
+
+  function renderResultPageNav(totalPages) {
+    var current = state.resultPage;
+    var pages = [1, 2, 3, 4, 5].filter(function (page) { return page <= totalPages; });
+    var html = '<button type="button" data-dqit-result-page="prev"' + (current <= 1 ? ' disabled' : '') + '><i class="bi bi-chevron-left"></i></button>';
+    pages.forEach(function (page) {
+      html += '<button type="button" data-dqit-result-page="' + page + '"' + (current === page ? ' class="active"' : '') + '>' + page + '</button>';
+    });
+    if (totalPages > 6) html += '<span>...</span>';
+    if (totalPages > 5) html += '<button type="button" data-dqit-result-page="' + totalPages + '"' + (current === totalPages ? ' class="active"' : '') + '>' + totalPages + '</button>';
+    html += '<button type="button" data-dqit-result-page="next"' + (current >= totalPages ? ' disabled' : '') + '><i class="bi bi-chevron-right"></i></button>';
+    return html;
+  }
+
+  function renderResultFooter() {
+    var total = getResultTotal();
+    var totalPages = Math.max(1, Math.ceil(total / state.resultPageSize));
+    var start = total ? (state.resultPage - 1) * state.resultPageSize + 1 : 0;
+    var end = total ? Math.min(total, state.resultPage * state.resultPageSize) : 0;
+    return '<div class="dqit-result-footer">' +
+      '<div>显示第 ' + start + ' 到第 ' + end + ' 条记录，总共 ' + total + ' 条记录 每页显示 ' +
+        '<select data-dqit-result-page-size><option value="10"' + (state.resultPageSize === 10 ? ' selected' : '') + '>10</option><option value="20"' + (state.resultPageSize === 20 ? ' selected' : '') + '>20</option></select> 条记录</div>' +
+      '<div class="dqit-page-nav">' + renderResultPageNav(totalPages) + '</div>' +
+    '</div>';
+  }
+
+  function renderResultRows() {
+    return getVisibleReportRuns().map(function (run) {
+      return '<tr>' +
+        '<td>' + escapeHtml(run.reportName) + '</td>' +
+        '<td>' + escapeHtml(run.startAt) + '</td>' +
+        '<td>' + escapeHtml(run.endAt) + '</td>' +
+        '<td>' + escapeHtml(run.frequency) + '</td>' +
+        '<td>' + escapeHtml(run.duration) + '</td>' +
+        '<td>' + escapeHtml(run.status) + '</td>' +
+        '<td><div class="dqit-result-actions">' +
+          '<button type="button" data-dqit-action="open-report-detail" data-run-index="' + run.index + '">报告</button>' +
+          '<button type="button" data-dqit-action="open-report-sql" data-run-index="' + run.index + '">SQL</button>' +
+          '<button type="button" data-dqit-action="open-report-log" data-run-index="' + run.index + '">执行日志</button>' +
+        '</div></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function renderResultListShell() {
+    var item = getViewTask();
+    var title = getReportName(item);
+    return '<section class="dqit-form-shell dqit-result-shell">' +
+      '<div class="dqit-form-head dqit-result-head">' +
+        '<div class="dqit-form-title"><i class="bi bi-list"></i><span>' + escapeHtml(title) + '</span></div>' +
+        '<div class="dqit-result-head-right"><span>频次：' + escapeHtml(getReportFrequency(item)) + '</span><button class="btn btn-primary" type="button" data-dqit-action="back-list"><i class="bi bi-arrow-left"></i><span>返回</span></button></div>' +
+      '</div>' +
+      '<div class="dqit-result-scroll">' +
+        '<div class="dqit-result-table-wrap">' +
+          '<table class="ds-table dqit-result-table">' +
+            '<thead><tr><th>报告名称</th><th>开始时间</th><th>完成时间</th><th>执行频次</th><th>耗时</th><th>状态</th><th>操作</th></tr></thead>' +
+            '<tbody>' + renderResultRows() + '</tbody>' +
+          '</table>' +
+        '</div>' +
+        renderResultFooter() +
+      '</div>' +
+    '</section>';
+  }
+
+  function renderReportMetricTable(rows) {
+    return '<table class="dqit-report-metric-table"><tbody>' + rows.map(function (row) {
+      return '<tr><th>' + escapeHtml(row[0]) + '</th><td class="' + (row[2] || '') + '">' + escapeHtml(row[1]) + '</td></tr>';
+    }).join('') + '</tbody></table>';
+  }
+
+  function renderReportGauge() {
+    return '<div class="dqit-report-gauge-wrap">' +
+      '<div id="dqitReportGauge" class="dqit-report-gauge" aria-label="符合规则比例 ' + reportSummary.passRate.toFixed(2) + '%"></div>' +
+    '</div>';
+  }
+
+  function renderReportDataRows() {
+    var rows = [
+      ['13978529932', '71001', 'OEwxR1ELbcy', '36', '雷枫芸', '70002', '2021-10-18 11:11:13...', '0', '1980-12-18 11:11:13...', '2021-10-18 11:11:14', '2023-07-18 11:11:14'],
+      ['13522143946', '71001', 'JP8I57099IRd', '72', '雷欢霄', '70003', '2022-07-18 11:11:13...', '0', '1987-08-18 10:11:13...', '2022-07-18 11:11:14', '2023-07-18 11:11:14'],
+      ['13992373346', '71001', 'nWHHIl5SqYTI', '28', '孟绍功', '70003', '2021-01-18 11:11:13.9', '0', '1975-06-18 11:11:13.9', '2021-01-18 11:11:14', '2023-07-18 11:11:14'],
+      ['13715678182', '71001', 'GB8B6qKXAMHj', '61', '狄可姬', '70002', '2019-11-18 11:11:13...', '0', '1987-03-18 11:11:13...', '2019-11-18 11:11:14', '2023-07-18 11:11:14'],
+      ['13465112581', '71001', 'u8E0bXM7y8XY', '91', '钟馨之欣', '70004', '2018-10-18 11:11:13...', '0', '1992-05-18 11:11:13...', '2018-10-18 11:11:14', '2023-07-18 11:11:14'],
+      ['13593336628', '71001', 'Dh6lUQ5CkkW1', '25', '姜亚', '70003', '2021-06-18 11:11:13.9', '0', '1990-05-18 10:11:13.9', '2021-06-18 11:11:14', '2023-07-18 11:11:14'],
+      ['13655285588', '71001', 'jv49xCH7R4FB', '12', '朱波宁', '70002', '2018-07-18 11:11:13...', '0', '1977-12-18 11:11:13...', '2018-07-18 11:11:14', '2023-07-18 11:11:14'],
+      ['13524263873', '71001', 'gKF4OOakTXXL', '10', '平雁蓓', '70003', '2020-12-18 11:11:13...', '0', '2002-05-18 11:11:13...', '2020-12-18 11:11:14', '2023-07-18 11:11:14'],
+      ['13181483999', '71001', 'jMT6yeacGrdP', '43', '余鸾媛', '70003', '2021-10-18 11:11:13...', '0', '1976-11-18 11:11:13...', '2021-10-18 11:11:14', '2023-07-18 11:11:14'],
+      ['13866663691', '71001', 'L5mr6HHUzWtv', '65', '唐昭冰', '70003', '2021-12-18 11:11:13...', '0', '1974-10-18 11:11:13...', '2021-12-18 11:11:14', '2023-07-18 11:11:14']
+    ];
+    return rows.map(function (row) {
+      return '<tr>' + row.map(function (cell, index) {
+        return '<td' + (index === 0 ? ' class="dqit-report-danger"' : '') + '>' + escapeHtml(cell) + '</td>';
+      }).join('') + '</tr>';
+    }).join('');
+  }
+
+  function renderReportDetailShell() {
+    var run = getSelectedReportRun();
+    return '<section class="dqit-form-shell dqit-report-shell">' +
+      '<div class="dqit-form-head">' +
+        '<div class="dqit-form-title"><i class="bi bi-list"></i><span>查看报告</span></div>' +
+        '<button class="btn btn-primary" type="button" data-dqit-action="back-result-list"><i class="bi bi-arrow-left"></i><span>返回</span></button>' +
+      '</div>' +
+      '<div class="dqit-report-scroll">' +
+        '<div class="dqit-report-top">' +
+          '<section><div class="dqit-report-card-title">报告概述</div>' + renderReportGauge() + '</section>' +
+          '<section><div class="dqit-report-card-title">' + escapeHtml(run.reportName) + '</div>' +
+            renderReportMetricTable([
+              ['开始时间', run.startAt],
+              ['结束时间', run.endAt],
+              ['执行耗时', run.duration, 'link'],
+              ['执行标准', '有效性', 'link'],
+              ['执行实体', '1个', 'link']
+            ]) +
+          '</section>' +
+          '<section><div class="dqit-report-card-title">报告记录</div>' +
+            renderReportMetricTable([
+              ['总记录数', String(reportSummary.total)],
+              ['符合规则记录数', String(reportSummary.passed), 'ok'],
+              ['符合规则比例', reportSummary.passRate.toFixed(2) + ' %', 'ok'],
+              ['不符合规则记录数', String(reportSummary.failed), 'danger'],
+              ['不符合规则比例', reportSummary.failRate.toFixed(2) + ' %', 'danger']
+            ]) +
+          '</section>' +
+        '</div>' +
+        '<div class="dqit-report-data-head"><h3>不符合规则数据</h3><div class="dqit-report-filters"><span>稽查实体:</span><select><option>employee_info(employee_info)-phone</option></select><select><option>请选择</option></select><select><option>请选择</option></select><input type="text"><div class="dqit-report-tool-buttons"><button class="btn btn-primary" type="button"><i class="bi bi-search"></i><span>查询</span></button><button class="btn btn-primary" type="button"><i class="bi bi-download"></i><span>导出</span></button><button class="btn btn-outline" type="button"><i class="bi bi-grid-3x3-gap-fill"></i><span>列配置</span></button></div></div></div>' +
+        '<div class="dqit-report-data-wrap"><table class="ds-table dqit-report-data-table"><thead><tr><th>phone</th><th>position_type</th><th>username</th><th>id</th><th>real_name</th><th>education</th><th>employment_date</th><th>is_deleted</th><th>birthday</th><th>create_time</th><th>update_time</th></tr></thead><tbody>' + renderReportDataRows() + '</tbody></table></div>' +
+        '<div class="dqit-report-data-footer"><span>显示第 1 到第 10 条记录，总共 ' + reportSummary.failed + ' 条记录 每页显示 <select><option>10</option></select> 条记录</span><div class="dqit-page-nav"><button type="button">上一页</button><button type="button" class="active">1</button><button type="button">2</button><button type="button">3</button><button type="button">4</button><button type="button">5</button><span>...</span><button type="button">20</button><button type="button">下一页</button></div></div>' +
+      '</div>' +
+    '</section>';
+  }
+
+  function renderReportLogShell() {
+    var run = getSelectedReportRun();
+    return '<section class="dqit-form-shell dqit-result-log-shell">' +
+      '<div class="dqit-form-head">' +
+        '<div class="dqit-form-title"><i class="bi bi-list"></i><span>执行日志</span></div>' +
+        '<button class="btn btn-primary" type="button" data-dqit-action="back-result-list"><i class="bi bi-arrow-left"></i><span>返回</span></button>' +
+      '</div>' +
+      '<div class="dqit-result-log-view">' +
+        '<div class="dqit-result-log-header">' +
+          '<div><h3>任务处理日志</h3><p title="' + escapeHtml(run.reportName) + '">' + escapeHtml(run.reportName) + ' / ' + escapeHtml(run.startAt) + '</p></div>' +
+          '<dl><dt>执行状态</dt><dd>' + escapeHtml(run.status) + '</dd><dt>执行频次</dt><dd>' + escapeHtml(run.frequency) + '</dd><dt>耗时</dt><dd>' + escapeHtml(run.duration) + '</dd></dl>' +
+        '</div>' +
+        '<pre class="dqit-tech-log dqit-result-tech-log">' + escapeHtml(getExecutionLog(run)) + '</pre>' +
+      '</div>' +
+    '</section>';
+  }
+
+  function getDefaultTemplateSql() {
+    return [
+      'SELECT',
+      '    t.${id}',
+      'FROM',
+      '    (SELECT',
+      '        *',
+      '     FROM',
+      '        ${standard_rule} a) t',
+      'WHERE',
+      '    t.${name} IN (',
+      '        SELECT',
+      '            ${name}',
+      '        FROM',
+      '            ${standard_rule}',
+      '        GROUP BY',
+      '            ${name}',
+      '        HAVING',
+      '            COUNT(*) > 1',
+      '    )'
+    ].join('\n');
+  }
+
+  function getDefaultGeneratedSql(tableName, idField, nameField) {
+    tableName = tableName || 'buildinglog';
+    idField = idField || 'Id';
+    nameField = nameField || 'Name';
+    return [
+      'SELECT',
+      '    t.`' + idField + '`',
+      'FROM',
+      '    (SELECT',
+      '        *',
+      '     FROM',
+      '        aierp_pro_test.`' + tableName + '` a) t',
+      'WHERE',
+      '    t.`' + nameField + '` IN (',
+      '        SELECT',
+      '            `' + nameField + '`',
+      '        FROM',
+      '            aierp_pro_test.`' + tableName + '`',
+      '        GROUP BY',
+      '            `' + nameField + '`',
+      '        HAVING',
+      '            COUNT(*) > 1',
+      '    )'
+    ].join('\n');
+  }
+
+  function getDefaultCustomRuleSql(tableName) {
+    tableName = tableName || 'buildinglog';
+    return [
+      'SELECT',
+      '    MIN(a.`Id`) AS sample_id,',
+      '    a.`Name`,',
+      '    COUNT(1) AS repeat_count',
+      'FROM',
+      '    aierp_pro_test.`' + tableName + '` a',
+      'WHERE',
+      '    a.`Name` IS NOT NULL',
+      '    AND TRIM(a.`Name`) <> \'\'',
+      'GROUP BY',
+      '    a.`Name`',
+      'HAVING',
+      '    COUNT(1) > 1',
+      'ORDER BY',
+      '    repeat_count DESC'
+    ].join('\n');
+  }
+
+  function createFormDraft(item) {
+    var target = item ? item.target : 'buildinglog';
+    var groupKey = item ? item.group : 'business';
+    var groupNode = findTreeNode(taskTree, groupKey) || findTreeNode(taskTree, 'business');
+    return {
+      taskName: item ? item.name : '字段不重复校验',
+      businessLayerKey: groupNode ? groupNode.key : 'business',
+      businessLayer: groupNode ? groupNode.label : '业务系统',
+      weight: item ? String(Math.min(100, Math.max(1, item.ruleCount * 4))) : '20',
+      dataSourceKey: 'ds-workorder',
+      dataSource: '工单系统',
+      ruleMode: 'existing',
+      ruleId: 'rule-repeat',
+      ruleName: '筛选出重复的记录',
+      params: [
+        { name: '${id}', attr: '字段', desc: '主键字段，用于定位重复记录', table: target || 'buildinglog', field: 'Id' },
+        { name: '${name}', attr: '字段', desc: '业务名称字段，用于重复分组', table: target || 'buildinglog', field: 'Name' },
+        { name: '${standard_rule}', attr: '表', desc: '参与稽查的数据表', table: target || 'buildinglog', field: '' }
+      ],
+      sqlTemplate: getDefaultTemplateSql(),
+      sqlGenerated: getDefaultGeneratedSql(target || 'buildinglog', 'Id', 'Name'),
+      sqlCustom: getDefaultCustomRuleSql(target || 'buildinglog'),
+      schedule: {
+        type: 'hourly',
+        minute: '7',
+        time: '11:55:32',
+        week: '周一',
+        day: '1号',
+        datetime: '2026-06-24 09:18:48'
+      }
+    };
+  }
+
+  function cloneStandardEntities() {
+    return standardEntities.map(function (entity) {
+      return {
+        name: entity.name,
+        alias: entity.alias,
+        desc: entity.desc
+      };
+    });
+  }
+
+  function createStandardFormDraft(item) {
+    var groupKey = item ? item.group : 'demo';
+    var groupNode = findTreeNode(taskTree, groupKey) || findTreeNode(taskTree, 'demo');
+    return {
+      taskName: item ? item.name : '手机号码稽查',
+      businessLayerKey: groupNode ? groupNode.key : 'demo',
+      businessLayer: groupNode ? groupNode.label : '中电数治演示',
+      standardDataKey: 'phone',
+      standardData: '手机号码',
+      datasource: item && standardDatasourceOptions.indexOf(item.target) >= 0 ? item.target : 'aierp_pro_test',
+      weight: item ? String(Math.min(100, Math.max(1, item.ruleCount * 2))) : '10',
+      entities: cloneStandardEntities(),
+      qualityRule: '电话号码与手机号码校验(11位)码校验',
+      inspectMode: '全量稽查',
+      schedule: {
+        type: 'daily',
+        minute: '7',
+        time: '10:18:57',
+        week: '周一',
+        day: '1号',
+        datetime: '2026-06-24 10:18:57'
+      }
+    };
+  }
+
+  function cloneBasicEntities() {
+    return basicEntities.map(function (entity) {
+      return {
+        name: entity.name,
+        alias: entity.alias,
+        ruleId: entity.ruleId
+      };
+    });
+  }
+
+  function getBasicRule(ruleId) {
+    for (var i = 0; i < basicRuleGroups.length; i++) {
+      var found = basicRuleGroups[i].children.filter(function (rule) { return rule.id === ruleId; })[0];
+      if (found) return found;
+    }
+    return basicRuleGroups[1].children[0];
+  }
+
+  function createBasicTimeParams() {
+    return {
+      startField: 'UpdateTime',
+      startDataType: 'datetime',
+      startFormat: 'YYYY-MM-DD',
+      startOffset: '1',
+      startUnit: '天',
+      startFixedTime: '00:00:00',
+      endField: 'UpdateTime',
+      endDataType: 'datetime',
+      endFormat: 'YYYY-MM-DD',
+      endOffset: '1',
+      endUnit: '天',
+      endFixedTime: '00:00:00'
+    };
+  }
+
+  function getDefaultBasicCustomSql() {
+    return [
+      'SELECT',
+      '    *',
+      'FROM',
+      '    aierp_pro_test.outboundorderlist',
+      'WHERE',
+      '    UpdateTime >= ${start_time}',
+      '    AND UpdateTime < ${end_time}',
+      '    AND (Address IS NULL OR Remark IS NULL OR UpdateTime IS NULL)'
+    ].join('\n');
+  }
+
+  function ensureBasicFormDefaults() {
+    if (!state.form) return;
+    if (!state.form.inspectMode) state.form.inspectMode = '全量稽查';
+    if (!state.form.paramMode) state.form.paramMode = '普通设置';
+    if (!state.form.timeParams) state.form.timeParams = createBasicTimeParams();
+    else {
+      var defaults = createBasicTimeParams();
+      Object.keys(defaults).forEach(function (key) {
+        if (state.form.timeParams[key] === undefined) state.form.timeParams[key] = defaults[key];
+      });
+    }
+    if (!state.form.customSql) state.form.customSql = getDefaultBasicCustomSql();
+  }
+
+  function createBasicFormDraft(item) {
+    var groupKey = item ? item.group : 'demo';
+    var groupNode = findTreeNode(taskTree, groupKey) || findTreeNode(taskTree, 'demo');
+    return {
+      taskName: item ? item.name : 'express_task_collect表非空校验',
+      businessLayerKey: groupNode ? groupNode.key : 'demo',
+      businessLayer: groupNode ? groupNode.label : '中电数治演示',
+      inspectObject: '字段',
+      weight: item ? String(Math.min(100, Math.max(1, item.ruleCount * 2))) : '10',
+      entities: cloneBasicEntities(),
+      inspectMode: '全量稽查',
+      paramMode: '普通设置',
+      timeParams: createBasicTimeParams(),
+      customSql: getDefaultBasicCustomSql(),
+      schedule: {
+        type: 'daily',
+        minute: '16',
+        time: '10:05:02',
+        week: '周一',
+        day: '1号',
+        datetime: '2026-06-24 10:05:02'
+      }
+    };
+  }
+
+  function renderFormRow(label, control, hint, extraClass) {
+    return '<div class="dqit-form-row ' + (extraClass || '') + '">' +
+      '<label>' + escapeHtml(label) + '</label>' +
+      '<div class="dqit-form-control">' + control + '</div>' +
+      (hint ? '<div class="dqit-form-hint">' + hint + '</div>' : '') +
+    '</div>';
+  }
+
+  function renderRequiredFormRow(label, control, hint, extraClass) {
+    return '<div class="dqit-form-row ' + (extraClass || '') + '">' +
+      '<label><span class="dqit-required">*</span>' + escapeHtml(label) + '</label>' +
+      '<div class="dqit-form-control">' + control + '</div>' +
+      (hint ? '<div class="dqit-form-hint">' + hint + '</div>' : '') +
+    '</div>';
+  }
+
+  function renderTreePicker(id, value, key, tree, placeholder) {
+    var isOpen = state.openPicker === id;
+    var keyword = isOpen ? state.pickerKeyword : '';
+    var treeHtml = renderTreeNodes(tree, normalize(keyword), {
+      forceOpen: true,
+      activeKey: key,
+      action: 'toggle-picker-tree',
+      selectAction: 'choose-picker-node'
+    }) || '<li class="dqit-empty-tree">暂无匹配目录</li>';
+    return '<div class="dqit-picker" data-dqit-picker="' + escapeHtml(id) + '">' +
+      '<button class="dqit-picker-value' + (value ? '' : ' placeholder') + '" type="button" data-dqit-action="toggle-picker" data-picker="' + escapeHtml(id) + '">' +
+        '<span>' + escapeHtml(value || placeholder || '请选择') + '</span><i class="bi bi-chevron-down"></i>' +
+      '</button>' +
+      (isOpen ? '<div class="dqit-picker-menu">' +
+        '<div class="dqit-picker-search"><i class="bi bi-search"></i><input type="text" data-dqit-picker-search data-picker="' + escapeHtml(id) + '" value="' + escapeHtml(keyword) + '" placeholder="关键字搜索"></div>' +
+        '<div class="dqit-picker-tree"><ul class="dqit-tree">' + treeHtml + '</ul></div>' +
+      '</div>' : '') +
+    '</div>';
+  }
+
+  function renderOptions(options, value) {
+    return options.map(function (option) {
+      var item = typeof option === 'string' ? { value: option, label: option } : option;
+      return '<option value="' + escapeHtml(item.value) + '"' + (item.value === value ? ' selected' : '') + '>' + escapeHtml(item.label) + '</option>';
+    }).join('');
+  }
+
+  function renderSearchSelect(id, value, options, placeholder) {
+    var isOpen = state.openParamSelect === id;
+    var keyword = isOpen ? normalize(state.paramKeyword) : '';
+    var items = options.filter(function (item) { return !keyword || normalize(item).indexOf(keyword) >= 0; });
+    return '<div class="dqit-search-select" data-dqit-param-select="' + escapeHtml(id) + '">' +
+      '<button type="button" class="dqit-search-select-value' + (value ? '' : ' placeholder') + '" data-dqit-action="toggle-param-select" data-select-id="' + escapeHtml(id) + '">' +
+        '<span>' + escapeHtml(value || placeholder || '请选择') + '</span><i class="bi bi-chevron-down"></i>' +
+      '</button>' +
+      (isOpen ? '<div class="dqit-search-select-menu">' +
+        '<div class="dqit-search-select-input"><i class="bi bi-search"></i><input type="text" data-dqit-param-search data-select-id="' + escapeHtml(id) + '" value="' + escapeHtml(state.paramKeyword) + '" placeholder="搜索"></div>' +
+        '<div class="dqit-search-select-list">' +
+          (items.length ? items.map(function (item) {
+            return '<button type="button" data-dqit-action="choose-param-option" data-select-id="' + escapeHtml(id) + '" data-value="' + escapeHtml(item) + '"' + (item === value ? ' class="active"' : '') + '>' + escapeHtml(item) + '</button>';
+          }).join('') : '<div class="dqit-search-select-empty">暂无匹配数据</div>') +
+        '</div>' +
+      '</div>' : '') +
+    '</div>';
+  }
+
+  function renderParamRows() {
+    return state.form.params.map(function (param, index) {
+      var tableId = 'param-' + index + '-table';
+      var fieldId = 'param-' + index + '-field';
+      return '<tr>' +
+        '<td>' + escapeHtml(param.name) + '</td>' +
+        '<td>' + escapeHtml(param.attr) + '</td>' +
+        '<td>' + escapeHtml(param.desc || '') + '</td>' +
+        '<td>' +
+          '<div class="dqit-param-config-cell">' +
+            '<div class="dqit-param-config-group"><span class="dqit-param-config-label">数据库表</span>' + renderSearchSelect(tableId, param.table, tableOptions, '请选择表') + '</div>' +
+            (param.attr === '字段' ? '<div class="dqit-param-config-group"><span class="dqit-param-config-label">表字段</span>' + renderSearchSelect(fieldId, param.field, fieldOptions, '请选择字段') + '</div>' : '') +
+          '</div>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function renderParamConfig() {
+    return '<div class="dqit-form-section dqit-param-section">' +
+      '<div class="dqit-section-label">参数配置</div>' +
+      '<div class="dqit-section-main">' +
+        '<table class="dqit-param-table">' +
+          '<thead><tr><th>参数名</th><th>参数属性</th><th>参数说明</th><th>参数配置</th></tr></thead>' +
+          '<tbody>' + renderParamRows() + '</tbody>' +
+        '</table>' +
+        '<div class="dqit-param-footer">显示第 1 到第 ' + state.form.params.length + ' 条记录，总共 ' + state.form.params.length + ' 条记录</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderSqlEditor(key, title, sql) {
+    if (!state.sql[key]) state.sql[key] = { theme: 'dark', font: '14px', searchOpen: false };
+    var cfg = state.sql[key];
+    var isLight = cfg.theme !== 'dark';
+    return '<div class="dqit-sql-card">' +
+      '<div class="dp-sql-editor dqit-sql-editor ' + (isLight ? 'theme-light' : 'theme-dark') + (cfg.searchOpen ? ' search-open' : '') + '" data-dqit-sql-editor="' + escapeHtml(key) + '" aria-label="' + escapeHtml(title) + '" style="font-size:' + escapeHtml(cfg.font) + ';">' +
+        '<div class="dp-sql-editor-toolbar">' +
+          '<select class="dp-sql-editor-select" data-dqit-sql-theme="' + escapeHtml(key) + '"><option value="dark"' + (!isLight ? ' selected' : '') + '>暗色 - One Dark</option><option value="light"' + (isLight ? ' selected' : '') + '>亮色 - Light</option></select>' +
+          '<select class="dp-sql-editor-select" data-dqit-sql-font="' + escapeHtml(key) + '"><option' + (cfg.font === '12px' ? ' selected' : '') + '>12px</option><option' + (cfg.font === '13px' ? ' selected' : '') + '>13px</option><option' + (cfg.font === '14px' ? ' selected' : '') + '>14px</option><option' + (cfg.font === '15px' ? ' selected' : '') + '>15px</option><option' + (cfg.font === '16px' ? ' selected' : '') + '>16px</option></select>' +
+          '<button class="dp-sql-editor-btn" type="button" data-dqit-action="format-sql" data-sql-key="' + escapeHtml(key) + '"><i class="bi bi-sliders"></i><span>格式化</span></button>' +
+          '<button class="dp-sql-editor-btn" type="button" data-dqit-action="copy-sql" data-sql-key="' + escapeHtml(key) + '"><i class="bi bi-clipboard"></i><span>复制</span></button>' +
+          '<button class="dp-sql-editor-btn" type="button" data-dqit-action="toggle-sql-search" data-sql-key="' + escapeHtml(key) + '"><i class="bi bi-search"></i><span>搜索</span></button>' +
+        '</div>' +
+        '<div class="dp-sql-editor-searchbar">' +
+          '<input class="dp-sql-editor-input" type="text" placeholder="查找...">' +
+          '<button class="dp-sql-editor-btn" type="button">下一个</button>' +
+          '<button class="dp-sql-editor-btn" type="button">上一个</button>' +
+          '<label class="dp-sql-editor-check"><input type="checkbox"> 区分大小写</label>' +
+          '<input class="dp-sql-editor-input" type="text" placeholder="替换...">' +
+          '<button class="dp-sql-editor-btn" type="button">替换</button>' +
+          '<span class="dp-sql-editor-close" data-dqit-action="close-sql-search" data-sql-key="' + escapeHtml(key) + '"><i class="bi bi-x"></i></span>' +
+        '</div>' +
+        '<div class="dp-sql-editor-wrap">' +
+          '<div class="dp-sql-editor-gutter" data-dqit-sql-gutter="' + escapeHtml(key) + '">' + lineNumbers(sql) + '</div>' +
+          '<div class="dp-sql-editor-content" data-dqit-sql-content="' + escapeHtml(key) + '" contenteditable="true" spellcheck="false">' + highlightSQL(sql) + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderSqlSection() {
+    var isCustomRule = state.form && state.form.ruleMode === 'custom';
+    if (isCustomRule) {
+      return '<div class="dqit-form-section dqit-sql-section dqit-sql-section-custom">' +
+        '<div class="dqit-section-label">SQL规则</div>' +
+        '<div class="dqit-section-main">' +
+          '<div class="dqit-sql-layout dqit-sql-layout-custom">' +
+            renderSqlEditor('customRule', '自定义SQL', state.form.sqlCustom) +
+            '<div class="dqit-sql-actions dqit-sql-actions-custom">' +
+              '<button class="btn dqit-btn-warning" type="button" data-dqit-action="test-sql"><i class="bi bi-link-45deg"></i><span>测试执行</span></button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+    return '<div class="dqit-form-section dqit-sql-section">' +
+      '<div class="dqit-section-label">SQL规则</div>' +
+      '<div class="dqit-section-main">' +
+        '<div class="dqit-sql-layout">' +
+          renderSqlEditor('template', '规则SQL', state.form.sqlTemplate) +
+          '<div class="dqit-sql-actions">' +
+            '<button class="btn btn-primary" type="button" data-dqit-action="generate-sql"><i class="bi bi-pc-display"></i><span>生成SQL</span></button>' +
+            '<button class="btn dqit-btn-warning" type="button" data-dqit-action="test-sql"><i class="bi bi-link-45deg"></i><span>测试执行</span></button>' +
+          '</div>' +
+          renderSqlEditor('generated', '执行SQL', state.form.sqlGenerated) +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function scheduleTypeLabel(type) {
+    var found = scheduleTypes.filter(function (item) { return item.value === type; })[0];
+    return found ? found.label : '每小时';
+  }
+
+  function renderScheduleHint() {
+    var s = state.form.schedule;
+    if (s.type === 'hourly') return '每小时第 ' + (s.minute || '0') + ' 分钟启动任务执行';
+    if (s.type === 'daily') return '每天' + (s.time || '00:00:00') + ' 启动任务执行';
+    if (s.type === 'weekly') return '每周' + (s.week || '周一') + (s.time || '00:00:00') + ' 启动任务执行';
+    if (s.type === 'monthly') return '每月' + (s.day || '1号') + (s.time || '00:00:00') + ' 启动任务执行';
+    return '根据设置时间，任务只执行一次';
+  }
+
+  function renderSchedulePopup(type) {
+    if (!state.schedulePopup || state.schedulePopup !== type) return '';
+    if (type === 'date') return renderDatePicker();
+    return renderTimePicker(type);
+  }
+
+  function parseTime(value) {
+    var parts = String(value || '00:00:00').split(':');
+    return {
+      h: parts[0] || '00',
+      m: parts[1] || '00',
+      s: parts[2] || '00'
+    };
+  }
+
+  function renderTimeColumn(part, active, action) {
+    var values = ['00', '01', '02', '03', '04', '05'];
+    var actionName = action || 'pick-time-part';
+    return values.map(function (value) {
+      return '<button type="button" data-dqit-action="' + escapeHtml(actionName) + '" data-part="' + part + '" data-value="' + value + '"' + (value === active ? ' class="active"' : '') + '>' + value + '</button>';
+    }).join('');
+  }
+
+  function renderTimePicker(type) {
+    var value = type === 'date-time' ? String(state.form.schedule.datetime || '').split(' ')[1] : state.form.schedule.time;
+    var time = parseTime(value);
+    return '<div class="dqit-time-picker">' +
+      '<div class="dqit-time-picker-head">选择时间</div>' +
+      '<div class="dqit-time-picker-labels"><span>时</span><span>分</span><span>秒</span></div>' +
+      '<div class="dqit-time-picker-cols">' +
+        '<div>' + renderTimeColumn('h', time.h) + '</div>' +
+        '<div>' + renderTimeColumn('m', time.m) + '</div>' +
+        '<div>' + renderTimeColumn('s', time.s) + '</div>' +
+      '</div>' +
+      '<div class="dqit-picker-footer">' +
+        '<button type="button" data-dqit-action="schedule-clear"><span>清空</span></button>' +
+        '<button type="button" data-dqit-action="schedule-now"><span>现在</span></button>' +
+        '<button type="button" data-dqit-action="schedule-ok"><span>确定</span></button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderDatePicker() {
+    var days = [
+      { text: '31', muted: true }, { text: '1' }, { text: '2' }, { text: '3' }, { text: '4' }, { text: '5' }, { text: '6' },
+      { text: '7' }, { text: '8' }, { text: '9' }, { text: '10' }, { text: '11' }, { text: '12' }, { text: '13' },
+      { text: '14' }, { text: '15' }, { text: '16' }, { text: '17' }, { text: '18' }, { text: '19' }, { text: '20' },
+      { text: '21' }, { text: '22' }, { text: '23' }, { text: '24', active: true }, { text: '25' }, { text: '26' }, { text: '27' },
+      { text: '28' }, { text: '29' }, { text: '30' }, { text: '1', muted: true }, { text: '2', muted: true }, { text: '3', muted: true }, { text: '4', muted: true },
+      { text: '5', muted: true }, { text: '6', muted: true }, { text: '7', muted: true }, { text: '8', muted: true }, { text: '9', muted: true }, { text: '10', muted: true }, { text: '11', muted: true }
+    ];
+    return '<div class="dqit-date-picker">' +
+      '<div class="dqit-date-head"><button type="button"><i class="bi bi-chevron-double-left"></i></button><button type="button"><i class="bi bi-chevron-left"></i></button><strong>2026年&nbsp;&nbsp;6月</strong><button type="button"><i class="bi bi-chevron-right"></i></button><button type="button"><i class="bi bi-chevron-double-right"></i></button></div>' +
+      '<div class="dqit-date-week"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>' +
+      '<div class="dqit-date-grid">' + days.map(function (day) {
+        return '<button type="button" data-dqit-action="pick-date-day" data-day="' + escapeHtml(day.text) + '" class="' + (day.muted ? 'muted ' : '') + (day.active ? 'active' : '') + '">' + escapeHtml(day.text) + '</button>';
+      }).join('') + '</div>' +
+      '<div class="dqit-date-footer"><span>选择时间</span><div><button type="button" data-dqit-action="schedule-clear"><span>清空</span></button><button type="button" data-dqit-action="schedule-now"><span>现在</span></button><button type="button" data-dqit-action="schedule-ok"><span>确定</span></button></div></div>' +
+    '</div>';
+  }
+
+  function renderScheduleControls() {
+    var s = state.form.schedule;
+    var html = '<select class="dqit-schedule-type" data-dqit-schedule-field="type">' + renderOptions(scheduleTypes, s.type) + '</select>';
+    if (s.type === 'hourly') {
+      html += '<span class="dqit-schedule-inline">第</span><input class="dqit-schedule-number" type="number" min="0" max="59" data-dqit-schedule-field="minute" value="' + escapeHtml(s.minute) + '"><span class="dqit-schedule-inline">分</span>';
+    } else if (s.type === 'daily') {
+      html += '<div class="dqit-schedule-popover-wrap"><input class="dqit-schedule-input" type="text" readonly data-dqit-schedule-field="time" data-dqit-action="open-schedule-popup" data-popup="time" value="' + escapeHtml(s.time) + '">' + renderSchedulePopup('time') + '</div>';
+    } else if (s.type === 'weekly') {
+      html += '<select class="dqit-schedule-sub" data-dqit-schedule-field="week">' + renderOptions(weekOptions, s.week) + '</select>' +
+        '<div class="dqit-schedule-popover-wrap"><input class="dqit-schedule-input compact" type="text" readonly data-dqit-schedule-field="time" data-dqit-action="open-schedule-popup" data-popup="time" value="' + escapeHtml(s.time) + '">' + renderSchedulePopup('time') + '</div>';
+    } else if (s.type === 'monthly') {
+      html += '<select class="dqit-schedule-sub" data-dqit-schedule-field="day">' + renderOptions(dayOptions, s.day) + '</select>' +
+        '<div class="dqit-schedule-popover-wrap"><input class="dqit-schedule-input compact" type="text" readonly data-dqit-schedule-field="time" data-dqit-action="open-schedule-popup" data-popup="time" value="' + escapeHtml(s.time) + '">' + renderSchedulePopup('time') + '</div>';
+    } else {
+      html += '<div class="dqit-schedule-popover-wrap"><input class="dqit-schedule-input wide" type="text" readonly data-dqit-schedule-field="datetime" data-dqit-action="open-schedule-popup" data-popup="date" value="' + escapeHtml(s.datetime) + '">' + renderSchedulePopup('date') + '</div>';
+    }
+    return html + '<div class="dqit-schedule-hint"><i class="bi bi-info-circle-fill"></i><span>' + escapeHtml(renderScheduleHint()) + '</span></div>';
+  }
+
+  function renderScheduleSection() {
+    return '<div class="dqit-form-section dqit-schedule-section">' +
+      '<div class="dqit-section-label">调度配置</div>' +
+      '<div class="dqit-section-main">' +
+        '<div class="dqit-schedule-row">' + renderScheduleControls() + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderRequiredFormSection(label, body, extraClass) {
+    return '<div class="dqit-form-section ' + (extraClass || '') + '">' +
+      '<div class="dqit-section-label"><span class="dqit-required">*</span>' + escapeHtml(label) + '</div>' +
+      '<div class="dqit-section-main">' + body + '</div>' +
+    '</div>';
+  }
+
+  function renderStandardEntitySection() {
+    var rows = (state.form.entities || []).map(function (entity) {
+      return '<tr>' +
+        '<td>' + escapeHtml(entity.name) + '</td>' +
+        '<td>' + escapeHtml(entity.alias) + '</td>' +
+        '<td>' + escapeHtml(entity.desc) + '</td>' +
+      '</tr>';
+    }).join('');
+    return renderRequiredFormSection('关联实体',
+      '<table class="dqit-standard-entity-table">' +
+        '<thead><tr><th>实体名称</th><th>实体别名</th><th>实体描述</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>',
+      'dqit-standard-entity-section'
+    );
+  }
+
+  function renderStandardScheduleSection() {
+    return renderRequiredFormSection('调度配置', '<div class="dqit-schedule-row">' + renderScheduleControls() + '</div>', 'dqit-schedule-section');
+  }
+
+  function renderBasicRuleTree(entityIndex) {
+    var keyword = normalize(state.basicRuleKeyword);
+    return basicRuleGroups.map(function (group) {
+      var children = group.children.filter(function (rule) {
+        return !keyword || normalize(rule.label + ' ' + rule.desc).indexOf(keyword) >= 0;
+      });
+      if (keyword && !children.length && normalize(group.label).indexOf(keyword) < 0) return '';
+      return '<li class="dqit-basic-rule-group">' +
+        '<div class="dqit-basic-rule-group-title"><i class="bi bi-chevron-down"></i><i class="bi ' + escapeHtml(group.icon) + '"></i><span>' + escapeHtml(group.label) + '</span></div>' +
+        '<ul>' + children.map(function (rule) {
+          return '<li><button type="button" data-dqit-action="choose-basic-rule" data-index="' + entityIndex + '" data-rule-id="' + escapeHtml(rule.id) + '"><i class="bi bi-box-seam"></i><span>' + escapeHtml(rule.label) + '</span></button></li>';
+        }).join('') + '</ul>' +
+      '</li>';
+    }).join('') || '<li class="dqit-search-select-empty">暂无匹配规则</li>';
+  }
+
+  function renderBasicRuleSelect(entity, index) {
+    var selectId = 'basic-rule-' + index;
+    var isOpen = state.openBasicRuleSelect === selectId;
+    var rule = getBasicRule(entity.ruleId);
+    return '<div class="dqit-basic-rule-select">' +
+      '<button type="button" class="dqit-basic-rule-value" data-dqit-action="toggle-basic-rule-select" data-select-id="' + escapeHtml(selectId) + '">' +
+        '<span>' + escapeHtml(rule.label) + '</span><i class="bi bi-caret-down-fill"></i>' +
+      '</button>' +
+      (isOpen ? '<div class="dqit-basic-rule-menu">' +
+        '<div class="dqit-basic-rule-search"><input type="text" data-dqit-basic-rule-search value="' + escapeHtml(state.basicRuleKeyword) + '" placeholder="关键字搜索"><button type="button" data-dqit-action="query-basic-rule"><i class="bi bi-search"></i></button></div>' +
+        '<ul class="dqit-basic-rule-tree">' + renderBasicRuleTree(index) + '</ul>' +
+      '</div>' : '') +
+    '</div>';
+  }
+
+  function renderBasicEntitySection() {
+    var rows = (state.form.entities || []).map(function (entity, index) {
+      var rule = getBasicRule(entity.ruleId);
+      return '<tr>' +
+        '<td>' + escapeHtml(entity.name) + '</td>' +
+        '<td>' + escapeHtml(entity.alias) + '</td>' +
+        '<td class="dqit-basic-rule-cell">' + renderBasicRuleSelect(entity, index) + '</td>' +
+        '<td>' + escapeHtml(rule.desc || '') + '</td>' +
+        '<td><button class="dqit-basic-delete-btn" type="button" data-dqit-action="delete-basic-entity" data-index="' + index + '" aria-label="删除稽查字段"><i class="bi bi-trash"></i></button></td>' +
+      '</tr>';
+    }).join('');
+    return renderRequiredFormSection('稽查实体',
+      '<div class="dqit-basic-entity-toolbar"><button class="btn btn-primary" type="button" data-dqit-action="add-basic-entity"><i class="bi bi-plus-lg"></i><span>添加 稽查字段</span></button></div>' +
+      '<table class="dqit-basic-entity-table">' +
+        '<thead><tr><th>实体名称</th><th>对象别名</th><th>质量规则</th><th>规则描述</th><th>操作</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>',
+      'dqit-basic-entity-section'
+    );
+  }
+
+  function renderBasicTimePicker(fieldKey) {
+    if (!state.basicTimePopup || state.basicTimePopup !== fieldKey) return '';
+    var value = (state.form.timeParams && state.form.timeParams[fieldKey]) || '00:00:00';
+    var time = parseTime(value);
+    return '<div class="dqit-time-picker dqit-basic-time-picker">' +
+      '<div class="dqit-time-picker-head">选择时间</div>' +
+      '<div class="dqit-time-picker-labels"><span>时</span><span>分</span><span>秒</span></div>' +
+      '<div class="dqit-time-picker-cols">' +
+        '<div>' + renderTimeColumn('h', time.h, 'pick-basic-time-part') + '</div>' +
+        '<div>' + renderTimeColumn('m', time.m, 'pick-basic-time-part') + '</div>' +
+        '<div>' + renderTimeColumn('s', time.s, 'pick-basic-time-part') + '</div>' +
+      '</div>' +
+      '<div class="dqit-picker-footer">' +
+        '<button type="button" data-dqit-action="basic-time-clear"><span>清空</span></button>' +
+        '<button type="button" data-dqit-action="basic-time-now"><span>现在</span></button>' +
+        '<button type="button" data-dqit-action="basic-time-ok"><span>确定</span></button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderBasicTimeParamRow(prefix, label) {
+    var params = state.form.timeParams || createBasicTimeParams();
+    var fieldKey = prefix + 'Field';
+    var typeKey = prefix + 'DataType';
+    var formatKey = prefix + 'Format';
+    var offsetKey = prefix + 'Offset';
+    var unitKey = prefix + 'Unit';
+    var fixedKey = prefix + 'FixedTime';
+    return renderRequiredFormSection(label,
+      '<div class="dqit-basic-time-row">' +
+        '<select class="dqit-basic-time-field" data-dqit-basic-time-param="' + fieldKey + '">' + renderOptions(basicTimeFieldOptions, params[fieldKey]) + '</select>' +
+        '<span class="dqit-basic-time-text">数据类型</span>' +
+        '<input class="dqit-basic-time-input dqit-basic-time-type" type="text" data-dqit-basic-time-param="' + typeKey + '" value="' + escapeHtml(params[typeKey]) + '">' +
+        '<span class="dqit-basic-time-text">数据格式</span>' +
+        '<select class="dqit-basic-time-format" data-dqit-basic-time-param="' + formatKey + '">' + renderOptions(basicDateFormatOptions, params[formatKey]) + '</select>' +
+        '<span class="dqit-basic-time-text">偏移值</span>' +
+        '<input class="dqit-basic-time-input dqit-basic-time-offset" type="number" data-dqit-basic-time-param="' + offsetKey + '" value="' + escapeHtml(params[offsetKey]) + '">' +
+        '<select class="dqit-basic-time-unit" data-dqit-basic-time-param="' + unitKey + '">' + renderOptions(basicOffsetUnitOptions, params[unitKey]) + '</select>' +
+        '<span class="dqit-basic-time-text">固定时间:</span>' +
+        '<div class="dqit-basic-time-popover-wrap">' +
+          '<input class="dqit-basic-fixed-time" type="text" readonly data-dqit-basic-time-param="' + fixedKey + '" data-dqit-action="open-basic-time-popup" data-time-field="' + fixedKey + '" value="' + escapeHtml(params[fixedKey]) + '">' +
+          renderBasicTimePicker(fixedKey) +
+        '</div>' +
+      '</div>',
+      'dqit-basic-time-section'
+    );
+  }
+
+  function renderBasicCustomSqlSection() {
+    var sql = state.form.customSql || getDefaultBasicCustomSql();
+    return renderRequiredFormSection('自定义SQL',
+      '<div class="dqit-basic-custom-sql-wrap">' + renderSqlEditor('basicCustom', '自定义SQL', sql) + '</div>',
+      'dqit-basic-custom-sql-section'
+    );
+  }
+
+  function renderBasicInspectModeHint(mode) {
+    if (mode === '增量稽查') {
+      return '<i class="bi bi-check-circle-fill"></i><span>增量稽查，稽查实体只能单张表，必须设置时间参数</span>';
+    }
+    return '<i class="bi bi-info-circle-fill"></i><span>全量稽查按所选稽查实体全量执行，无需配置时间参数</span>';
+  }
+
+  function renderBasicParamSection() {
+    if (state.form.inspectMode !== '增量稽查') return '';
+    var html = renderRequiredFormRow('参数设置',
+      '<select data-dqit-basic-field="paramMode">' + renderOptions(basicParamModeOptions, state.form.paramMode) + '</select>',
+      '',
+      'dqit-basic-param-mode-row'
+    );
+    if (state.form.paramMode === '自定义SQL') return html + renderBasicCustomSqlSection();
+    return html + renderBasicTimeParamRow('start', '开始时间') + renderBasicTimeParamRow('end', '结束时间');
+  }
+
+  function basicFieldTreeMatches(node, keyword) {
+    if (!keyword) return true;
+    if (normalize(node.label).indexOf(keyword) >= 0) return true;
+    return (node.children || []).some(function (child) { return basicFieldTreeMatches(child, keyword); });
+  }
+
+  function findBasicFieldNode(nodes, key) {
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i];
+      if (node.key === key) return node;
+      var found = findBasicFieldNode(node.children || [], key);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function collectBasicFieldTables(node) {
+    if (!node) return [];
+    if (node.type === 'table') return [node.label];
+    return (node.children || []).reduce(function (tables, child) {
+      return tables.concat(collectBasicFieldTables(child));
+    }, []);
+  }
+
+  function getBasicFieldOpenMap() {
+    if (!state.basicFieldModal) return {};
+    if (!state.basicFieldModal.treeOpen) {
+      state.basicFieldModal.treeOpen = {
+        ods: true,
+        'workorder-ods': true
+      };
+    }
+    return state.basicFieldModal.treeOpen;
+  }
+
+  function renderBasicFieldTree(nodes, keyword) {
+    return nodes.filter(function (node) {
+      return basicFieldTreeMatches(node, keyword);
+    }).map(function (node) {
+      var children = node.children || [];
+      var hasChildren = children.length > 0;
+      var treeOpen = getBasicFieldOpenMap();
+      var open = hasChildren && (!!keyword || !!treeOpen[node.key]);
+      var active = state.basicFieldModal && state.basicFieldModal.treeKey === node.key;
+      return '<li class="dqit-basic-field-node ' + (open ? 'open ' : '') + escapeHtml(node.type || '') + '">' +
+        '<div class="dqit-basic-field-tree-row' + (active ? ' active' : '') + '">' +
+          (hasChildren ? '<button class="dqit-basic-field-toggle" type="button" data-dqit-action="toggle-basic-field-tree" data-key="' + escapeHtml(node.key) + '"><i class="bi ' + (open ? 'bi-chevron-down' : 'bi-chevron-right') + '"></i></button>' : '<span class="dqit-basic-field-toggle"></span>') +
+          '<button class="dqit-basic-field-select" type="button" data-dqit-action="select-basic-field-tree" data-key="' + escapeHtml(node.key) + '"><i class="bi ' + escapeHtml(node.icon || 'bi-table') + '"></i><span>' + escapeHtml(node.label) + '</span></button>' +
+        '</div>' +
+        (hasChildren && open ? '<ul>' + renderBasicFieldTree(children, keyword) + '</ul>' : '') +
+      '</li>';
+    }).join('');
+  }
+
+  function getBasicFieldRows() {
+    if (!state.basicFieldModal) return [];
+    var keyword = normalize(state.basicFieldModal.keyword);
+    var selectedNode = findBasicFieldNode(basicFieldTree, state.basicFieldModal.treeKey);
+    var tableNames = collectBasicFieldTables(selectedNode);
+    var shouldFilterByTable = !!selectedNode;
+    return basicFieldRows.filter(function (item) {
+      if (shouldFilterByTable && (!tableNames.length || tableNames.indexOf(item.table) < 0)) return false;
+      if (keyword && normalize(item.alias + ' ' + item.enName + ' ' + item.desc).indexOf(keyword) < 0) return false;
+      return true;
+    });
+  }
+
+  function renderBasicFieldModal() {
+    if (!state.basicFieldModal) return '';
+    var rows = getBasicFieldRows();
+    var selectedIds = state.basicFieldModal.selectedIds || {};
+    var allChecked = rows.length && rows.every(function (row) { return selectedIds[row.id]; });
+    return '<div class="dqit-modal-mask" data-dqit-modal-mask="basic-field">' +
+      '<div class="dqit-basic-field-dialog" role="dialog" aria-modal="true" aria-label="添加稽查列表">' +
+        '<div class="dqit-rule-head"><strong>添加 稽查列表</strong><button type="button" data-dqit-action="close-basic-field-modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button></div>' +
+        '<div class="dqit-basic-field-body">' +
+          '<div class="dqit-basic-field-left">' +
+            '<div class="dqit-basic-field-search"><input type="text" data-dqit-basic-field-tree-search value="' + escapeHtml(state.basicFieldModal.treeKeyword) + '" placeholder="关键字搜索"><button type="button" data-dqit-action="query-basic-field"><i class="bi bi-search"></i></button></div>' +
+            '<div class="dqit-basic-field-tree-wrap"><ul class="dqit-basic-field-tree">' + (renderBasicFieldTree(basicFieldTree, normalize(state.basicFieldModal.treeKeyword)) || '<li class="dqit-search-select-empty">暂无匹配目录</li>') + '</ul></div>' +
+          '</div>' +
+          '<div class="dqit-basic-field-right">' +
+            '<div class="dqit-basic-field-table-wrap">' +
+              '<table class="ds-table dqit-basic-field-table"><thead><tr><th><input type="checkbox" data-dqit-action="toggle-basic-field-all" ' + (allChecked ? 'checked' : '') + '></th><th>别名</th><th>英文名称</th><th>描述</th></tr></thead><tbody>' +
+                (rows.length ? rows.map(function (row) {
+                  return '<tr data-dqit-action="toggle-basic-field-row" data-field-id="' + escapeHtml(row.id) + '">' +
+                    '<td><input type="checkbox" ' + (selectedIds[row.id] ? 'checked ' : '') + 'aria-label="选择稽查字段"></td>' +
+                    '<td title="' + escapeHtml(row.alias) + '">' + escapeHtml(row.alias) + '</td>' +
+                    '<td title="' + escapeHtml(row.enName) + '">' + escapeHtml(row.enName) + '</td>' +
+                    '<td title="' + escapeHtml(row.desc) + '">' + escapeHtml(row.desc) + '</td>' +
+                  '</tr>';
+                }).join('') : '<tr class="dqit-empty-row"><td colspan="4">暂无匹配字段</td></tr>') +
+              '</tbody></table>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="dqit-rule-foot">' +
+          '<button class="btn btn-primary" type="button" data-dqit-action="choose-basic-fields"><i class="bi bi-plus-lg"></i><span>添加</span></button>' +
+          '<button class="btn btn-outline" type="button" data-dqit-action="close-basic-field-modal"><i class="bi bi-x-lg"></i><span>取消</span></button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderBasicFormShell() {
+    var draft = state.form || createBasicFormDraft();
+    state.form = draft;
+    ensureBasicFormDefaults();
+    var title = state.formMode === 'edit' ? '编辑' : '基础稽查';
+    return '<section class="dqit-form-shell dqit-basic-form">' +
+      '<div class="dqit-form-head">' +
+        '<div class="dqit-form-title"><i class="bi bi-list"></i><span>' + escapeHtml(title) + '</span></div>' +
+        '<button class="btn btn-primary" type="button" data-dqit-action="back-list"><i class="bi bi-arrow-left"></i><span>返回</span></button>' +
+      '</div>' +
+      '<div class="dqit-form-scroll">' +
+        renderRequiredFormRow('任务名称', '<input class="dqit-input" type="text" data-dqit-form-field="taskName" value="' + escapeHtml(draft.taskName) + '" placeholder="50个字符以内">', '<i class="bi bi-info-circle-fill"></i><span>50个字符以内，只允许数字，字母，中文，下划线；</span>') +
+        renderRequiredFormRow('业务分层', renderTreePicker('businessLayer', draft.businessLayer, draft.businessLayerKey, taskTree, '请选择业务分层')) +
+        renderRequiredFormRow('稽查对象', '<select data-dqit-basic-field="inspectObject">' + renderOptions(basicObjectOptions, draft.inspectObject) + '</select>') +
+        renderRequiredFormRow('考核权重', '<input class="dqit-input" type="number" min="1" max="100" data-dqit-form-field="weight" value="' + escapeHtml(draft.weight) + '">', '<i class="bi bi-info-circle-fill"></i><span>只允许1-100数字</span>') +
+        renderBasicEntitySection() +
+        renderRequiredFormRow('稽查机制', '<select data-dqit-basic-field="inspectMode">' + renderOptions(inspectModeOptions, draft.inspectMode) + '</select>', renderBasicInspectModeHint(draft.inspectMode)) +
+        renderBasicParamSection() +
+        renderStandardScheduleSection() +
+        '<div class="dqit-form-actions-bottom">' +
+          '<button class="btn btn-primary" type="button" data-dqit-action="save-form"><i class="bi bi-save"></i><span>保存</span></button>' +
+          '<button class="btn btn-outline" type="button" data-dqit-action="back-list"><i class="bi bi-x-lg"></i><span>取消</span></button>' +
+        '</div>' +
+      '</div>' +
+    '</section>';
+  }
+
+  function renderFormShell() {
+    var draft = state.form || createFormDraft();
+    if (!draft.ruleMode) draft.ruleMode = 'existing';
+    if (!draft.sqlCustom) {
+      var customTable = draft.params && draft.params[0] ? draft.params[0].table : 'buildinglog';
+      draft.sqlCustom = getDefaultCustomRuleSql(customTable);
+    }
+    state.form = draft;
+    var isCustomRule = draft.ruleMode === 'custom';
+    return '<section class="dqit-form-shell">' +
+      '<div class="dqit-form-head">' +
+        '<div class="dqit-form-title"><i class="bi bi-list"></i><span>自定义稽查</span></div>' +
+        '<button class="btn btn-primary" type="button" data-dqit-action="back-list"><i class="bi bi-arrow-left"></i><span>返回</span></button>' +
+      '</div>' +
+      '<div class="dqit-form-scroll">' +
+        renderFormRow('任务名称', '<input class="dqit-input" type="text" data-dqit-form-field="taskName" value="' + escapeHtml(draft.taskName) + '" placeholder="50个字符以内">', '<i class="bi bi-info-circle-fill"></i><span>50个字符以内；</span>') +
+        renderFormRow('业务分层', renderTreePicker('businessLayer', draft.businessLayer, draft.businessLayerKey, taskTree, '请选择业务分层')) +
+        renderFormRow('考核权重', '<input class="dqit-input" type="number" min="1" max="100" data-dqit-form-field="weight" value="' + escapeHtml(draft.weight) + '">', '<i class="bi bi-info-circle-fill"></i><span>1-100数字</span>') +
+        renderFormRow('数据源', renderTreePicker('dataSource', draft.dataSource, draft.dataSourceKey, dataSourceTree, '请选择数据源')) +
+        renderFormRow('规则选择', '<select data-dqit-custom-field="ruleMode">' + renderOptions(customRuleModeOptions, draft.ruleMode) + '</select>') +
+        (isCustomRule ? '' : renderFormRow('稽查规则', '<div class="dqit-rule-field"><input class="dqit-input" type="text" readonly value="' + escapeHtml(draft.ruleName) + '"><button class="btn btn-primary" type="button" data-dqit-action="open-rule-modal"><i class="bi bi-check-circle"></i><span>选择</span></button></div>') +
+        renderParamConfig()) +
+        renderSqlSection() +
+        renderScheduleSection() +
+        '<div class="dqit-form-actions-bottom">' +
+          '<button class="btn btn-primary" type="button" data-dqit-action="save-form"><i class="bi bi-save"></i><span>保存</span></button>' +
+          '<button class="btn btn-outline" type="button" data-dqit-action="back-list"><i class="bi bi-x-lg"></i><span>取消</span></button>' +
+        '</div>' +
+      '</div>' +
+    '</section>';
+  }
+
+  function renderStandardFormShell() {
+    var draft = state.form || createStandardFormDraft();
+    state.form = draft;
+    var title = state.formMode === 'edit' ? '编辑' : '标准稽查';
+    return '<section class="dqit-form-shell dqit-standard-form">' +
+      '<div class="dqit-form-head">' +
+        '<div class="dqit-form-title"><i class="bi bi-list"></i><span>' + escapeHtml(title) + '</span></div>' +
+        '<button class="btn btn-primary" type="button" data-dqit-action="back-list"><i class="bi bi-arrow-left"></i><span>返回</span></button>' +
+      '</div>' +
+      '<div class="dqit-form-scroll">' +
+        renderRequiredFormRow('任务名称', '<input class="dqit-input" type="text" data-dqit-form-field="taskName" value="' + escapeHtml(draft.taskName) + '" placeholder="50个字符以内">', '<i class="bi bi-info-circle-fill"></i><span>50个字符以内，只允许数字，字母，中文，下划线；</span>') +
+        renderRequiredFormRow('业务分层', renderTreePicker('businessLayer', draft.businessLayer, draft.businessLayerKey, taskTree, '请选择业务分层')) +
+        renderRequiredFormRow('标准数据', '<div class="dqit-rule-field dqit-standard-field"><input class="dqit-input dqit-input-readonly" type="text" readonly value="' + escapeHtml(draft.standardData) + '"><button class="btn btn-primary" type="button" data-dqit-action="open-standard-modal"><i class="bi bi-plus-lg"></i><span>选择</span></button></div>') +
+        renderRequiredFormRow('关联数据源', '<select data-dqit-standard-field="datasource">' + renderOptions(standardDatasourceOptions, draft.datasource) + '</select>') +
+        renderRequiredFormRow('考核权重', '<input class="dqit-input" type="number" min="1" max="100" data-dqit-form-field="weight" value="' + escapeHtml(draft.weight) + '">', '<i class="bi bi-info-circle-fill"></i><span>只允许1-100数字</span>') +
+        renderStandardEntitySection() +
+        renderRequiredFormRow('质量规则', '<input class="dqit-input dqit-input-readonly" type="text" readonly value="' + escapeHtml(draft.qualityRule) + '">') +
+        renderRequiredFormRow('稽查机制', '<select data-dqit-standard-field="inspectMode">' + renderOptions(inspectModeOptions, draft.inspectMode) + '</select>') +
+        renderStandardScheduleSection() +
+        '<div class="dqit-form-actions-bottom">' +
+          '<button class="btn btn-primary" type="button" data-dqit-action="save-form"><i class="bi bi-save"></i><span>保存</span></button>' +
+          '<button class="btn btn-outline" type="button" data-dqit-action="back-list"><i class="bi bi-x-lg"></i><span>取消</span></button>' +
+        '</div>' +
+      '</div>' +
+    '</section>';
+  }
+
+  function renderOperationModal() {
     if (!state.modal) return '';
     var type = state.modal.type;
     var tasks = getTasksByIds(state.modal.ids);
@@ -377,10 +1731,8 @@ DP.pages.qualityInspectTask = (function () {
     var taskHtml = tasks.slice(0, 6).map(function (item) {
       return '<li><span>' + escapeHtml(item.name) + '</span><em>' + escapeHtml(item.status) + '</em></li>';
     }).join('');
-    if (tasks.length > 6) {
-      taskHtml += '<li class="more">另有 ' + (tasks.length - 6) + ' 个任务</li>';
-    }
-    return '<div class="dqit-modal-mask" data-dqit-modal-mask>' +
+    if (tasks.length > 6) taskHtml += '<li class="more">另有 ' + (tasks.length - 6) + ' 个任务</li>';
+    return '<div class="dqit-modal-mask" data-dqit-modal-mask="operation">' +
       '<div class="dqit-confirm" role="dialog" aria-modal="true" aria-label="' + escapeHtml(title) + '">' +
         '<button class="dqit-confirm-close" type="button" data-dqit-action="close-modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button>' +
         '<div class="dqit-confirm-body">' +
@@ -400,25 +1752,254 @@ DP.pages.qualityInspectTask = (function () {
     '</div>';
   }
 
-  function renderMain() {
-    var main = pageEl.querySelector('[data-dqit-main]');
-    if (!main) return;
-    main.innerHTML = renderToolbar() + renderTable() + renderFooter();
+  function getRuleRows() {
+    if (!state.ruleModal) return [];
+    var keyword = normalize(state.ruleModal.keyword);
+    var selectedKey = state.ruleModal.treeKey;
+    var selectedNode = findTreeNode(ruleTree, selectedKey);
+    var keys = collectTreeKeys(selectedNode);
+    return ruleRows.filter(function (item) {
+      if (keys.length && keys.indexOf(item.group) < 0 && selectedKey !== 'rule-business') return false;
+      if (keyword && normalize(item.name + ' ' + item.desc).indexOf(keyword) < 0) return false;
+      return true;
+    });
+  }
+
+  function renderRuleModal() {
+    if (!state.ruleModal) return '';
+    var rows = getRuleRows();
+    return '<div class="dqit-modal-mask" data-dqit-modal-mask="rule">' +
+      '<div class="dqit-rule-dialog" role="dialog" aria-modal="true" aria-label="稽查规则选择">' +
+        '<div class="dqit-rule-head"><strong>稽查规则-选择</strong><button type="button" data-dqit-action="close-rule-modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button></div>' +
+        '<div class="dqit-rule-body">' +
+          '<div class="dqit-rule-left">' +
+            '<div class="dqit-rule-search"><input type="text" data-dqit-rule-tree-search value="' + escapeHtml(state.ruleModal.treeKeyword) + '" placeholder="关键字搜索"><button type="button"><i class="bi bi-search"></i></button></div>' +
+            '<div class="dqit-rule-tree-wrap"><ul class="dqit-tree">' + (renderTreeNodes(ruleTree, normalize(state.ruleModal.treeKeyword), { forceOpen: true, activeKey: state.ruleModal.treeKey, action: 'toggle-picker-tree', selectAction: 'select-rule-tree' }) || '<li class="dqit-empty-tree">暂无匹配目录</li>') + '</ul></div>' +
+          '</div>' +
+          '<div class="dqit-rule-right">' +
+            '<div class="dqit-rule-query"><input type="text" data-dqit-rule-keyword value="' + escapeHtml(state.ruleModal.keyword) + '" placeholder="关键字查询"><button class="btn btn-primary" type="button" data-dqit-action="query-rule"><i class="bi bi-search"></i><span>查询</span></button></div>' +
+            '<div class="dqit-rule-table-wrap">' +
+              '<table class="ds-table dqit-rule-table"><thead><tr><th></th><th>名称</th><th>描述</th></tr></thead><tbody>' +
+                (rows.length ? rows.map(function (row) {
+                  return '<tr data-dqit-action="select-rule" data-rule-id="' + escapeHtml(row.id) + '">' +
+                    '<td><input type="radio" name="dqitRule" ' + (state.ruleModal.selectedId === row.id ? ' checked' : '') + '></td>' +
+                    '<td>' + escapeHtml(row.name) + '</td><td>' + escapeHtml(row.desc) + '</td>' +
+                  '</tr>';
+                }).join('') : '<tr class="dqit-empty-row"><td colspan="3">暂无匹配稽查规则</td></tr>') +
+              '</tbody></table>' +
+            '</div>' +
+            '<div class="dqit-rule-footer-note">显示第 ' + (rows.length ? 1 : 0) + ' 到第 ' + rows.length + ' 条记录，总共 ' + rows.length + ' 条记录</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="dqit-rule-foot">' +
+          '<button class="btn btn-primary" type="button" data-dqit-action="choose-rule"><i class="bi bi-check2-square"></i><span>选择 稽查规则</span></button>' +
+          '<button class="btn btn-outline" type="button" data-dqit-action="close-rule-modal"><i class="bi bi-x-lg"></i><span>取消</span></button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function getStandardRows() {
+    if (!state.standardModal) return [];
+    var keyword = normalize(state.standardModal.keyword);
+    var selectedKey = state.standardModal.treeKey;
+    var selectedNode = findTreeNode(standardTree, selectedKey);
+    var keys = collectTreeKeys(selectedNode);
+    return standardRows.filter(function (item) {
+      if (keys.length && keys.indexOf(item.group) < 0) return false;
+      if (keyword && normalize(item.enName + ' ' + item.alias + ' ' + item.desc).indexOf(keyword) < 0) return false;
+      return true;
+    });
+  }
+
+  function renderStandardModal() {
+    if (!state.standardModal) return '';
+    var rows = getStandardRows();
+    var selectedIds = state.standardModal.selectedIds || {};
+    var treeHtml = renderTreeNodes(standardTree, normalize(state.standardModal.treeKeyword), {
+      forceOpen: true,
+      activeKey: state.standardModal.treeKey,
+      action: 'toggle-standard-tree',
+      selectAction: 'select-standard-tree'
+    }) || '<li class="dqit-empty-tree">暂无匹配目录</li>';
+    return '<div class="dqit-modal-mask" data-dqit-modal-mask="standard">' +
+      '<div class="dqit-standard-dialog" role="dialog" aria-modal="true" aria-label="选择标准">' +
+        '<div class="dqit-rule-head"><strong>选择标准</strong><button type="button" data-dqit-action="close-standard-modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button></div>' +
+        '<div class="dqit-standard-body">' +
+          '<div class="dqit-rule-left">' +
+            '<div class="dqit-standard-search"><input type="text" data-dqit-standard-tree-search value="' + escapeHtml(state.standardModal.treeKeyword) + '" placeholder="关键字搜索"><button type="button" data-dqit-action="query-standard"><i class="bi bi-search"></i></button></div>' +
+            '<div class="dqit-standard-tree-wrap"><ul class="dqit-tree">' + treeHtml + '</ul></div>' +
+          '</div>' +
+          '<div class="dqit-rule-right">' +
+            '<div class="dqit-standard-query"><input type="text" data-dqit-standard-keyword value="' + escapeHtml(state.standardModal.keyword) + '" placeholder="关键字搜索"><button class="btn btn-primary" type="button" data-dqit-action="query-standard"><i class="bi bi-search"></i><span>搜索</span></button></div>' +
+            '<div class="dqit-standard-table-wrap">' +
+              '<table class="ds-table dqit-standard-table"><thead><tr><th></th><th>英文名称</th><th>别名</th><th>描述</th></tr></thead><tbody>' +
+                (rows.length ? rows.map(function (row) {
+                  return '<tr data-dqit-action="toggle-standard-row" data-standard-id="' + escapeHtml(row.id) + '">' +
+                    '<td><input type="checkbox" ' + (selectedIds[row.id] ? 'checked ' : '') + 'aria-label="选择标准数据"></td>' +
+                    '<td>' + escapeHtml(row.enName) + '</td>' +
+                    '<td>' + escapeHtml(row.alias) + '</td>' +
+                    '<td>' + escapeHtml(row.desc) + '</td>' +
+                  '</tr>';
+                }).join('') : '<tr class="dqit-empty-row"><td colspan="4">暂无匹配标准数据</td></tr>') +
+              '</tbody></table>' +
+            '</div>' +
+            '<div class="dqit-standard-footer-note">第' + (rows.length ? 1 : 0) + '到第' + rows.length + '条记录，共' + rows.length + '条记录</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="dqit-rule-foot">' +
+          '<button class="btn btn-primary" type="button" data-dqit-action="choose-standard"><i class="bi bi-plus-lg"></i><span>添加</span></button>' +
+          '<button class="btn btn-outline" type="button" data-dqit-action="close-standard-modal"><i class="bi bi-x-lg"></i><span>取消</span></button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderReportSqlModal() {
+    if (!state.reportSqlModal) return '';
+    var run = getSelectedReportRun();
+    return '<div class="dqit-modal-mask" data-dqit-modal-mask="report-sql">' +
+      '<div class="dqit-view-sql-dialog" role="dialog" aria-modal="true" aria-label="查看SQL">' +
+        '<div class="dqit-rule-head"><strong>查看SQL</strong><button type="button" data-dqit-action="close-report-sql" aria-label="关闭"><i class="bi bi-x-lg"></i></button></div>' +
+        '<div class="dqit-view-sql-body">' + renderSqlEditor('reportSql', run.reportName, getReportSql()) + '</div>' +
+        '<div class="dqit-rule-foot"><button class="btn btn-primary" type="button" data-dqit-action="close-report-sql"><i class="bi bi-x-lg"></i><span>关闭</span></button></div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderReportLogModal() {
+    if (!state.reportLogModal) return '';
+    var run = getSelectedReportRun();
+    return '<div class="dqit-modal-mask" data-dqit-modal-mask="report-log">' +
+      '<div class="dqit-view-log-dialog" role="dialog" aria-modal="true" aria-label="执行日志">' +
+        '<div class="dqit-rule-head"><strong>执行日志</strong><button type="button" data-dqit-action="close-report-log" aria-label="关闭"><i class="bi bi-x-lg"></i></button></div>' +
+        '<div class="dqit-log-header"><div><h3>' + escapeHtml(run.reportName) + '</h3><p>开始时间：' + escapeHtml(run.startAt) + '　完成时间：' + escapeHtml(run.endAt) + '　状态：' + escapeHtml(run.status) + '</p></div></div>' +
+        '<pre class="dqit-tech-log">' + escapeHtml(getExecutionLog(run)) + '</pre>' +
+        '<div class="dqit-rule-foot"><button class="btn btn-primary" type="button" data-dqit-action="close-report-log"><i class="bi bi-x-lg"></i><span>关闭</span></button></div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function disposeReportGauge() {
+    if (reportGaugeChart) {
+      reportGaugeChart.dispose();
+      reportGaugeChart = null;
+    }
+  }
+
+  function initReportGauge() {
+    var el = pageEl ? pageEl.querySelector('#dqitReportGauge') : null;
+    if (!el) return;
+    if (!window.echarts) {
+      el.innerHTML = '<div class="dqit-gauge-fallback"><strong>' + reportSummary.passRate.toFixed(2) + '%</strong><span>符合规则比例</span></div>';
+      return;
+    }
+    var progressColor = window.echarts.graphic
+      ? new window.echarts.graphic.LinearGradient(0, 0, 1, 0, [
+        { offset: 0, color: '#20c997' },
+        { offset: 0.52, color: '#1683ff' },
+        { offset: 1, color: '#2f78ff' }
+      ])
+      : '#1683ff';
+    reportGaugeChart = window.echarts.init(el);
+    reportGaugeChart.setOption({
+      series: [{
+        type: 'gauge',
+        startAngle: 90,
+        endAngle: -270,
+        min: 0,
+        max: 100,
+        center: ['50%', '50%'],
+        radius: '82%',
+        progress: {
+          show: true,
+          roundCap: true,
+          clip: false,
+          width: 18,
+          itemStyle: {
+            color: progressColor,
+            shadowColor: 'rgba(22, 131, 255, 0.22)',
+            shadowBlur: 10,
+            shadowOffsetY: 2
+          }
+        },
+        axisLine: {
+          roundCap: true,
+          lineStyle: {
+            width: 18,
+            color: [[1, '#edf4fb']]
+          }
+        },
+        pointer: {
+          show: false
+        },
+        axisTick: {
+          show: false
+        },
+        splitLine: {
+          show: false
+        },
+        axisLabel: {
+          show: false
+        },
+        anchor: {
+          show: false
+        },
+        title: {
+          offsetCenter: [0, '22%'],
+          color: '#60758b',
+          fontSize: 13,
+          fontWeight: 400
+        },
+        detail: {
+          valueAnimation: true,
+          offsetCenter: [0, '-8%'],
+          formatter: function (value) { return Number(value).toFixed(2) + '%'; },
+          color: '#1683ff',
+          fontSize: 31,
+          fontWeight: 700,
+          lineHeight: 36
+        },
+        data: [{ value: reportSummary.passRate, name: '符合规则比例' }]
+      }]
+    }, true);
+    window.setTimeout(function () {
+      if (reportGaugeChart) reportGaugeChart.resize();
+    }, 0);
   }
 
   function renderAll() {
-    var tree = pageEl.querySelector('[data-dqit-tree]');
-    var treeInput = pageEl.querySelector('[data-dqit-tree-search]');
-    if (tree) tree.innerHTML = renderTree();
-    if (treeInput && treeInput.value !== state.treeKeyword) treeInput.value = state.treeKeyword;
-    renderMain();
-    renderModalContainer();
+    if (!pageEl) return;
+    var fullMode = state.view === 'form' || state.view === 'result' || state.view === 'report' || state.view === 'log';
+    var content = renderListShell();
+    if (state.view === 'form') content = state.formKind === 'standard' ? renderStandardFormShell() : (state.formKind === 'basic' ? renderBasicFormShell() : renderFormShell());
+    if (state.view === 'result') content = renderResultListShell();
+    if (state.view === 'report') content = renderReportDetailShell();
+    if (state.view === 'log') content = renderReportLogShell();
+    disposeReportGauge();
+    pageEl.classList.toggle('form-mode', fullMode);
+    pageEl.innerHTML = content +
+      renderOperationModal() + renderRuleModal() + renderStandardModal() + renderBasicFieldModal() + renderReportSqlModal() + renderReportLogModal();
+    if (state.view === 'report') {
+      if (window.requestAnimationFrame) window.requestAnimationFrame(initReportGauge);
+      else initReportGauge();
+    }
   }
 
-  function renderModalContainer() {
-    var old = pageEl.querySelector('[data-dqit-modal-mask]');
-    if (old) old.remove();
-    if (state.modal) pageEl.insertAdjacentHTML('beforeend', renderModal());
+  function renderAllKeepFormScroll() {
+    var scrollTop = 0;
+    var scroller = pageEl ? pageEl.querySelector('.dqit-form-scroll') : null;
+    if (scroller) scrollTop = scroller.scrollTop;
+    renderAll();
+    restoreFormScroll(scrollTop);
+    if (window.requestAnimationFrame) window.requestAnimationFrame(function () { restoreFormScroll(scrollTop); });
+    window.setTimeout(function () { restoreFormScroll(scrollTop); }, 0);
+    window.setTimeout(function () { restoreFormScroll(scrollTop); }, 60);
+  }
+
+  function restoreFormScroll(scrollTop) {
+    var nextScroller = pageEl ? pageEl.querySelector('.dqit-form-scroll') : null;
+    if (nextScroller) nextScroller.scrollTop = scrollTop;
   }
 
   function showToast(message) {
@@ -430,6 +2011,62 @@ DP.pages.qualityInspectTask = (function () {
     window.setTimeout(function () { if (toast && toast.parentNode) toast.remove(); }, 1800);
   }
 
+  function openForm(kind, mode, id) {
+    if (kind !== 'custom' && kind !== 'standard' && kind !== 'basic') {
+      id = mode;
+      mode = kind;
+      kind = 'custom';
+    }
+    var item = id ? getTaskById(id) : null;
+    state.view = 'form';
+    state.formKind = kind || 'custom';
+    state.formMode = mode || 'create';
+    state.editingId = item ? item.id : '';
+    state.form = state.formKind === 'standard' ? createStandardFormDraft(item) : (state.formKind === 'basic' ? createBasicFormDraft(item) : createFormDraft(item));
+    state.openPicker = '';
+    state.openParamSelect = '';
+    state.openBasicRuleSelect = '';
+    state.basicRuleKeyword = '';
+    state.ruleModal = null;
+    state.standardModal = null;
+    state.basicFieldModal = null;
+    state.reportSqlModal = null;
+    state.reportLogModal = null;
+    state.schedulePopup = '';
+    state.basicTimePopup = '';
+    state.sql = {
+      template: { theme: 'dark', font: '14px', searchOpen: false },
+      generated: { theme: 'dark', font: '14px', searchOpen: false },
+      customRule: { theme: 'dark', font: '14px', searchOpen: false },
+      basicCustom: { theme: 'dark', font: '14px', searchOpen: false },
+      reportSql: { theme: 'light', font: '14px', searchOpen: false }
+    };
+    renderAllKeepFormScroll();
+  }
+
+  function backToList() {
+    state.view = 'list';
+    state.form = null;
+    state.formMode = 'create';
+    state.formKind = 'custom';
+    state.editingId = '';
+    state.viewTaskId = '';
+    state.reportRunIndex = 0;
+    state.resultPage = 1;
+    state.ruleModal = null;
+    state.standardModal = null;
+    state.basicFieldModal = null;
+    state.reportSqlModal = null;
+    state.reportLogModal = null;
+    state.openPicker = '';
+    state.openParamSelect = '';
+    state.openBasicRuleSelect = '';
+    state.basicRuleKeyword = '';
+    state.schedulePopup = '';
+    state.basicTimePopup = '';
+    renderAllKeepFormScroll();
+  }
+
   function openOperation(type, ids) {
     ids = (ids || []).filter(function (id) { return !!getTaskById(id); });
     if (!ids.length) {
@@ -437,12 +2074,12 @@ DP.pages.qualityInspectTask = (function () {
       return;
     }
     state.modal = { type: type, ids: ids };
-    renderModalContainer();
+    renderAll();
   }
 
   function closeModal() {
     state.modal = null;
-    renderModalContainer();
+    renderAll();
   }
 
   function applyOperation() {
@@ -453,7 +2090,7 @@ DP.pages.qualityInspectTask = (function () {
       taskRows = taskRows.filter(function (item) { return ids.indexOf(item.id) < 0; });
       state.selectedIds = {};
       state.modal = null;
-      renderAll();
+      renderAllKeepFormScroll();
       showToast('稽查任务已删除');
       return;
     }
@@ -472,20 +2109,496 @@ DP.pages.qualityInspectTask = (function () {
     return Object.keys(state.selectedIds);
   }
 
+  function captureFormDraft() {
+    if (!state.form || !pageEl) return;
+    var taskName = pageEl.querySelector('[data-dqit-form-field="taskName"]');
+    var weight = pageEl.querySelector('[data-dqit-form-field="weight"]');
+    if (taskName) state.form.taskName = taskName.value.trim();
+    if (weight) state.form.weight = weight.value.trim();
+    var scheduleFields = pageEl.querySelectorAll('[data-dqit-schedule-field]');
+    scheduleFields.forEach(function (field) {
+      var key = field.getAttribute('data-dqit-schedule-field');
+      state.form.schedule[key] = field.value;
+    });
+    pageEl.querySelectorAll('[data-dqit-standard-field]').forEach(function (field) {
+      state.form[field.getAttribute('data-dqit-standard-field')] = field.value;
+    });
+    pageEl.querySelectorAll('[data-dqit-custom-field]').forEach(function (field) {
+      state.form[field.getAttribute('data-dqit-custom-field')] = field.value;
+    });
+    pageEl.querySelectorAll('[data-dqit-basic-field]').forEach(function (field) {
+      state.form[field.getAttribute('data-dqit-basic-field')] = field.value;
+    });
+    pageEl.querySelectorAll('[data-dqit-basic-time-param]').forEach(function (field) {
+      if (!state.form.timeParams) state.form.timeParams = createBasicTimeParams();
+      state.form.timeParams[field.getAttribute('data-dqit-basic-time-param')] = field.value;
+    });
+    ['template', 'generated', 'customRule', 'basicCustom'].forEach(function (key) {
+      var content = pageEl.querySelector('[data-dqit-sql-content="' + key + '"]');
+      if (!content) return;
+      if (key === 'template') state.form.sqlTemplate = content.innerText || content.textContent || '';
+      if (key === 'generated') state.form.sqlGenerated = content.innerText || content.textContent || '';
+      if (key === 'customRule') state.form.sqlCustom = content.innerText || content.textContent || '';
+      if (key === 'basicCustom') state.form.customSql = content.innerText || content.textContent || '';
+    });
+  }
+
+  function getFrequencyText() {
+    var s = state.form.schedule;
+    if (s.type === 'hourly') return '每小时 ' + String(s.minute || '0').padStart(2, '0') + ' 分';
+    if (s.type === 'daily') return '每天 ' + (s.time || '00:00:00');
+    if (s.type === 'weekly') return '每周' + (s.week || '周一') + ' ' + (s.time || '00:00:00');
+    if (s.type === 'monthly') return '每月' + (s.day || '1号') + ' ' + (s.time || '00:00:00');
+    return '执行一次 ' + (s.datetime || '2026-06-24 09:18:48');
+  }
+
+  function getBasicEntityTableName() {
+    var first = state.form.entities && state.form.entities[0] ? state.form.entities[0].name : 'tms_demo.express_task_collect';
+    var parts = String(first).split('.');
+    return parts.length >= 3 ? parts[parts.length - 2] : first;
+  }
+
+  function saveForm() {
+    captureFormDraft();
+    if (!state.form.taskName) {
+      showToast('请输入任务名称');
+      return;
+    }
+    if (state.formKind === 'basic') {
+      var basicTarget = getBasicEntityTableName();
+      var basicDesc = state.form.inspectObject + '基础规则稽查，共 ' + (state.form.entities || []).length + ' 个稽查实体。';
+      if (state.formMode === 'edit' && state.editingId) {
+        var basicItem = getTaskById(state.editingId);
+        if (basicItem) {
+          basicItem.name = state.form.taskName;
+          basicItem.frequency = getFrequencyText();
+          basicItem.group = state.form.businessLayerKey;
+          basicItem.type = '基础稽查';
+          basicItem.target = basicTarget;
+          basicItem.ruleCount = (state.form.entities || []).length;
+          basicItem.desc = basicDesc;
+        }
+      } else {
+        taskRows.unshift(task('dqit-' + String(Date.now()).slice(-6), state.form.taskName, getFrequencyText(), '已停止', 'present', formatDateTime(new Date()), '--', state.form.businessLayerKey, '基础稽查', basicTarget, (state.form.entities || []).length, basicDesc));
+      }
+      state.treeKey = state.form.businessLayerKey;
+      backToList();
+      showToast('基础稽查任务已保存');
+      return;
+    }
+    if (state.formKind === 'standard') {
+      var standardTarget = state.form.datasource || 'aierp_pro_test';
+      var standardDesc = state.form.qualityRule + '，标准数据：' + state.form.standardData + '。';
+      if (state.formMode === 'edit' && state.editingId) {
+        var standardItem = getTaskById(state.editingId);
+        if (standardItem) {
+          standardItem.name = state.form.taskName;
+          standardItem.frequency = getFrequencyText();
+          standardItem.group = state.form.businessLayerKey;
+          standardItem.type = '标准稽查';
+          standardItem.target = standardTarget;
+          standardItem.ruleCount = (state.form.entities || []).length;
+          standardItem.desc = standardDesc;
+        }
+      } else {
+        taskRows.unshift(task('dqit-' + String(Date.now()).slice(-6), state.form.taskName, getFrequencyText(), '已停止', 'present', formatDateTime(new Date()), '--', state.form.businessLayerKey, '标准稽查', standardTarget, (state.form.entities || []).length, standardDesc));
+      }
+      state.treeKey = state.form.businessLayerKey;
+      backToList();
+      showToast('标准稽查任务已保存');
+      return;
+    }
+    var target = state.form.params[0] ? state.form.params[0].table : 'buildinglog';
+    var isCustomRuleMode = state.form.ruleMode === 'custom';
+    var ruleCount = isCustomRuleMode ? 1 : state.form.params.length;
+    var ruleDesc = isCustomRuleMode ? '自定义SQL规则' : state.form.ruleName;
+    if (state.formMode === 'edit' && state.editingId) {
+      var item = getTaskById(state.editingId);
+      if (item) {
+        item.name = state.form.taskName;
+        item.frequency = getFrequencyText();
+        item.group = state.form.businessLayerKey;
+        item.target = target;
+        item.ruleCount = ruleCount;
+        item.desc = ruleDesc + '，数据源：' + state.form.dataSource + '。';
+      }
+    } else {
+      taskRows.unshift(task('dqit-' + String(Date.now()).slice(-6), state.form.taskName, getFrequencyText(), '已停止', 'present', formatDateTime(new Date()), '--', state.form.businessLayerKey, '自定义稽查', target, ruleCount, ruleDesc + '，数据源：' + state.form.dataSource + '。'));
+    }
+    state.treeKey = state.form.businessLayerKey;
+    backToList();
+    showToast('自定义稽查任务已保存');
+  }
+
+  function setSqlText(key, sql) {
+    if (state.form) {
+      if (key === 'template') state.form.sqlTemplate = sql;
+      if (key === 'generated') state.form.sqlGenerated = sql;
+      if (key === 'customRule') state.form.sqlCustom = sql;
+      if (key === 'basicCustom') state.form.customSql = sql;
+    }
+    var content = pageEl.querySelector('[data-dqit-sql-content="' + key + '"]');
+    var gutter = pageEl.querySelector('[data-dqit-sql-gutter="' + key + '"]');
+    if (content) content.innerHTML = highlightSQL(sql);
+    if (gutter) gutter.innerHTML = lineNumbers(sql);
+  }
+
+  function getPlainSqlText(key) {
+    var content = pageEl ? pageEl.querySelector('[data-dqit-sql-content="' + key + '"]') : null;
+    return content ? (content.innerText || content.textContent || '') : '';
+  }
+
+  function formatSqlText(sql) {
+    var keywords = ['SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'INSERT', 'INTO', 'VALUES', 'SET', 'CREATE', 'TABLE', 'WITH', 'AS', 'NOT', 'NULL', 'ORDER', 'BY', 'GROUP', 'HAVING', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'ON', 'LIMIT', 'UNION', 'ALL', 'COUNT', 'LENGTH'];
+    var formatted = String(sql || '').replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '');
+    keywords.forEach(function (kw) {
+      formatted = formatted.replace(new RegExp('\\b' + kw + '\\b', 'gi'), kw);
+    });
+    formatted = formatted.replace(/\s+(FROM|WHERE|GROUP BY|HAVING|ORDER BY)\b/g, '\n$1');
+    formatted = formatted.replace(/\s+(AND|OR)\b/g, '\n  $1');
+    return formatted.trim();
+  }
+
+  function generateSql() {
+    captureFormDraft();
+    var idField = (state.form.params[0] && state.form.params[0].field) || 'Id';
+    var nameField = (state.form.params[1] && state.form.params[1].field) || 'Name';
+    var tableName = (state.form.params[2] && state.form.params[2].table) || (state.form.params[0] && state.form.params[0].table) || 'buildinglog';
+    setSqlText('generated', getDefaultGeneratedSql(tableName, idField, nameField));
+    showToast('SQL 已生成');
+  }
+
+  function updateScheduleHint() {
+    var hint = pageEl.querySelector('.dqit-schedule-hint span');
+    if (hint) hint.textContent = renderScheduleHint();
+  }
+
+  function updateScheduleInputs(field, value) {
+    pageEl.querySelectorAll('[data-dqit-schedule-field="' + field + '"]').forEach(function (input) {
+      input.value = value;
+    });
+    updateScheduleHint();
+  }
+
+  function syncTimePickerActive(timeValue) {
+    var time = parseTime(timeValue);
+    pageEl.querySelectorAll('.dqit-time-picker [data-part]').forEach(function (button) {
+      var part = button.getAttribute('data-part');
+      button.classList.toggle('active', button.getAttribute('data-value') === time[part]);
+    });
+  }
+
+  function syncDatePickerActive(dayValue) {
+    pageEl.querySelectorAll('.dqit-date-grid button').forEach(function (button) {
+      button.classList.toggle('active', button.getAttribute('data-day') === dayValue && !button.classList.contains('muted'));
+    });
+  }
+
+  function closeSchedulePopupDom() {
+    state.schedulePopup = '';
+    pageEl.querySelectorAll('.dqit-time-picker, .dqit-date-picker').forEach(function (popup) {
+      popup.remove();
+    });
+  }
+
+  function closeBasicTimePopupDom() {
+    state.basicTimePopup = '';
+    pageEl.querySelectorAll('.dqit-basic-time-picker').forEach(function (popup) {
+      popup.remove();
+    });
+  }
+
+  function updateTimePart(part, value) {
+    var field = state.schedulePopup === 'date-time' ? 'datetime' : 'time';
+    var source = field === 'datetime' ? (state.form.schedule.datetime.split(' ')[1] || '00:00:00') : state.form.schedule.time;
+    var time = parseTime(source);
+    time[part] = value;
+    var next = time.h + ':' + time.m + ':' + time.s;
+    if (field === 'datetime') {
+      var date = state.form.schedule.datetime.split(' ')[0] || '2026-06-24';
+      state.form.schedule.datetime = date + ' ' + next;
+    } else {
+      state.form.schedule.time = next;
+    }
+    updateScheduleInputs(field, field === 'datetime' ? state.form.schedule.datetime : next);
+    syncTimePickerActive(next);
+  }
+
+  function syncBasicTimePickerActive(timeValue) {
+    var time = parseTime(timeValue);
+    pageEl.querySelectorAll('.dqit-basic-time-picker [data-part]').forEach(function (button) {
+      var part = button.getAttribute('data-part');
+      button.classList.toggle('active', button.getAttribute('data-value') === time[part]);
+    });
+  }
+
+  function updateBasicTimeInputs(field, value) {
+    pageEl.querySelectorAll('[data-dqit-basic-time-param="' + field + '"]').forEach(function (input) {
+      input.value = value;
+    });
+    syncBasicTimePickerActive(value || '00:00:00');
+  }
+
+  function updateBasicTimePart(part, value) {
+    var field = state.basicTimePopup;
+    if (!field || !state.form) return;
+    ensureBasicFormDefaults();
+    var time = parseTime(state.form.timeParams[field]);
+    time[part] = value;
+    var next = time.h + ':' + time.m + ':' + time.s;
+    state.form.timeParams[field] = next;
+    updateBasicTimeInputs(field, next);
+  }
+
+  function choosePickerNode(actionEl) {
+    var key = actionEl.getAttribute('data-key');
+    var picker = state.openPicker;
+    var tree = picker === 'dataSource' ? dataSourceTree : taskTree;
+    var node = findTreeNode(tree, key);
+    if (!node || !state.form) return;
+    if (picker === 'dataSource') {
+      state.form.dataSourceKey = node.key;
+      state.form.dataSource = node.label;
+    } else {
+      state.form.businessLayerKey = node.key;
+      state.form.businessLayer = node.label;
+    }
+    state.openPicker = '';
+    state.pickerKeyword = '';
+    renderAll();
+  }
+
+  function chooseParamOption(actionEl) {
+    var selectId = actionEl.getAttribute('data-select-id') || '';
+    var value = actionEl.getAttribute('data-value') || '';
+    var parts = selectId.split('-');
+    var index = Number(parts[1]);
+    var field = parts[2];
+    if (state.form && state.form.params[index]) state.form.params[index][field] = value;
+    state.openParamSelect = '';
+    state.paramKeyword = '';
+    renderAll();
+  }
+
+  function openRuleModal() {
+    state.ruleModal = {
+      treeKey: 'rule-business',
+      treeKeyword: '',
+      keyword: '',
+      selectedId: state.form ? state.form.ruleId : 'rule-repeat'
+    };
+    renderAll();
+  }
+
+  function chooseRule() {
+    if (!state.ruleModal || !state.form) return;
+    var selected = ruleRows.filter(function (row) { return row.id === state.ruleModal.selectedId; })[0] || ruleRows[1];
+    state.form.ruleId = selected.id;
+    state.form.ruleName = selected.name;
+    state.ruleModal = null;
+    renderAll();
+    showToast('稽查规则已选择');
+  }
+
+  function openStandardModal() {
+    var selectedIds = {};
+    var selectedKey = state.form && state.form.standardDataKey ? state.form.standardDataKey : 'phone';
+    selectedIds[selectedKey] = true;
+    state.standardModal = {
+      treeKey: selectedKey === 'phone' ? 'std-warehouse' : 'std-business',
+      treeKeyword: '',
+      keyword: '',
+      selectedIds: selectedIds
+    };
+    renderAll();
+  }
+
+  function toggleStandardRow(actionEl) {
+    if (!state.standardModal) return;
+    var id = actionEl.getAttribute('data-standard-id') || '';
+    if (!id) return;
+    if (!state.standardModal.selectedIds) state.standardModal.selectedIds = {};
+    if (state.standardModal.selectedIds[id]) delete state.standardModal.selectedIds[id];
+    else state.standardModal.selectedIds[id] = true;
+    renderAll();
+  }
+
+  function chooseStandard() {
+    if (!state.standardModal || !state.form) return;
+    var selectedIds = state.standardModal.selectedIds || {};
+    var selected = standardRows.filter(function (row) { return selectedIds[row.id]; })[0];
+    if (!selected) {
+      showToast('请先选择标准数据');
+      return;
+    }
+    state.form.standardDataKey = selected.id;
+    state.form.standardData = selected.alias;
+    state.form.qualityRule = selected.id === 'phone' ? '电话号码与手机号码校验(11位)码校验' : selected.alias + '标准值域校验';
+    state.form.entities = cloneStandardEntities();
+    state.standardModal = null;
+    renderAll();
+    showToast('标准数据已添加');
+  }
+
+  function toggleBasicRuleSelect(actionEl) {
+    var selectId = actionEl.getAttribute('data-select-id') || '';
+    state.openBasicRuleSelect = state.openBasicRuleSelect === selectId ? '' : selectId;
+    state.openPicker = '';
+    state.openParamSelect = '';
+    state.basicRuleKeyword = '';
+    state.basicTimePopup = '';
+    renderAllKeepFormScroll();
+  }
+
+  function chooseBasicRule(actionEl) {
+    if (!state.form) return;
+    var index = Number(actionEl.getAttribute('data-index'));
+    var ruleId = actionEl.getAttribute('data-rule-id') || 'field-not-null';
+    if (state.form.entities[index]) state.form.entities[index].ruleId = ruleId;
+    state.openBasicRuleSelect = '';
+    state.basicRuleKeyword = '';
+    renderAllKeepFormScroll();
+  }
+
+  function addBasicEntity() {
+    if (!state.form) return;
+    state.basicFieldModal = {
+      treeKey: 'dim-order-status',
+      treeKeyword: '',
+      keyword: '',
+      selectedIds: {},
+      treeOpen: {
+        ods: true,
+        'workorder-ods': true
+      }
+    };
+    renderAllKeepFormScroll();
+  }
+
+  function deleteBasicEntity(actionEl) {
+    if (!state.form) return;
+    var index = Number(actionEl.getAttribute('data-index'));
+    if (state.form.entities.length <= 1) {
+      showToast('至少保留 1 个稽查实体');
+      return;
+    }
+    state.form.entities.splice(index, 1);
+    state.openBasicRuleSelect = '';
+    renderAllKeepFormScroll();
+    showToast('稽查字段已删除');
+  }
+
+  function toggleBasicFieldRow(actionEl) {
+    if (!state.basicFieldModal) return;
+    var id = actionEl.getAttribute('data-field-id') || '';
+    if (!id) return;
+    if (state.basicFieldModal.selectedIds[id]) delete state.basicFieldModal.selectedIds[id];
+    else state.basicFieldModal.selectedIds[id] = true;
+    renderAllKeepFormScroll();
+  }
+
+  function toggleBasicFieldAll() {
+    if (!state.basicFieldModal) return;
+    var rows = getBasicFieldRows();
+    var selectedIds = state.basicFieldModal.selectedIds || {};
+    var allChecked = rows.length && rows.every(function (row) { return selectedIds[row.id]; });
+    rows.forEach(function (row) {
+      if (allChecked) delete selectedIds[row.id];
+      else selectedIds[row.id] = true;
+    });
+    state.basicFieldModal.selectedIds = selectedIds;
+    renderAllKeepFormScroll();
+  }
+
+  function chooseBasicFields() {
+    if (!state.form || !state.basicFieldModal) return;
+    var selectedIds = state.basicFieldModal.selectedIds || {};
+    var selected = basicFieldRows.filter(function (row) { return selectedIds[row.id]; });
+    if (!selected.length) {
+      showToast('请先选择稽查字段');
+      return;
+    }
+    var exists = {};
+    (state.form.entities || []).forEach(function (entity) {
+      exists[entity.name] = true;
+    });
+    var added = 0;
+    selected.forEach(function (row) {
+      var name = 'tms_demo.' + row.table + '.' + row.enName;
+      if (exists[name]) return;
+      state.form.entities.push({
+        name: name,
+        alias: row.alias,
+        ruleId: 'field-not-null'
+      });
+      exists[name] = true;
+      added++;
+    });
+    state.basicFieldModal = null;
+    state.reportSqlModal = null;
+    state.reportLogModal = null;
+    state.viewTaskId = '';
+    state.reportRunIndex = 0;
+    state.resultPage = 1;
+    state.resultPageSize = 10;
+    renderAllKeepFormScroll();
+    showToast(added ? '稽查字段已添加' : '所选字段已存在');
+  }
+
+  function openResultList(id) {
+    var item = getTaskById(id) || taskRows[0];
+    state.view = 'result';
+    state.viewTaskId = item ? item.id : '';
+    state.resultPage = 1;
+    state.reportRunIndex = 0;
+    state.reportSqlModal = null;
+    state.reportLogModal = null;
+    state.selectedIds = {};
+    renderAll();
+  }
+
+  function openReportDetail(actionEl) {
+    state.reportRunIndex = Number(actionEl.getAttribute('data-run-index')) || 0;
+    state.view = 'report';
+    state.reportSqlModal = null;
+    state.reportLogModal = null;
+    renderAll();
+  }
+
+  function openReportSql(actionEl) {
+    state.reportRunIndex = Number(actionEl.getAttribute('data-run-index')) || 0;
+    state.reportSqlModal = true;
+    state.reportLogModal = null;
+    renderAllKeepFormScroll();
+  }
+
+  function openReportLog(actionEl) {
+    state.reportRunIndex = Number(actionEl.getAttribute('data-run-index')) || 0;
+    state.view = 'log';
+    state.reportLogModal = null;
+    state.reportSqlModal = null;
+    renderAll();
+  }
+
   function handleAction(actionEl) {
     var action = actionEl.getAttribute('data-dqit-action');
     var id = actionEl.getAttribute('data-id') || '';
     if (action === 'toggle-tree') {
       var key = actionEl.getAttribute('data-key') || '';
       state.treeOpen[key] = !state.treeOpen[key];
-      var tree = pageEl.querySelector('[data-dqit-tree]');
-      if (tree) tree.innerHTML = renderTree();
+      renderAllKeepFormScroll();
     } else if (action === 'query') {
       var input = pageEl.querySelector('#dqitKeywordInput');
       state.filters.keyword = input ? input.value.trim() : '';
       state.page = 1;
       state.selectedIds = {};
-      renderMain();
+      renderAllKeepFormScroll();
+    } else if (action === 'entry-custom') {
+      openForm('custom', 'create');
+    } else if (action === 'entry-standard') {
+      openForm('standard', 'create');
+    } else if (action === 'entry-basic') {
+      openForm('basic', 'create');
     } else if (action === 'start-selected') {
       openOperation('start', getSelectedIds());
     } else if (action === 'stop-selected') {
@@ -503,24 +2616,233 @@ DP.pages.qualityInspectTask = (function () {
     } else if (action === 'confirm-modal') {
       applyOperation();
     } else if (action === 'view-row') {
-      showToast('查看详情入口已保留，详情页未设计');
+      openResultList(id);
     } else if (action === 'edit-row') {
-      showToast('编辑入口已保留，编辑页未设计');
-    } else if (action.indexOf('entry-') === 0) {
-      showToast('创建入口已保留，本次只设计列表页面');
+      var editItem = getTaskById(id);
+      openForm(editItem && editItem.type === '标准稽查' ? 'standard' : (editItem && editItem.type === '基础稽查' ? 'basic' : 'custom'), 'edit', id);
+    } else if (action === 'back-list') {
+      backToList();
+    } else if (action === 'back-result-list') {
+      state.view = 'result';
+      state.reportSqlModal = null;
+      state.reportLogModal = null;
+      renderAll();
+    } else if (action === 'open-report-detail') {
+      openReportDetail(actionEl);
+    } else if (action === 'open-report-sql') {
+      openReportSql(actionEl);
+    } else if (action === 'open-report-log') {
+      openReportLog(actionEl);
+    } else if (action === 'close-report-sql') {
+      state.reportSqlModal = null;
+      renderAllKeepFormScroll();
+    } else if (action === 'close-report-log') {
+      state.reportLogModal = null;
+      renderAllKeepFormScroll();
+    } else if (action === 'open-rule-modal') {
+      openRuleModal();
+    } else if (action === 'close-rule-modal') {
+      state.ruleModal = null;
+      renderAllKeepFormScroll();
+    } else if (action === 'select-rule-tree') {
+      state.ruleModal.treeKey = actionEl.getAttribute('data-key') || 'rule-business';
+      renderAllKeepFormScroll();
+    } else if (action === 'select-rule') {
+      state.ruleModal.selectedId = actionEl.getAttribute('data-rule-id') || state.ruleModal.selectedId;
+      renderAll();
+    } else if (action === 'choose-rule') {
+      chooseRule();
+    } else if (action === 'query-rule') {
+      renderAll();
+    } else if (action === 'open-standard-modal') {
+      openStandardModal();
+    } else if (action === 'close-standard-modal') {
+      state.standardModal = null;
+      renderAllKeepFormScroll();
+    } else if (action === 'select-standard-tree') {
+      state.standardModal.treeKey = actionEl.getAttribute('data-key') || 'std-business';
+      renderAllKeepFormScroll();
+    } else if (action === 'toggle-standard-tree') {
+      var standardToggleKey = actionEl.getAttribute('data-key') || '';
+      state.treeOpen[standardToggleKey] = !state.treeOpen[standardToggleKey];
+      renderAllKeepFormScroll();
+    } else if (action === 'toggle-standard-row') {
+      toggleStandardRow(actionEl);
+    } else if (action === 'choose-standard') {
+      chooseStandard();
+    } else if (action === 'query-standard') {
+      renderAll();
+    } else if (action === 'toggle-basic-rule-select') {
+      toggleBasicRuleSelect(actionEl);
+    } else if (action === 'choose-basic-rule') {
+      chooseBasicRule(actionEl);
+    } else if (action === 'query-basic-rule') {
+      renderAllKeepFormScroll();
+    } else if (action === 'add-basic-entity') {
+      addBasicEntity();
+    } else if (action === 'delete-basic-entity') {
+      deleteBasicEntity(actionEl);
+    } else if (action === 'close-basic-field-modal') {
+      state.basicFieldModal = null;
+      renderAllKeepFormScroll();
+    } else if (action === 'select-basic-field-tree') {
+      var basicFieldKey = actionEl.getAttribute('data-key') || 'dim-order-status';
+      var basicFieldNode = findBasicFieldNode(basicFieldTree, basicFieldKey);
+      state.basicFieldModal.treeKey = basicFieldKey;
+      if (basicFieldNode && (basicFieldNode.children || []).length) {
+        var basicTreeOpen = getBasicFieldOpenMap();
+        basicTreeOpen[basicFieldKey] = true;
+      }
+      renderAllKeepFormScroll();
+    } else if (action === 'toggle-basic-field-tree') {
+      var basicToggleKey = actionEl.getAttribute('data-key') || '';
+      var openMap = getBasicFieldOpenMap();
+      openMap[basicToggleKey] = !openMap[basicToggleKey];
+      renderAllKeepFormScroll();
+    } else if (action === 'toggle-basic-field-row') {
+      toggleBasicFieldRow(actionEl);
+    } else if (action === 'toggle-basic-field-all') {
+      toggleBasicFieldAll();
+    } else if (action === 'query-basic-field') {
+      renderAllKeepFormScroll();
+    } else if (action === 'choose-basic-fields') {
+      chooseBasicFields();
+    } else if (action === 'toggle-picker') {
+      var picker = actionEl.getAttribute('data-picker') || '';
+      state.openPicker = state.openPicker === picker ? '' : picker;
+      state.openParamSelect = '';
+      state.openBasicRuleSelect = '';
+      state.basicTimePopup = '';
+      state.pickerKeyword = '';
+      renderAll();
+    } else if (action === 'choose-picker-node') {
+      choosePickerNode(actionEl);
+    } else if (action === 'toggle-picker-tree') {
+      var toggleKey = actionEl.getAttribute('data-key') || '';
+      state.treeOpen[toggleKey] = !state.treeOpen[toggleKey];
+      renderAll();
+    } else if (action === 'toggle-param-select') {
+      var selectId = actionEl.getAttribute('data-select-id') || '';
+      state.openParamSelect = state.openParamSelect === selectId ? '' : selectId;
+      state.openPicker = '';
+      state.openBasicRuleSelect = '';
+      state.basicTimePopup = '';
+      state.paramKeyword = '';
+      renderAll();
+    } else if (action === 'choose-param-option') {
+      chooseParamOption(actionEl);
+    } else if (action === 'generate-sql') {
+      generateSql();
+    } else if (action === 'test-sql') {
+      showToast('测试执行完成，未发现重复记录');
+    } else if (action === 'format-sql') {
+      var sqlKey = actionEl.getAttribute('data-sql-key') || 'template';
+      setSqlText(sqlKey, formatSqlText(getPlainSqlText(sqlKey)));
+      showToast('SQL 已格式化');
+    } else if (action === 'copy-sql') {
+      var copyKey = actionEl.getAttribute('data-sql-key') || 'template';
+      var button = actionEl;
+      function done() {
+        button.innerHTML = '<i class="bi bi-check2"></i><span>已复制</span>';
+        window.setTimeout(function () {
+          button.innerHTML = '<i class="bi bi-clipboard"></i><span>复制</span>';
+        }, 1200);
+      }
+      if (navigator.clipboard) navigator.clipboard.writeText(getPlainSqlText(copyKey)).then(done).catch(function () { showToast('复制失败'); });
+      else done();
+    } else if (action === 'toggle-sql-search') {
+      var toggleSqlKey = actionEl.getAttribute('data-sql-key') || 'template';
+      state.sql[toggleSqlKey].searchOpen = !state.sql[toggleSqlKey].searchOpen;
+      renderAll();
+    } else if (action === 'close-sql-search') {
+      var closeSqlKey = actionEl.getAttribute('data-sql-key') || 'template';
+      state.sql[closeSqlKey].searchOpen = false;
+      renderAll();
+    } else if (action === 'open-schedule-popup') {
+      state.schedulePopup = actionEl.getAttribute('data-popup') || '';
+      state.basicTimePopup = '';
+      renderAllKeepFormScroll();
+    } else if (action === 'pick-time-part') {
+      updateTimePart(actionEl.getAttribute('data-part'), actionEl.getAttribute('data-value'));
+    } else if (action === 'open-basic-time-popup') {
+      state.basicTimePopup = actionEl.getAttribute('data-time-field') || '';
+      state.schedulePopup = '';
+      renderAllKeepFormScroll();
+    } else if (action === 'pick-basic-time-part') {
+      updateBasicTimePart(actionEl.getAttribute('data-part'), actionEl.getAttribute('data-value'));
+    } else if (action === 'basic-time-clear') {
+      if (state.basicTimePopup && state.form) {
+        ensureBasicFormDefaults();
+        state.form.timeParams[state.basicTimePopup] = '';
+        updateBasicTimeInputs(state.basicTimePopup, '');
+      }
+    } else if (action === 'basic-time-now') {
+      if (state.basicTimePopup && state.form) {
+        ensureBasicFormDefaults();
+        state.form.timeParams[state.basicTimePopup] = '11:55:32';
+        updateBasicTimeInputs(state.basicTimePopup, '11:55:32');
+      }
+    } else if (action === 'basic-time-ok') {
+      closeBasicTimePopupDom();
+    } else if (action === 'pick-date-day') {
+      var day = String(actionEl.getAttribute('data-day') || '24').padStart(2, '0');
+      var time = state.form.schedule.datetime.split(' ')[1] || '09:18:48';
+      state.form.schedule.datetime = '2026-06-' + day + ' ' + time;
+      updateScheduleInputs('datetime', state.form.schedule.datetime);
+      syncDatePickerActive(actionEl.getAttribute('data-day') || '24');
+    } else if (action === 'schedule-clear') {
+      if (state.schedulePopup === 'date') {
+        state.form.schedule.datetime = '';
+        updateScheduleInputs('datetime', '');
+      } else {
+        state.form.schedule.time = '';
+        updateScheduleInputs('time', '');
+        syncTimePickerActive('00:00:00');
+      }
+    } else if (action === 'schedule-now') {
+      if (state.schedulePopup === 'date') {
+        state.form.schedule.datetime = '2026-06-24 09:18:48';
+        updateScheduleInputs('datetime', state.form.schedule.datetime);
+        syncDatePickerActive('24');
+      } else {
+        state.form.schedule.time = '11:55:32';
+        updateScheduleInputs('time', state.form.schedule.time);
+        syncTimePickerActive(state.form.schedule.time);
+      }
+    } else if (action === 'schedule-ok') {
+      closeSchedulePopupDom();
+    } else if (action === 'save-form') {
+      saveForm();
     }
   }
 
   function bindEvents() {
+    pageEl.addEventListener('mousedown', function (e) {
+      var scheduleTarget = e.target.closest('[data-dqit-action="open-schedule-popup"], [data-dqit-action="open-basic-time-popup"], .dqit-time-picker button, .dqit-date-picker button');
+      if (scheduleTarget && pageEl.contains(scheduleTarget)) {
+        e.preventDefault();
+      }
+    });
+
     pageEl.addEventListener('click', function (e) {
       var mask = e.target.closest('[data-dqit-modal-mask]');
       if (mask && e.target === mask) {
-        closeModal();
+        if (mask.getAttribute('data-dqit-modal-mask') === 'rule') state.ruleModal = null;
+        else if (mask.getAttribute('data-dqit-modal-mask') === 'standard') state.standardModal = null;
+        else if (mask.getAttribute('data-dqit-modal-mask') === 'basic-field') state.basicFieldModal = null;
+        else if (mask.getAttribute('data-dqit-modal-mask') === 'report-sql') state.reportSqlModal = null;
+        else if (mask.getAttribute('data-dqit-modal-mask') === 'report-log') state.reportLogModal = null;
+        else state.modal = null;
+        renderAllKeepFormScroll();
         return;
       }
 
       var actionEl = e.target.closest('[data-dqit-action]');
       if (actionEl && pageEl.contains(actionEl)) {
+        var action = actionEl.getAttribute('data-dqit-action') || '';
+        if (action.indexOf('schedule-') === 0 || action.indexOf('basic-time-') === 0 || action === 'open-schedule-popup' || action === 'open-basic-time-popup' || action === 'pick-time-part' || action === 'pick-basic-time-part' || action === 'pick-date-day') {
+          e.preventDefault();
+        }
         handleAction(actionEl);
         return;
       }
@@ -542,16 +2864,39 @@ DP.pages.qualityInspectTask = (function () {
         if (target === 'prev') state.page = Math.max(1, state.page - 1);
         else if (target === 'next') state.page = Math.min(totalPages, state.page + 1);
         else state.page = Number(target) || 1;
-        renderMain();
+        renderAll();
+        return;
+      }
+
+      var resultPageBtn = e.target.closest('[data-dqit-result-page]');
+      if (resultPageBtn && pageEl.contains(resultPageBtn) && !resultPageBtn.disabled) {
+        var resultTotalPages = Math.max(1, Math.ceil(getResultTotal() / state.resultPageSize));
+        var resultTarget = resultPageBtn.getAttribute('data-dqit-result-page');
+        if (resultTarget === 'prev') state.resultPage = Math.max(1, state.resultPage - 1);
+        else if (resultTarget === 'next') state.resultPage = Math.min(resultTotalPages, state.resultPage + 1);
+        else state.resultPage = Number(resultTarget) || 1;
+        renderAll();
+        return;
+      }
+
+      if (state.openPicker || state.openParamSelect || state.openBasicRuleSelect || state.schedulePopup || state.basicTimePopup) {
+        state.openPicker = '';
+        state.openParamSelect = '';
+        state.openBasicRuleSelect = '';
+        state.basicRuleKeyword = '';
+        state.schedulePopup = '';
+        state.basicTimePopup = '';
+        renderAll();
       }
     });
 
     pageEl.addEventListener('change', function (e) {
-      if (e.target.matches('[data-dqit-filter="status"]')) {
-        state.filters.status = e.target.value;
+      if (e.target.matches('[data-dqit-filter]')) {
+        var filterKey = e.target.getAttribute('data-dqit-filter');
+        state.filters[filterKey] = e.target.value;
         state.page = 1;
         state.selectedIds = {};
-        renderMain();
+        renderAll();
         return;
       }
       if (e.target.matches('[data-dqit-check-all]')) {
@@ -559,21 +2904,84 @@ DP.pages.qualityInspectTask = (function () {
           if (e.target.checked) state.selectedIds[item.id] = true;
           else delete state.selectedIds[item.id];
         });
-        renderMain();
+        renderAll();
         return;
       }
       if (e.target.matches('[data-dqit-row-check]')) {
         var id = e.target.getAttribute('data-dqit-row-check');
         if (e.target.checked) state.selectedIds[id] = true;
         else delete state.selectedIds[id];
-        renderMain();
+        renderAll();
         return;
       }
       if (e.target.matches('[data-dqit-page-size]')) {
         state.pageSize = Number(e.target.value) || 16;
         state.page = 1;
         state.selectedIds = {};
-        renderMain();
+        renderAll();
+        return;
+      }
+      if (e.target.matches('[data-dqit-result-page-size]')) {
+        state.resultPageSize = Number(e.target.value) || 10;
+        state.resultPage = 1;
+        renderAll();
+        return;
+      }
+      if (e.target.matches('[data-dqit-schedule-field]')) {
+        if (!state.form) return;
+        state.form.schedule[e.target.getAttribute('data-dqit-schedule-field')] = e.target.value;
+        state.schedulePopup = '';
+        renderAllKeepFormScroll();
+        return;
+      }
+      if (e.target.matches('[data-dqit-custom-field]')) {
+        if (!state.form) return;
+        var customKey = e.target.getAttribute('data-dqit-custom-field');
+        state.form[customKey] = e.target.value;
+        if (customKey === 'ruleMode') {
+          state.ruleModal = null;
+          state.openPicker = '';
+          state.openParamSelect = '';
+          state.openBasicRuleSelect = '';
+          state.pickerKeyword = '';
+          state.paramKeyword = '';
+          state.basicRuleKeyword = '';
+          renderAllKeepFormScroll();
+        }
+        return;
+      }
+      if (e.target.matches('[data-dqit-standard-field], [data-dqit-basic-field]')) {
+        if (!state.form) return;
+        var formKey = e.target.getAttribute('data-dqit-standard-field') || e.target.getAttribute('data-dqit-basic-field');
+        state.form[formKey] = e.target.value;
+        if (formKey === 'inspectMode' || formKey === 'paramMode') {
+          state.schedulePopup = '';
+          state.basicTimePopup = '';
+          renderAllKeepFormScroll();
+        }
+        return;
+      }
+      if (e.target.matches('[data-dqit-basic-time-param]')) {
+        if (!state.form) return;
+        ensureBasicFormDefaults();
+        state.form.timeParams[e.target.getAttribute('data-dqit-basic-time-param')] = e.target.value;
+        return;
+      }
+      if (e.target.matches('[data-dqit-sql-theme]')) {
+        var themeKey = e.target.getAttribute('data-dqit-sql-theme');
+        state.sql[themeKey].theme = e.target.value === 'light' ? 'light' : 'dark';
+        var editor = pageEl.querySelector('[data-dqit-sql-editor="' + themeKey + '"]');
+        if (editor) {
+          editor.classList.toggle('theme-light', state.sql[themeKey].theme === 'light');
+          editor.classList.toggle('theme-dark', state.sql[themeKey].theme !== 'light');
+        }
+        return;
+      }
+      if (e.target.matches('[data-dqit-sql-font]')) {
+        var fontKey = e.target.getAttribute('data-dqit-sql-font');
+        state.sql[fontKey].font = e.target.value || '14px';
+        var fontEditor = pageEl.querySelector('[data-dqit-sql-editor="' + fontKey + '"]');
+        if (fontEditor) fontEditor.style.fontSize = state.sql[fontKey].font;
       }
     });
 
@@ -582,6 +2990,82 @@ DP.pages.qualityInspectTask = (function () {
         state.treeKeyword = e.target.value;
         var tree = pageEl.querySelector('[data-dqit-tree]');
         if (tree) tree.innerHTML = renderTree();
+        return;
+      }
+      if (e.target.matches('[data-dqit-picker-search]')) {
+        state.pickerKeyword = e.target.value;
+        renderAll();
+        return;
+      }
+      if (e.target.matches('[data-dqit-param-search]')) {
+        state.paramKeyword = e.target.value;
+        renderAll();
+        return;
+      }
+      if (e.target.matches('[data-dqit-rule-tree-search]')) {
+        state.ruleModal.treeKeyword = e.target.value;
+        renderAll();
+        return;
+      }
+      if (e.target.matches('[data-dqit-rule-keyword]')) {
+        state.ruleModal.keyword = e.target.value;
+        renderAll();
+        return;
+      }
+      if (e.target.matches('[data-dqit-standard-tree-search]')) {
+        if (!state.standardModal) return;
+        state.standardModal.treeKeyword = e.target.value;
+        renderAll();
+        return;
+      }
+      if (e.target.matches('[data-dqit-standard-keyword]')) {
+        if (!state.standardModal) return;
+        state.standardModal.keyword = e.target.value;
+        renderAll();
+        return;
+      }
+      if (e.target.matches('[data-dqit-basic-rule-search]')) {
+        state.basicRuleKeyword = e.target.value;
+        renderAllKeepFormScroll();
+        return;
+      }
+      if (e.target.matches('[data-dqit-basic-field-tree-search]')) {
+        if (!state.basicFieldModal) return;
+        state.basicFieldModal.treeKeyword = e.target.value;
+        renderAllKeepFormScroll();
+        return;
+      }
+      if (e.target.matches('[data-dqit-basic-field-keyword]')) {
+        if (!state.basicFieldModal) return;
+        state.basicFieldModal.keyword = e.target.value;
+        renderAllKeepFormScroll();
+        return;
+      }
+      if (e.target.matches('[data-dqit-form-field]')) {
+        if (!state.form) return;
+        state.form[e.target.getAttribute('data-dqit-form-field')] = e.target.value;
+        return;
+      }
+      if (e.target.matches('[data-dqit-schedule-field]')) {
+        if (!state.form) return;
+        state.form.schedule[e.target.getAttribute('data-dqit-schedule-field')] = e.target.value;
+        updateScheduleHint();
+        return;
+      }
+      if (e.target.matches('[data-dqit-sql-content]')) {
+        var key = e.target.getAttribute('data-dqit-sql-content');
+        if (state.form && key === 'template') state.form.sqlTemplate = e.target.innerText || e.target.textContent || '';
+        if (state.form && key === 'generated') state.form.sqlGenerated = e.target.innerText || e.target.textContent || '';
+        if (state.form && key === 'customRule') state.form.sqlCustom = e.target.innerText || e.target.textContent || '';
+        if (state.form && key === 'basicCustom') state.form.customSql = e.target.innerText || e.target.textContent || '';
+        var gutter = pageEl.querySelector('[data-dqit-sql-gutter="' + key + '"]');
+        if (gutter) gutter.innerHTML = lineNumbers(e.target.innerText || e.target.textContent || '');
+      }
+      if (e.target.matches('[data-dqit-basic-time-param]')) {
+        if (!state.form) return;
+        ensureBasicFormDefaults();
+        state.form.timeParams[e.target.getAttribute('data-dqit-basic-time-param')] = e.target.value;
+        return;
       }
     });
 
@@ -590,13 +3074,31 @@ DP.pages.qualityInspectTask = (function () {
         var query = pageEl.querySelector('[data-dqit-action="query"]');
         if (query) query.click();
       }
-      if (e.key === 'Escape' && state.modal) {
-        closeModal();
+      if (e.key === 'Escape') {
+        if (state.modal || state.ruleModal || state.standardModal || state.basicFieldModal || state.reportSqlModal || state.reportLogModal || state.openPicker || state.openParamSelect || state.openBasicRuleSelect || state.schedulePopup || state.basicTimePopup) {
+          state.modal = null;
+          state.ruleModal = null;
+          state.standardModal = null;
+          state.basicFieldModal = null;
+          state.reportSqlModal = null;
+          state.reportLogModal = null;
+          state.openPicker = '';
+          state.openParamSelect = '';
+          state.openBasicRuleSelect = '';
+          state.basicRuleKeyword = '';
+          state.schedulePopup = '';
+          state.basicTimePopup = '';
+          renderAll();
+        }
       }
     });
   }
 
   function resetState() {
+    state.view = 'list';
+    state.formMode = 'create';
+    state.formKind = 'custom';
+    state.editingId = '';
     state.treeKey = 'demo';
     state.treeKeyword = '';
     state.treeOpen = {
@@ -605,28 +3107,42 @@ DP.pages.qualityInspectTask = (function () {
       business: true,
       'biz-core': true,
       standard: true,
-      'standard-domain': true
+      'standard-domain': true,
+      'ds-root': true,
+      'ds-business': true,
+      'rule-demo': true,
+      'rule-business': true,
+      'std-business': true,
+      'std-warehouse': true
     };
     state.selectedIds = {};
     state.page = 1;
     state.pageSize = 16;
-    state.filters = { status: '', keyword: '' };
+    state.filters = { status: '', type: '', keyword: '' };
+    state.form = null;
     state.modal = null;
+    state.ruleModal = null;
+    state.standardModal = null;
+    state.basicFieldModal = null;
+    state.openPicker = '';
+    state.pickerKeyword = '';
+    state.openParamSelect = '';
+    state.paramKeyword = '';
+    state.openBasicRuleSelect = '';
+    state.basicRuleKeyword = '';
+    state.schedulePopup = '';
+    state.basicTimePopup = '';
+    state.sql = {
+      template: { theme: 'dark', font: '14px', searchOpen: false },
+      generated: { theme: 'dark', font: '14px', searchOpen: false },
+      customRule: { theme: 'dark', font: '14px', searchOpen: false },
+      basicCustom: { theme: 'dark', font: '14px', searchOpen: false },
+      reportSql: { theme: 'light', font: '14px', searchOpen: false }
+    };
   }
 
-  var html = '<div class="page-quality-inspect-task">' +
-    '<aside class="dqit-left-panel">' +
-      '<div class="dqit-tree-search">' +
-        '<input type="text" data-dqit-tree-search placeholder="关键字搜索" aria-label="关键字搜索">' +
-        '<button type="button" aria-label="搜索目录"><i class="bi bi-search"></i></button>' +
-      '</div>' +
-      '<div class="dqit-tree-scroll"><ul class="dqit-tree" data-dqit-tree></ul></div>' +
-    '</aside>' +
-    '<section class="dqit-main-panel" data-dqit-main></section>' +
-  '</div>';
-
   return {
-    html: html,
+    html: '<div class="page-quality-inspect-task"></div>',
     init: function () {
       pageEl = document.querySelector('.page-quality-inspect-task');
       if (!pageEl) return;

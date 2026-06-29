@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var menuText = getNodeText(link);
     if (!link) return fallbackKey || '';
     if (link.closest('.sub-menu')) return menuKey || menuText || fallbackKey;
-    if (menuKey === 'datasource' || menuKey === 'project-mgr') return menuKey;
+    if (menuKey === 'datasource' || menuKey === 'project-mgr' || menuKey === 'svc-api-dev') return menuKey;
     return menuText || menuKey || fallbackKey;
   }
 
@@ -157,11 +157,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
   navItems.forEach(function (item) {
     item.addEventListener('click', function () {
+      var page = item.dataset.page;
+
+      if (page === 'datamap') {
+        var baseUrl = location.href.replace(/#.*$/, '');
+        var params = new URLSearchParams();
+        params.set('nav', 'datamap');
+        params.set('page', 'datamap-home');
+        window.open(baseUrl + '#' + params.toString(), '_blank');
+        return;
+      }
+
       // 切换激活态
       navItems.forEach(function (n) { n.classList.remove('active'); });
       item.classList.add('active');
 
-      var page = item.dataset.page;
       var name = DP.navNames[page] || page;
 
       // 切换侧边栏菜单组
@@ -187,6 +197,10 @@ document.addEventListener('DOMContentLoaded', function () {
         var devLink = document.querySelector('[data-menu="dev-develop"]');
         if (devLink) devLink.classList.add('active');
         DP.showPage('数据开发');
+      } else if (page === 'service') {
+        var serviceApiDevLink = document.querySelector('[data-menu="svc-api-dev"]');
+        if (serviceApiDevLink) serviceApiDevLink.classList.add('active');
+        DP.showPage('svc-api-dev');
       } else if (page === 'analysis') {
         var dimLink = Array.prototype.find.call(document.querySelectorAll('#menuAnalysis .sub-menu li a'), function (link) {
           return link.textContent.trim() === '维度管理';

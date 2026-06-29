@@ -8,6 +8,8 @@ window.DP = window.DP || {};
  * 切换菜单组（顶部导航切换时调用）
  */
 DP.switchMenuGroup = function (page) {
+  document.body.classList.toggle('datamap-standalone', page === 'datamap');
+
   // 隐藏所有菜单组
   document.querySelectorAll('.menu-group').forEach(function (g) { g.style.display = 'none'; });
   // 隐藏所有额外组件
@@ -54,7 +56,7 @@ DP.initSidebar = function () {
         DP.setActiveMenu(link);
         var menuKey = link.dataset.menu || '';
         var menuText = link.querySelector('span') ? link.querySelector('span').textContent : '';
-        if (menuKey === 'datasource' || menuKey === 'project-mgr') {
+        if (menuKey === 'datasource' || menuKey === 'project-mgr' || menuKey === 'svc-api-dev') {
           DP.showPage(menuKey);
         } else {
           DP.showPage(menuText);

@@ -13,9 +13,14 @@ DP.showPage = function (menuKey, opts) {
   var c = DP.contentArea;
   if (!c) return;
 
+  document.body.classList.toggle('datamap-standalone', menuKey === 'datamap-home' || menuKey === '数据地图');
+
   if (menuKey === 'datasource') {
     c.innerHTML = DP.pages.datasource.html;
     DP.pages.datasource.init();
+  } else if (menuKey === 'datamap-home' || menuKey === '数据地图') {
+    c.innerHTML = DP.pages.dataMapHome.html;
+    DP.pages.dataMapHome.init();
   } else if (menuKey === '技术元数据') {
     c.innerHTML = DP.pages.technicalMetadata.html;
     DP.pages.technicalMetadata.init();
@@ -69,9 +74,15 @@ DP.showPage = function (menuKey, opts) {
   } else if (menuKey === 'quality-rule' || menuKey === '质量规则') {
     c.innerHTML = DP.pages.dataQualityRule.html;
     DP.pages.dataQualityRule.init();
+  } else if (menuKey === 'quality-inspect-report' || menuKey === '稽查报告') {
+    c.innerHTML = DP.pages.qualityInspectReport.html;
+    DP.pages.qualityInspectReport.init();
   } else if (menuKey === 'quality-inspect-task' || menuKey === '稽查任务') {
     c.innerHTML = DP.pages.qualityInspectTask.html;
     DP.pages.qualityInspectTask.init();
+  } else if (menuKey === 'svc-api-dev' || menuKey === '接口开发') {
+    c.innerHTML = DP.pages.serviceApiDev.html;
+    DP.pages.serviceApiDev.init();
   } else if (menuKey === '元数据搜索' || menuKey === '元数据搜索结果') {
     c.innerHTML = DP.pages.metaSearchResult.html;
     DP.pages.metaSearchResult.init(opts);
