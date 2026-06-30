@@ -561,23 +561,57 @@
 .qir-quality-overview {
   grid-template-columns: minmax(0, 1fr) repeat(3, 140px);
   margin-bottom: 12px;
-  align-items: start;
+  align-items: center;
 }
 
 .qir-quality-overview .gt-quality-stat {
-  min-height: 64px;
-  padding: 10px;
-  border-color: #e8edf3;
-  background: #fff;
-  box-shadow: none;
-  align-self: start;
+  min-height: 82px;
+  align-self: center;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 13px 12px;
+  border: 1px solid #dce9f8;
+  border-top: 3px solid var(--primary);
+  border-radius: 6px;
+  background: linear-gradient(180deg, #f8fbff 0%, #fff 100%);
+  box-shadow: 0 8px 20px rgba(34, 91, 157, 0.08);
+  text-align: center;
+}
+
+.qir-quality-overview .gt-quality-stat:nth-of-type(3) {
+  border-color: #d8f0df;
+  border-top-color: #52c41a;
+  background: linear-gradient(180deg, #f6fff8 0%, #fff 100%);
+}
+
+.qir-quality-overview .gt-quality-stat:nth-of-type(4) {
+  border-color: #ffe1c2;
+  border-top-color: #fa8c16;
+  background: linear-gradient(180deg, #fff9f0 0%, #fff 100%);
+}
+
+.qir-quality-overview .gt-quality-stat span {
+  color: #5f7187;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .qir-quality-overview .gt-quality-stat b {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 20px;
+  color: #1559a8;
+  font-size: 23px;
+  line-height: 1.1;
+}
+
+.qir-quality-overview .gt-quality-stat:nth-of-type(3) b {
+  color: #237804;
+}
+
+.qir-quality-overview .gt-quality-stat:nth-of-type(4) b {
+  color: #ad4e00;
 }
 
 .qir-overview-lines {
@@ -601,12 +635,49 @@
 }
 
 .qir-quality-section .gt-quality-section-head {
-  min-height: 76px;
+  min-height: 92px;
   align-items: center;
+  gap: 18px;
 }
 
 .qir-quality-section .qir-rate {
   flex: 0 0 auto;
+  margin-top: 0;
+}
+
+.qir-quality-section-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.qir-issue-summary {
+  margin-top: 8px;
+  color: #526579;
+  font-size: 13px;
+  display: grid;
+  gap: 4px;
+  line-height: 1.65;
+}
+
+.qir-issue-summary p {
+  margin: 0;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.qir-issue-summary b {
+  flex: 0 0 auto;
+  color: #26384d;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.qir-issue-summary span {
+  min-width: 0;
+  color: #5f7187;
+  overflow-wrap: anywhere;
 }
 
 .qir-rule-table-wrap {

@@ -228,7 +228,7 @@ DP.pages.qualityInspectReport = (function () {
     sheetViews += '</sheetView></sheetViews>';
     var rowXml = Object.keys(rowMap).map(function (rowKey) {
       var row = Number(rowKey);
-      var height = row === 1 ? 32 : (row === 3 || row === 8 || row === 11 ? 24 : (row === 5 || row === 6 ? 36 : 22));
+      var height = row === 1 ? 32 : (row === 3 || row === 8 || row === 11 ? 24 : (row === 6 ? 72 : (row === 5 ? 36 : (maxCol === 8 && row >= 13 ? 54 : 22))));
       return '<row r="' + row + '" ht="' + height + '" customHeight="1">' +
         rowMap[rowKey].sort(function (a, b) { return a.col - b.col; }).map(sheetCellXml).join('') +
       '</row>';
@@ -265,7 +265,8 @@ DP.pages.qualityInspectReport = (function () {
   }
 
   function getExportIssueSummary(summary) {
-    return String(summary || '').replace(/^质量问题说明：/, '');
+    var parts = splitRuleSummary(summary);
+    return '质量概述：' + parts.overview + '\n质量要求：' + parts.requirement;
   }
 
   function buildOverviewSheet(report, rules, problemRows) {
@@ -301,7 +302,7 @@ DP.pages.qualityInspectReport = (function () {
       numberCell(9, 8, report.ruleCount, 6),
       textCell(11, 1, '稽查内容清单', 2)
     ];
-    ['序号', '稽查内容', '规则类型', '问题字段', '通过率', '问题记录数', '对应 Sheet', '质量问题说明'].forEach(function (header, index) {
+    ['序号', '稽查内容', '规则类型', '问题字段', '通过率', '问题记录数', '对应 Sheet', '质量概述/质量要求'].forEach(function (header, index) {
       rows.push(textCell(12, index + 1, header, 7));
     });
     rules.forEach(function (rule, index) {
@@ -315,7 +316,7 @@ DP.pages.qualityInspectReport = (function () {
       rows.push(numberCell(row, 5, rule.rate / 100, 11));
       rows.push(numberCell(row, 6, issueCount, 9));
       rows.push(textCell(row, 7, sheetName, 9));
-      rows.push(textCell(row, 8, getExportIssueSummary(rule.summary), 9));
+      rows.push(textCell(row, 8, getExportIssueSummary(rule.summary), 4));
     });
     return worksheetXml(rows, [8, 36, 16, 24, 14, 14, 20, 64], ['A1:H1', 'A3:H3', 'A8:H8', 'A11:H11'], 12);
   }
@@ -338,7 +339,7 @@ DP.pages.qualityInspectReport = (function () {
       numberCell(5, 4, rule.rate / 100, 11),
       textCell(5, 5, '问题记录数', 3),
       numberCell(5, 6, problemRows.length, 9),
-      textCell(6, 1, '质量问题说明', 3),
+      textCell(6, 1, '质量概述/质量要求', 3),
       textCell(6, 2, getExportIssueSummary(rule.summary), 4),
       textCell(6, 3, '最后执行时间', 3),
       textCell(6, 4, report.lastExecutionTime, 4),
@@ -606,35 +607,85 @@ DP.pages.qualityInspectReport = (function () {
         field: issueField,
         desc: issueField + ' 需满足' + tpl.type + '规则，稽查对象为 ' + report.tableName + '。',
         rate: rate,
-        summary: '质量问题说明：' + report.alias + '的 ' + issueField + ' 字段在“' + tpl.ruleName + '”中命中问题记录 ' + issueCount + ' 条，通过率为 ' + rate + '%，' + getRuleIssueSummary(tpl.ruleKey, issueField) + '。'
+        summary: '质量概述：' + report.alias + '的 ' + issueField + ' 字段在“' + tpl.ruleName + '”中命中问题记录 ' + issueCount + ' 条，通过率为 ' + rate + '%。' + getRuleIssueSummary(tpl.ruleKey, issueField)
       };
     });
   }
 
   function getRuleIssueSummary(ruleKey, issueField) {
-    var summaries = {
-      required: issueField + ' 存在空值或未写入，影响关键记录的唯一定位和后续链路追踪',
-      unique: issueField + ' 存在重复取值，可能导致同一业务对象被重复识别或覆盖',
-      range: issueField + ' 存在超出合理业务范围的取值，可能影响金额、数量或评分类指标统计',
-      enum: issueField + ' 存在未定义或非法枚举值，可能导致状态流转、分组统计和规则判断异常',
-      format: issueField + ' 存在不符合格式约束的取值，可能影响日期、手机号、证件号等字段解析',
-      relation: issueField + ' 存在无法匹配关联主数据或维表的取值，可能造成关联查询和指标汇总缺失'
+    return '质量要求：' + getRuleRequirementSummary(ruleKey, issueField);
+  }
+
+  function getRuleRequirementSummary(ruleKey, issueField) {
+    var enumRequirements = {
+      order_status: '合法枚举值为：0（其他）、1（一级）、2（二级）、3（三级），不允许出现 -1、99、NULL 或未配置状态码。',
+      status: '合法枚举值为：0（停用）、1（启用）、2（冻结）、3（注销），不允许出现未配置状态码。',
+      stock_status: '合法枚举值为：0（下架）、1（在售）、2（缺货）、3（预售），不允许出现未配置状态码。',
+      customer_level: '合法枚举值为：0（普通）、1（银牌）、2（金牌）、3（铂金），不允许出现未配置等级。',
+      approve_status: '合法枚举值为：0（待审批）、1（审批中）、2（已通过）、3（已驳回），不允许出现未配置审批状态。',
+      region_level: '合法枚举值为：0（国家）、1（省级）、2（市级）、3（区县级），不允许出现未配置层级。',
+      event_type: '合法枚举值为：0（其他）、1（浏览）、2（点击）、3（提交），不允许出现未配置事件类型。'
     };
-    return summaries[ruleKey] || issueField + ' 存在不符合当前质量规则的异常取值';
+    if (ruleKey === 'required') {
+      return issueField + ' 为必填字段，不能为空、不能为 NULL，主键、业务关键字段和关联字段必须在入库时完成写入。';
+    }
+    if (ruleKey === 'unique') {
+      return issueField + ' 在本次稽查范围内必须唯一，不允许多条记录共用同一个业务键；重复值需要回溯上游生成逻辑或去重策略。';
+    }
+    if (ruleKey === 'range') {
+      if (issueField.indexOf('amount') >= 0 || issueField.indexOf('price') >= 0) {
+        return issueField + ' 合理取值应大于等于 0，不能为负数；金额类字段应保留两位小数，不能出现无业务含义的异常金额。';
+      }
+      if (issueField.indexOf('qty') >= 0) {
+        return issueField + ' 合理取值应为大于等于 0 的整数，不能为负数，库存或数量类字段不能出现无业务含义的异常数量。';
+      }
+      if (issueField.indexOf('days') >= 0) {
+        return issueField + ' 合理取值应大于 0 且不超过 365，不能为 0、负数或明显超出业务周期的天数。';
+      }
+      if (issueField.indexOf('score') >= 0) {
+        return issueField + ' 合理取值范围为 0 到 100，不能为负数，也不能超过评分上限。';
+      }
+      if (issueField.indexOf('duration') >= 0) {
+        return issueField + ' 合理取值应大于等于 0 且处于业务可接受范围内，不能为负数或明显超出正常处理时长。';
+      }
+      if (issueField.indexOf('year') >= 0) {
+        return issueField + ' 合理取值应大于等于 0 且符合员工实际年限，不能为负数或明显超出合理工作年限。';
+      }
+      if (issueField === 'sort_no') {
+        return issueField + ' 合理取值应为大于等于 0 的排序数字，不能为负数或异常大的无意义排序值。';
+      }
+      return issueField + ' 合理取值应落在业务规则配置的上下限范围内，不能为负数、0 值异常或超出上限的异常值。';
+    }
+    if (ruleKey === 'enum') {
+      return enumRequirements[issueField] || issueField + ' 必须使用已配置的标准枚举编码，不允许出现未配置编码、空值或临时状态码。';
+    }
+    if (ruleKey === 'format') {
+      if (issueField.indexOf('mobile') >= 0 || issueField.indexOf('phone') >= 0) {
+        return issueField + ' 必须为 11 位手机号格式，需以 1 开头且全部为数字，不能出现 PHONE_ERROR、13812ABC、少位、超长或包含非数字字符。';
+      }
+      if (issueField.indexOf('card') >= 0) {
+        return issueField + ' 必须符合 18 位身份证号格式，出生日期段必须为有效日期，不能出现 ID_CARD_ERROR、非法日期段或校验位不合法的证件号。';
+      }
+      return issueField + ' 必须使用 yyyy-MM-dd HH:mm:ss 格式且为真实存在的日期时间，不能出现 INVALID_DATE、2026/99/99 99:99:99、月份越界、日期越界或时分秒越界。';
+    }
+    if (ruleKey === 'relation') {
+      return issueField + ' 必须能在对应主数据、维表或上游业务实体中找到有效记录，不允许使用 999999、0、空值等无法关联的占位值。';
+    }
+    return issueField + ' 必须满足当前质量规则配置的合法取值、格式和业务约束。';
   }
 
   function getInspectionFields(report) {
     if (report.tableName.indexOf('employee') >= 0) {
-      return ['employee_id', 'employee_no', 'real_name', 'phone', 'department_id', 'position_type', 'hire_date', 'status', 'update_time'];
+      return ['employee_id', 'employee_no', 'real_name', 'phone', 'department_id', 'position_type', 'work_years', 'hire_date', 'status', 'update_time'];
     }
     if (report.tableName.indexOf('customer') >= 0 || report.tableName.indexOf('crm') >= 0) {
-      return ['customer_id', 'customer_no', 'customer_name', 'mobile', 'id_card_no', 'customer_level', 'source_channel', 'create_time', 'update_time'];
+      return ['customer_id', 'customer_no', 'customer_name', 'mobile', 'id_card_no', 'customer_level', 'credit_score', 'source_channel', 'create_time', 'update_time'];
     }
     if (report.tableName.indexOf('product') >= 0) {
       return ['product_id', 'sku_code', 'product_name', 'category_id', 'sale_price', 'stock_status', 'is_deleted', 'create_time', 'update_time'];
     }
     if (report.tableName.indexOf('inventory') >= 0) {
-      return ['snapshot_id', 'warehouse_id', 'sku_code', 'available_qty', 'locked_qty', 'snapshot_date', 'batch_no', 'create_time', 'update_time'];
+      return ['snapshot_id', 'warehouse_id', 'sku_code', 'available_qty', 'locked_qty', 'stock_status', 'snapshot_date', 'batch_no', 'create_time', 'update_time'];
     }
     if (report.tableName.indexOf('region') >= 0) {
       return ['region_id', 'parent_id', 'region_code', 'region_name', 'region_level', 'sort_no', 'is_enabled', 'create_time', 'update_time'];
@@ -649,7 +700,7 @@ DP.pages.qualityInspectReport = (function () {
       return ['apply_id', 'employee_id', 'leave_type', 'start_time', 'end_time', 'leave_days', 'approve_status', 'create_time', 'update_time'];
     }
     if (report.tableName.indexOf('log') >= 0) {
-      return ['log_id', 'event_id', 'user_id', 'event_type', 'event_time', 'device_id', 'payload_hash', 'create_time', 'update_time'];
+      return ['log_id', 'event_id', 'user_id', 'event_type', 'event_time', 'event_duration_ms', 'device_id', 'payload_hash', 'create_time', 'update_time'];
     }
     return ['order_id', 'user_id', 'order_no', 'order_status', 'total_amount', 'pay_amount', 'pay_time', 'create_time', 'update_time'];
   }
@@ -657,14 +708,27 @@ DP.pages.qualityInspectReport = (function () {
   function getIssueFieldForRule(fields, ruleKey) {
     var candidates = {
       required: ['order_id', 'user_id', 'employee_id', 'customer_id', 'product_id', 'snapshot_id', 'region_id', 'contract_id', 'apply_id', 'log_id'],
-      unique: ['order_no', 'employee_no', 'customer_no', 'sku_code', 'contract_no', 'region_code', 'event_id'],
-      range: ['total_amount', 'pay_amount', 'sale_price', 'available_qty', 'locked_qty', 'score', 'contract_amount', 'leave_days'],
-      enum: ['order_status', 'status', 'stock_status', 'customer_level', 'approve_status', 'region_level', 'event_type'],
-      format: ['pay_time', 'hire_date', 'mobile', 'phone', 'id_card_no', 'snapshot_date', 'start_date', 'event_time'],
+      unique: ['order_no', 'employee_no', 'customer_no', 'member_no', 'sku_code', 'contract_no', 'region_code', 'event_id', 'apply_id'],
+      range: ['total_amount', 'pay_amount', 'sale_price', 'available_qty', 'locked_qty', 'credit_score', 'score', 'contract_amount', 'leave_days', 'work_years', 'sort_no', 'event_duration_ms'],
+      enum: ['order_status', 'status', 'stock_status', 'customer_level', 'approve_status', 'region_level', 'event_type', 'position_type', 'leave_type', 'tag_code', 'is_deleted', 'is_enabled', 'source_channel'],
+      format: ['pay_time', 'hire_date', 'mobile', 'phone', 'id_card_no', 'snapshot_date', 'start_date', 'end_date', 'event_time', 'start_time', 'end_time', 'create_time', 'update_time'],
       relation: ['user_id', 'department_id', 'category_id', 'warehouse_id', 'parent_id', 'supplier_id', 'employee_id', 'device_id']
+    }[ruleKey] || [];
+    var fallbackPatterns = {
+      required: [/_id$/],
+      unique: [/_no$/, /_code$/, /^event_id$/, /_id$/],
+      range: [/amount/, /price/, /qty/, /days/, /score/, /sort_no/, /duration/, /year/, /count/, /num/],
+      enum: [/status/, /level/, /type/, /^is_/, /source_channel/, /tag_code/],
+      format: [/time/, /date/, /mobile/, /phone/, /card/],
+      relation: [/_id$/]
     }[ruleKey] || [];
     for (var i = 0; i < candidates.length; i++) {
       if (fields.indexOf(candidates[i]) >= 0) return candidates[i];
+    }
+    for (var j = 0; j < fields.length; j++) {
+      for (var k = 0; k < fallbackPatterns.length; k++) {
+        if (fallbackPatterns[k].test(fields[j])) return fields[j];
+      }
     }
     return fields[Math.min(2, fields.length - 1)];
   }
@@ -672,17 +736,24 @@ DP.pages.qualityInspectReport = (function () {
   function getRawIssueValue(ruleKey, field, index, report) {
     var prefix = report.tableName.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'TAB';
     if (ruleKey === 'required') return 'NULL';
-    if (ruleKey === 'unique') return prefix + '20260624001';
-    if (ruleKey === 'range') {
-      if (field.indexOf('amount') >= 0 || field.indexOf('price') >= 0) return index % 2 ? '-25.00' : '0.00';
-      if (field.indexOf('qty') >= 0 || field.indexOf('days') >= 0 || field === 'score') return index % 2 ? '-3' : '0';
-      return '-1';
+    if (ruleKey === 'unique') {
+      if (field.indexOf('id') >= 0 && field.indexOf('card') < 0) return '70001';
+      return prefix + '20260624001';
     }
-    if (ruleKey === 'enum') return index % 2 ? '9' : '-1';
+    if (ruleKey === 'range') {
+      if (field.indexOf('amount') >= 0 || field.indexOf('price') >= 0) return index % 2 ? '-99999.99' : '-0.01';
+      if (field.indexOf('qty') >= 0) return index % 2 ? '-999' : '-1';
+      if (field.indexOf('days') >= 0) return index % 2 ? '-99' : '999';
+      if (field.indexOf('score') >= 0) return index % 2 ? '150' : '-20';
+      if (field.indexOf('duration') >= 0) return index % 2 ? '-999' : '999999999';
+      if (field.indexOf('year') >= 0) return index % 2 ? '-5' : '999';
+      return '-999';
+    }
+    if (ruleKey === 'enum') return index % 2 ? '99' : '-1';
     if (ruleKey === 'format') {
-      if (field.indexOf('mobile') >= 0 || field.indexOf('phone') >= 0) return index % 2 ? '13812' : '1700000000000';
-      if (field.indexOf('card') >= 0) return '110000199913320000';
-      return '2026-13-41 25:61:00';
+      if (field.indexOf('mobile') >= 0 || field.indexOf('phone') >= 0) return index % 2 ? 'PHONE_ERROR' : '13812ABC';
+      if (field.indexOf('card') >= 0) return 'ID_CARD_ERROR';
+      return index % 2 ? 'INVALID_DATE' : '2026/99/99 99:99:99';
     }
     if (ruleKey === 'relation') return '999999';
     return 'NULL';
@@ -692,11 +763,12 @@ DP.pages.qualityInspectReport = (function () {
     var values = {};
     fields.forEach(function (field) {
       if (field.indexOf('id') >= 0 && field.indexOf('card') < 0) values[field] = String(70000 + index * 11);
+      else if (field === 'sort_no' || field.indexOf('qty') >= 0 || field.indexOf('days') >= 0 || field.indexOf('score') >= 0 || field.indexOf('duration') >= 0 || field.indexOf('year') >= 0 || field.indexOf('count') >= 0 || field.indexOf('num') >= 0) values[field] = String(10 + index % 80);
+      else if (field.indexOf('card') >= 0) values[field] = '110101199001011234';
       else if (field.indexOf('no') >= 0 || field.indexOf('code') >= 0) values[field] = report.tableName.toUpperCase().slice(0, 3) + String(2026060000 + index * 13);
       else if (field.indexOf('name') >= 0) values[field] = ['张明', '李婷', '王强', '赵丽', '陈晨'][index % 5];
       else if (field.indexOf('mobile') >= 0 || field.indexOf('phone') >= 0) values[field] = '13' + String(500000000 + index * 7913).slice(0, 9);
       else if (field.indexOf('amount') >= 0 || field.indexOf('price') >= 0) values[field] = (68 + index * 3.7).toFixed(2);
-      else if (field.indexOf('qty') >= 0 || field.indexOf('days') >= 0 || field === 'score') values[field] = String(10 + index % 80);
       else if (field.indexOf('status') >= 0 || field.indexOf('level') >= 0 || field.indexOf('type') >= 0) values[field] = String(index % 4);
       else if (field.indexOf('time') >= 0 || field.indexOf('date') >= 0) values[field] = '2026-06-' + String(20 + index % 8).padStart(2, '0') + ' ' + String(8 + index % 10).padStart(2, '0') + ':15:00';
       else if (field.indexOf('hash') >= 0) values[field] = 'HASH' + String(900000 + index * 17);
@@ -757,6 +829,33 @@ DP.pages.qualityInspectReport = (function () {
       '<i style="width:' + Math.max(0, Math.min(100, rate)) + '%"></i>' +
       '<b>' + escapeHtml(rate.toFixed(1)) + '%</b>' +
     '</span>';
+  }
+
+  function splitRuleSummary(summary) {
+    var text = String(summary || '')
+      .replace(/^质量问题说明：/, '质量概述：')
+      .replace(/问题表现：/g, '')
+      .replace(/规则要求：/g, '质量要求：');
+    var overviewMarker = '质量概述：';
+    var requirementMarker = '质量要求：';
+    var overviewIndex = text.indexOf(overviewMarker);
+    var overviewText = overviewIndex >= 0 ? text.slice(overviewIndex + overviewMarker.length) : text;
+    var requirementIndex = overviewText.indexOf(requirementMarker);
+    if (requirementIndex < 0) {
+      return { overview: overviewText.trim(), requirement: '' };
+    }
+    return {
+      overview: overviewText.slice(0, requirementIndex).trim(),
+      requirement: overviewText.slice(requirementIndex + requirementMarker.length).trim()
+    };
+  }
+
+  function renderRuleSummary(rule) {
+    var summary = splitRuleSummary(rule.summary);
+    return '<div class="qir-issue-summary">' +
+      '<p><b>质量概述：</b><span>' + escapeHtml(summary.overview || '当前字段存在不符合质量规则的异常数据。') + '</span></p>' +
+      '<p><b>质量要求：</b><span>' + escapeHtml(summary.requirement || rule.desc) + '</span></p>' +
+    '</div>';
   }
 
   function renderTree(nodes, level) {
@@ -913,7 +1012,7 @@ DP.pages.qualityInspectReport = (function () {
   function renderQualitySections(report) {
     return getQualityRules(report).map(function (rule) {
       return '<section class="gt-quality-report-section qir-quality-section">' +
-        '<div class="gt-quality-section-head"><div><h4>' + escapeHtml(rule.name) + '</h4><p>' + escapeHtml(rule.summary) + '</p></div>' + renderRate(rule.rate) + '</div>' +
+        '<div class="gt-quality-section-head"><div class="qir-quality-section-main"><h4>' + escapeHtml(rule.name) + '</h4>' + renderRuleSummary(rule) + '</div>' + renderRate(rule.rate) + '</div>' +
         '<div class="qir-rule-table-wrap"><table class="ds-table gt-quality-problem-table qir-rule-problem-table">' +
           '<thead>' + renderRuleProblemHead(report, rule) + '</thead>' +
           '<tbody>' + renderRuleProblemRows(report, rule) + '</tbody>' +
