@@ -1312,11 +1312,11 @@
   background: #f7f7f7;
 }
 
-.dqit-basic-entity-table th:nth-child(1) { width: 40%; }
-.dqit-basic-entity-table th:nth-child(2) { width: 17%; }
-.dqit-basic-entity-table th:nth-child(3) { width: 14%; }
+.dqit-basic-entity-table th:nth-child(1) { width: 36%; }
+.dqit-basic-entity-table th:nth-child(2) { width: 15%; }
+.dqit-basic-entity-table th:nth-child(3) { width: 15%; }
 .dqit-basic-entity-table th:nth-child(4) { width: 22%; }
-.dqit-basic-entity-table th:nth-child(5) { width: 7%; }
+.dqit-basic-entity-table th:nth-child(5) { width: 12%; }
 
 .dqit-basic-entity-table td:first-child {
   white-space: nowrap;
@@ -1470,6 +1470,14 @@
   cursor: pointer;
 }
 
+.dqit-basic-rule-tree li li button span {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .dqit-basic-rule-tree li li button:hover {
   background: #dcecff;
   color: var(--primary);
@@ -1478,6 +1486,87 @@
 .dqit-basic-rule-tree li li button i {
   color: #aeb7c2;
   font-size: 14px;
+}
+
+.dqit-basic-rule-tag {
+  flex-shrink: 0;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 5px;
+  border-radius: 2px;
+  background: #edf2f7;
+  color: #53657a;
+  font-size: 11px;
+  font-style: normal;
+  line-height: 18px;
+}
+
+.dqit-basic-rule-tag.custom {
+  background: #fff7e6;
+  color: #b86a00;
+}
+
+.dqit-basic-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.dqit-basic-param-btn {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px solid #cfe4ff;
+  border-radius: 3px;
+  background: #edf5ff;
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.dqit-basic-param-btn:hover {
+  border-color: var(--primary);
+  background: #dfefff;
+}
+
+.dqit-basic-param-btn em {
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 5px;
+  border-radius: 2px;
+  font-size: 11px;
+  font-style: normal;
+  line-height: 18px;
+}
+
+.dqit-basic-param-btn.configured em {
+  background: #e8f7f0;
+  color: #16875b;
+}
+
+.dqit-basic-param-btn.unconfigured {
+  border-color: #ffd8bf;
+  background: #fff7e6;
+  color: #b86a00;
+}
+
+.dqit-basic-param-btn.unconfigured:hover {
+  border-color: #faad52;
+  background: #fff1d6;
+}
+
+.dqit-basic-param-btn.unconfigured em {
+  background: #fff1f0;
+  color: #d4380d;
 }
 
 .dqit-basic-delete-btn {
@@ -1793,6 +1882,114 @@
 .dqit-basic-field-table tbody tr:hover,
 .dqit-basic-field-table tbody tr:has(input:checked) {
   background: #f2f8ff;
+}
+
+/* ---- 基础稽查参数配置弹窗 ---- */
+.dqit-basic-param-dialog {
+  width: 1180px;
+  max-width: calc(100vw - 80px);
+  max-height: calc(100vh - 70px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-top: 3px solid var(--primary);
+  border-radius: 3px;
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.22);
+}
+
+.dqit-basic-param-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 18px 24px 20px;
+  background: #fff;
+}
+
+.dqit-basic-param-body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.dqit-basic-param-body::-webkit-scrollbar-thumb {
+  border-radius: 6px;
+  background: #d4dce7;
+}
+
+.dqit-basic-param-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(180px, .8fr) 130px;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid #e6ebf2;
+  border-radius: 3px;
+  background: #f8fafc;
+}
+
+.dqit-basic-param-summary div {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dqit-basic-param-summary span {
+  flex-shrink: 0;
+  color: #7b8fa8;
+  font-size: 12px;
+}
+
+.dqit-basic-param-summary strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #172335;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dqit-basic-param-summary em {
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: 3px;
+  background: #fff7e6;
+  color: #b86a00;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.dqit-basic-param-dialog .dqit-form-section {
+  grid-template-columns: 86px minmax(0, 1fr);
+  margin-top: 14px;
+}
+
+.dqit-basic-param-dialog .dqit-section-label {
+  padding-top: 8px;
+}
+
+.dqit-basic-param-dialog .dqit-param-table {
+  min-width: 860px;
+}
+
+.dqit-basic-param-dialog .dqit-sql-layout {
+  grid-template-columns: minmax(360px, 1fr) 104px minmax(360px, 1fr);
+  gap: 14px;
+}
+
+.dqit-basic-param-dialog .dqit-sql-editor {
+  height: 306px;
+}
+
+.dqit-basic-param-dialog .dqit-sql-actions {
+  min-height: 306px;
+}
+
+.dqit-basic-param-dialog .dqit-sql-actions .btn {
+  padding: 0 10px;
 }
 
 /* ---- SQL 双编辑器 ---- */
@@ -2511,6 +2708,152 @@
 .dqit-view-sql-body .dqit-sql-editor {
   height: 100%;
   min-height: 0;
+}
+
+.dqit-test-sql-dialog {
+  width: 1118px;
+  max-width: calc(100vw - 42px);
+  max-height: calc(100vh - 52px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-top: 2px solid var(--primary);
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.2);
+}
+
+.dqit-test-sql-head {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: 0 16px;
+  border-bottom: 1px solid #e1e5eb;
+  background: #fff;
+}
+
+.dqit-test-sql-head strong {
+  color: #111827;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.dqit-test-sql-head button {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: #b9bfc7;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.dqit-test-sql-head button:hover {
+  background: #f1f4f8;
+  color: #53657a;
+}
+
+.dqit-test-sql-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 24px 32px 0 36px;
+  background: #fff;
+}
+
+.dqit-test-table-wrap {
+  width: 100%;
+  max-height: calc(100vh - 188px);
+  overflow-x: scroll;
+  overflow-y: auto;
+  border: 1px solid #dfe5ec;
+  background: #fff;
+}
+
+.dqit-test-table-wrap::-webkit-scrollbar {
+  width: 12px;
+  height: 20px;
+}
+
+.dqit-test-table-wrap::-webkit-scrollbar-track {
+  background: #f1f3f5;
+}
+
+.dqit-test-table-wrap::-webkit-scrollbar-thumb {
+  border: 4px solid #f1f3f5;
+  border-radius: 0;
+  background: #9b9b9b;
+}
+
+.dqit-test-table {
+  width: 100%;
+  min-width: 1048px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: #111827;
+  font-size: 13px;
+}
+
+.dqit-test-table th,
+.dqit-test-table td {
+  height: 38px;
+  padding: 0 10px;
+  border-right: 1px solid #dfe5ec;
+  border-bottom: 1px solid #dfe5ec;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dqit-test-table th {
+  height: 40px;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.dqit-test-table th:nth-child(1) { width: 18%; }
+.dqit-test-table th:nth-child(2) { width: 18%; }
+.dqit-test-table th:nth-child(3) { width: 18%; }
+.dqit-test-table th:nth-child(4) { width: 18%; }
+.dqit-test-table th:nth-child(5) { width: 18%; }
+.dqit-test-table th:nth-child(6) { width: 10%; }
+
+.dqit-test-table th:last-child,
+.dqit-test-table td:last-child {
+  border-right: none;
+}
+
+.dqit-test-table tbody tr:nth-child(even) {
+  background: #f7f7f7;
+}
+
+.dqit-test-issue-head,
+.dqit-test-issue-cell {
+  color: #ff0000;
+}
+
+.dqit-test-sql-foot {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  padding: 0 14px;
+  border-top: 1px solid #e6ebf2;
+  background: #fff;
+}
+
+.dqit-test-sql-foot .btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 4px;
+  font-size: 13px;
 }
 
 .dqit-view-log-dialog {

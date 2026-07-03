@@ -39,6 +39,8 @@ DP.pages.qualityInspectTask = (function () {
     ruleModal: null,
     standardModal: null,
     basicFieldModal: null,
+    basicParamModal: null,
+    testSqlModal: null,
     reportSqlModal: null,
     reportLogModal: null,
     viewTaskId: '',
@@ -267,14 +269,14 @@ DP.pages.qualityInspectTask = (function () {
       label: '系统规则',
       icon: 'bi-folder-fill',
       children: [
-        { id: 'length', label: '长度校验', desc: '字段值长度需在配置的最小值与最大值之间' },
-        { id: 'range', label: '取值范围约束', desc: '字段值必须落在规则维护的枚举或阈值范围内' },
-        { id: 'size', label: '大小值校验', desc: '数值型字段不得超过配置的上限或低于下限' },
-        { id: 'id-card', label: '身份证号校验(18位)', desc: '身份证号需满足18位长度、出生日期和校验位规则' },
-        { id: 'timely', label: '及时性校验', desc: '时间字段需满足业务要求的采集或入仓时效' },
-        { id: 'unique', label: '唯一性校验', desc: '同一业务主键在目标范围内不得重复出现' },
-        { id: 'phone', label: '电话号码与手机号码校验(11位)码校验', desc: '电话号码或手机号需满足11位号码格式规则' },
-        { id: 'not-null', label: '非空校验', desc: '字段值不能为空、空字符串或仅包含空白字符' }
+        { id: 'length', label: '长度校验', desc: '字段值长度需在配置的最小值与最大值之间', ruleType: 'fixed' },
+        { id: 'range', label: '取值范围约束', desc: '字段值必须落在规则维护的枚举或阈值范围内', ruleType: 'fixed' },
+        { id: 'size', label: '大小值校验', desc: '数值型字段不得超过配置的上限或低于下限', ruleType: 'fixed' },
+        { id: 'id-card', label: '身份证号校验(18位)', desc: '身份证号需满足18位长度、出生日期和校验位规则', ruleType: 'fixed' },
+        { id: 'timely', label: '及时性校验', desc: '时间字段需满足业务要求的采集或入仓时效', ruleType: 'fixed' },
+        { id: 'unique', label: '唯一性校验', desc: '同一业务主键在目标范围内不得重复出现', ruleType: 'fixed' },
+        { id: 'phone', label: '电话号码与手机号码校验(11位)码校验', desc: '电话号码或手机号需满足11位号码格式规则', ruleType: 'fixed' },
+        { id: 'not-null', label: '非空校验', desc: '字段值不能为空、空字符串或仅包含空白字符', ruleType: 'fixed' }
       ]
     },
     {
@@ -282,7 +284,17 @@ DP.pages.qualityInspectTask = (function () {
       label: '业务系统',
       icon: 'bi-layers-fill',
       children: [
-        { id: 'field-not-null', label: '字段非空校验', desc: '稽查字段值不能为空，用于发现关键业务字段缺失记录' }
+        { id: 'field-not-null', label: '字段非空校验', desc: '稽查字段值不能为空，用于发现关键业务字段缺失记录', ruleType: 'fixed' }
+      ]
+    },
+    {
+      id: 'custom',
+      label: '自定义稽查规则',
+      icon: 'bi-code-square',
+      children: [
+        { id: 'custom-not-null', label: '非空校验-字段不能为空', desc: '通过自定义 SQL 检查关键字段空值记录', ruleType: 'custom' },
+        { id: 'custom-repeat', label: '筛选出重复的记录', desc: '通过自定义 SQL 识别指定字段组合的重复数据', ruleType: 'custom' },
+        { id: 'custom-length', label: '长度不能超过 10 个字符', desc: '通过自定义 SQL 校验编码类字段长度阈值', ruleType: 'custom' }
       ]
     }
   ];
@@ -1031,11 +1043,13 @@ DP.pages.qualityInspectTask = (function () {
 
   function cloneBasicEntities() {
     return basicEntities.map(function (entity) {
-      return {
+      var cloned = {
         name: entity.name,
         alias: entity.alias,
         ruleId: entity.ruleId
       };
+      if (entity.paramConfig) cloned.paramConfig = cloneBasicParamDraft(entity.paramConfig);
+      return cloned;
     });
   }
 
@@ -1045,6 +1059,105 @@ DP.pages.qualityInspectTask = (function () {
       if (found) return found;
     }
     return basicRuleGroups[1].children[0];
+  }
+
+  function isCustomBasicRule(rule) {
+    return rule && rule.ruleType === 'custom';
+  }
+
+  function getBasicRuleTypeLabel(rule) {
+    return isCustomBasicRule(rule) ? '自定义稽查' : '固定稽查';
+  }
+
+  function getBasicEntityParts(entity) {
+    var name = entity && entity.name ? String(entity.name) : 'tms_demo.express_task_collect.update_time';
+    var parts = name.split('.');
+    var field = parts.length ? parts[parts.length - 1] : (entity && entity.alias ? entity.alias : 'UpdateTime');
+    var table = parts.length >= 2 ? parts[parts.length - 2] : 'express_task_collect';
+    return {
+      table: table || 'express_task_collect',
+      field: field || (entity && entity.alias) || 'UpdateTime'
+    };
+  }
+
+  function createBasicParamDraft(entity) {
+    var parts = getBasicEntityParts(entity);
+    return {
+      configured: false,
+      ruleMode: 'existing',
+      params: [
+        { name: '${id}', attr: '字段', desc: '主键字段，用于定位问题记录', table: parts.table, field: 'Id' },
+        { name: '${name}', attr: '字段', desc: '当前稽查字段，用于规则条件判断', table: parts.table, field: parts.field },
+        { name: '${standard_rule}', attr: '表', desc: '参与稽查的数据表', table: parts.table, field: '' }
+      ],
+      sqlTemplate: getDefaultTemplateSql(),
+      sqlGenerated: getDefaultGeneratedSql(parts.table, 'Id', parts.field),
+      sqlCustom: getDefaultCustomRuleSql(parts.table)
+    };
+  }
+
+  function cloneBasicParamDraft(draft) {
+    draft = draft || createBasicParamDraft();
+    return {
+      configured: draft.configured === true,
+      ruleMode: draft.ruleMode || 'existing',
+      params: (draft.params || []).map(function (param) {
+        return {
+          name: param.name,
+          attr: param.attr,
+          desc: param.desc,
+          table: param.table || '',
+          field: param.field || ''
+        };
+      }),
+      sqlTemplate: draft.sqlTemplate || getDefaultTemplateSql(),
+      sqlGenerated: draft.sqlGenerated || getDefaultGeneratedSql(),
+      sqlCustom: draft.sqlCustom || getDefaultCustomRuleSql()
+    };
+  }
+
+  function createConfiguredBasicParamDraft(entity) {
+    var draft = createBasicParamDraft(entity);
+    var parts = getBasicEntityParts(entity);
+    draft.configured = true;
+    draft.params = [
+      { name: '${id}', attr: '字段', desc: '主键字段，用于定位问题记录', table: parts.table, field: 'Id' },
+      { name: '${name}', attr: '字段', desc: '当前稽查字段，用于规则条件判断', table: parts.table, field: parts.field },
+      { name: '${standard_rule}', attr: '表', desc: '参与稽查的数据表', table: parts.table, field: '' }
+    ];
+    draft.sqlTemplate = getDefaultTemplateSql();
+    draft.sqlGenerated = getDefaultGeneratedSql(parts.table, 'Id', parts.field);
+    draft.sqlCustom = getDefaultCustomRuleSql(parts.table);
+    return draft;
+  }
+
+  function isBasicParamConfigured(entity) {
+    return !!(entity && entity.paramConfig && entity.paramConfig.configured === true);
+  }
+
+  function createBasicEditEntities() {
+    var entities = cloneBasicEntities();
+    if (entities[0]) {
+      entities[0].ruleId = 'custom-not-null';
+      entities[0].paramConfig = createConfiguredBasicParamDraft(entities[0]);
+    }
+    if (entities[1]) {
+      entities[1].ruleId = 'custom-repeat';
+      delete entities[1].paramConfig;
+    }
+    return entities;
+  }
+
+  function getActiveConfigDraft() {
+    return state.basicParamModal ? state.basicParamModal.draft : state.form;
+  }
+
+  function setDraftSqlValue(draft, key, value) {
+    if (!draft) return;
+    if (key === 'template') draft.sqlTemplate = value;
+    if (key === 'generated') draft.sqlGenerated = value;
+    if (key === 'customRule') draft.sqlCustom = value;
+    if (key === 'basicCustom') draft.customSql = value;
   }
 
   function createBasicTimeParams() {
@@ -1100,7 +1213,7 @@ DP.pages.qualityInspectTask = (function () {
       businessLayer: groupNode ? groupNode.label : '中电数治演示',
       inspectObject: '字段',
       weight: item ? String(Math.min(100, Math.max(1, item.ruleCount * 2))) : '10',
-      entities: cloneBasicEntities(),
+      entities: item ? createBasicEditEntities() : cloneBasicEntities(),
       inspectMode: '全量稽查',
       paramMode: '普通设置',
       timeParams: createBasicTimeParams(),
@@ -1178,8 +1291,10 @@ DP.pages.qualityInspectTask = (function () {
     '</div>';
   }
 
-  function renderParamRows() {
-    return state.form.params.map(function (param, index) {
+  function renderParamRows(draft) {
+    draft = draft || state.form || {};
+    var params = draft.params || [];
+    return params.map(function (param, index) {
       var tableId = 'param-' + index + '-table';
       var fieldId = 'param-' + index + '-field';
       return '<tr>' +
@@ -1196,15 +1311,17 @@ DP.pages.qualityInspectTask = (function () {
     }).join('');
   }
 
-  function renderParamConfig() {
+  function renderParamConfig(draft) {
+    draft = draft || state.form || {};
+    var params = draft.params || [];
     return '<div class="dqit-form-section dqit-param-section">' +
       '<div class="dqit-section-label">参数配置</div>' +
       '<div class="dqit-section-main">' +
         '<table class="dqit-param-table">' +
           '<thead><tr><th>参数名</th><th>参数属性</th><th>参数说明</th><th>参数配置</th></tr></thead>' +
-          '<tbody>' + renderParamRows() + '</tbody>' +
+          '<tbody>' + renderParamRows(draft) + '</tbody>' +
         '</table>' +
-        '<div class="dqit-param-footer">显示第 1 到第 ' + state.form.params.length + ' 条记录，总共 ' + state.form.params.length + ' 条记录</div>' +
+        '<div class="dqit-param-footer">显示第 ' + (params.length ? 1 : 0) + ' 到第 ' + params.length + ' 条记录，总共 ' + params.length + ' 条记录</div>' +
       '</div>' +
     '</div>';
   }
@@ -1239,14 +1356,15 @@ DP.pages.qualityInspectTask = (function () {
     '</div>';
   }
 
-  function renderSqlSection() {
-    var isCustomRule = state.form && state.form.ruleMode === 'custom';
+  function renderSqlSection(draft) {
+    draft = draft || state.form || {};
+    var isCustomRule = draft.ruleMode === 'custom';
     if (isCustomRule) {
       return '<div class="dqit-form-section dqit-sql-section dqit-sql-section-custom">' +
         '<div class="dqit-section-label">SQL规则</div>' +
         '<div class="dqit-section-main">' +
           '<div class="dqit-sql-layout dqit-sql-layout-custom">' +
-            renderSqlEditor('customRule', '自定义SQL', state.form.sqlCustom) +
+            renderSqlEditor('customRule', '自定义SQL', draft.sqlCustom) +
             '<div class="dqit-sql-actions dqit-sql-actions-custom">' +
               '<button class="btn dqit-btn-warning" type="button" data-dqit-action="test-sql"><i class="bi bi-link-45deg"></i><span>测试执行</span></button>' +
             '</div>' +
@@ -1258,12 +1376,12 @@ DP.pages.qualityInspectTask = (function () {
       '<div class="dqit-section-label">SQL规则</div>' +
       '<div class="dqit-section-main">' +
         '<div class="dqit-sql-layout">' +
-          renderSqlEditor('template', '规则SQL', state.form.sqlTemplate) +
+          renderSqlEditor('template', '规则SQL', draft.sqlTemplate) +
           '<div class="dqit-sql-actions">' +
             '<button class="btn btn-primary" type="button" data-dqit-action="generate-sql"><i class="bi bi-pc-display"></i><span>生成SQL</span></button>' +
             '<button class="btn dqit-btn-warning" type="button" data-dqit-action="test-sql"><i class="bi bi-link-45deg"></i><span>测试执行</span></button>' +
           '</div>' +
-          renderSqlEditor('generated', '执行SQL', state.form.sqlGenerated) +
+          renderSqlEditor('generated', '执行SQL', draft.sqlGenerated) +
         '</div>' +
       '</div>' +
     '</div>';
@@ -1410,7 +1528,8 @@ DP.pages.qualityInspectTask = (function () {
       return '<li class="dqit-basic-rule-group">' +
         '<div class="dqit-basic-rule-group-title"><i class="bi bi-chevron-down"></i><i class="bi ' + escapeHtml(group.icon) + '"></i><span>' + escapeHtml(group.label) + '</span></div>' +
         '<ul>' + children.map(function (rule) {
-          return '<li><button type="button" data-dqit-action="choose-basic-rule" data-index="' + entityIndex + '" data-rule-id="' + escapeHtml(rule.id) + '"><i class="bi bi-box-seam"></i><span>' + escapeHtml(rule.label) + '</span></button></li>';
+          var typeClass = isCustomBasicRule(rule) ? ' custom' : '';
+          return '<li><button type="button" data-dqit-action="choose-basic-rule" data-index="' + entityIndex + '" data-rule-id="' + escapeHtml(rule.id) + '"><i class="bi bi-box-seam"></i><span>' + escapeHtml(rule.label) + '</span><em class="dqit-basic-rule-tag' + typeClass + '">' + escapeHtml(getBasicRuleTypeLabel(rule)) + '</em></button></li>';
         }).join('') + '</ul>' +
       '</li>';
     }).join('') || '<li class="dqit-search-select-empty">暂无匹配规则</li>';
@@ -1434,12 +1553,16 @@ DP.pages.qualityInspectTask = (function () {
   function renderBasicEntitySection() {
     var rows = (state.form.entities || []).map(function (entity, index) {
       var rule = getBasicRule(entity.ruleId);
+      var isConfigured = isBasicParamConfigured(entity);
+      var actionHtml = isCustomBasicRule(rule)
+        ? '<button class="dqit-basic-param-btn' + (isConfigured ? ' configured' : ' unconfigured') + '" type="button" data-dqit-action="open-basic-param-modal" data-index="' + index + '"><i class="bi bi-sliders"></i><span>参数配置</span><em>' + (isConfigured ? '已配置' : '未配置') + '</em></button>'
+        : '';
       return '<tr>' +
         '<td>' + escapeHtml(entity.name) + '</td>' +
         '<td>' + escapeHtml(entity.alias) + '</td>' +
         '<td class="dqit-basic-rule-cell">' + renderBasicRuleSelect(entity, index) + '</td>' +
         '<td>' + escapeHtml(rule.desc || '') + '</td>' +
-        '<td><button class="dqit-basic-delete-btn" type="button" data-dqit-action="delete-basic-entity" data-index="' + index + '" aria-label="删除稽查字段"><i class="bi bi-trash"></i></button></td>' +
+        '<td><div class="dqit-basic-actions">' + actionHtml + '<button class="dqit-basic-delete-btn" type="button" data-dqit-action="delete-basic-entity" data-index="' + index + '" aria-label="删除稽查字段"><i class="bi bi-trash"></i></button></div></td>' +
       '</tr>';
     }).join('');
     return renderRequiredFormSection('稽查实体',
@@ -1624,6 +1747,32 @@ DP.pages.qualityInspectTask = (function () {
         '<div class="dqit-rule-foot">' +
           '<button class="btn btn-primary" type="button" data-dqit-action="choose-basic-fields"><i class="bi bi-plus-lg"></i><span>添加</span></button>' +
           '<button class="btn btn-outline" type="button" data-dqit-action="close-basic-field-modal"><i class="bi bi-x-lg"></i><span>取消</span></button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderBasicParamModal() {
+    if (!state.basicParamModal || !state.form) return '';
+    var entity = state.form.entities && state.form.entities[state.basicParamModal.entityIndex];
+    if (!entity) return '';
+    var rule = getBasicRule(entity.ruleId);
+    var draft = state.basicParamModal.draft || createBasicParamDraft(entity);
+    return '<div class="dqit-modal-mask" data-dqit-modal-mask="basic-param">' +
+      '<div class="dqit-basic-param-dialog" role="dialog" aria-modal="true" aria-label="参数配置">' +
+        '<div class="dqit-rule-head"><strong>参数配置</strong><button type="button" data-dqit-action="close-basic-param-modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button></div>' +
+        '<div class="dqit-basic-param-body">' +
+          '<div class="dqit-basic-param-summary">' +
+            '<div><span>稽查实体</span><strong title="' + escapeHtml(entity.name) + '">' + escapeHtml(entity.name) + '</strong></div>' +
+            '<div><span>质量规则</span><strong>' + escapeHtml(rule.label) + '</strong></div>' +
+            '<div><span>规则类型</span><em>' + escapeHtml(getBasicRuleTypeLabel(rule)) + '</em></div>' +
+          '</div>' +
+          renderParamConfig(draft) +
+          renderSqlSection(draft) +
+        '</div>' +
+        '<div class="dqit-rule-foot">' +
+          '<button class="btn btn-primary" type="button" data-dqit-action="save-basic-param-modal"><i class="bi bi-save"></i><span>保存</span></button>' +
+          '<button class="btn btn-outline" type="button" data-dqit-action="close-basic-param-modal"><i class="bi bi-x-lg"></i><span>取消</span></button>' +
         '</div>' +
       '</div>' +
     '</div>';
@@ -1855,6 +2004,112 @@ DP.pages.qualityInspectTask = (function () {
     '</div>';
   }
 
+  function getTestSqlRows() {
+    return [
+      { id: '100238', username: 'zhangyue', password: 'pwd_2026_01', realName: '张悦', idCard: '110101199003127425', phone: '1381023' },
+      { id: '100241', username: 'liucheng', password: 'pwd_2026_02', realName: '刘诚', idCard: '320105198811238317', phone: '1398765432' },
+      { id: '100257', username: 'wangmin', password: 'pwd_2026_03', realName: '王敏', idCard: '440106199205063628', phone: '131-2048-88' },
+      { id: '100263', username: 'chenhao', password: 'pwd_2026_04', realName: '陈浩', idCard: '330102198709184916', phone: '13200000000' },
+      { id: '100279', username: 'zhaonan', password: 'pwd_2026_05', realName: '赵楠', idCard: '510104199412301233', phone: '135AB77890' },
+      { id: '100286', username: 'sunlei', password: 'pwd_2026_06', realName: '孙磊', idCard: '420106199001154214', phone: '134555' },
+      { id: '100291', username: 'zhouxin', password: 'pwd_2026_07', realName: '周欣', idCard: '210102198606217532', phone: '12588889999' },
+      { id: '100305', username: 'huangqi', password: 'pwd_2026_08', realName: '黄琪', idCard: '370202199307095821', phone: '1367777888' },
+      { id: '100318', username: 'yangfan', password: 'pwd_2026_09', realName: '杨帆', idCard: '610104198912014816', phone: '138 9012 345' },
+      { id: '100326', username: 'xumeng', password: 'pwd_2026_10', realName: '许萌', idCard: '350102199608268429', phone: '1392222333' }
+    ];
+  }
+
+  function getTestSqlColumns() {
+    return [
+      { key: 'id', label: 'id' },
+      { key: 'username', label: 'username' },
+      { key: 'password', label: 'password' },
+      { key: 'realName', label: 'real_name' },
+      { key: 'idCard', label: 'id_card' },
+      { key: 'phone', label: 'phone', issue: true }
+    ];
+  }
+
+  function getBasicTestIssueField() {
+    if (!state.basicParamModal || !state.form) return 'actual_collected_time';
+    var entity = state.form.entities && state.form.entities[state.basicParamModal.entityIndex];
+    var field = getBasicEntityParts(entity).field || 'actual_collected_time';
+    return field;
+  }
+
+  function getBasicTestSqlRows(issueKey) {
+    var rows = [
+      { task_id: 'CT20260703001', waybill_no: 'YT7328049126', customer_name: '上海启明商贸有限公司', planned_collect_time: '2026-07-03 09:30:00', status: '待补录' },
+      { task_id: 'CT20260703002', waybill_no: 'YT7328049158', customer_name: '杭州青禾科技有限公司', planned_collect_time: '2026-07-03 09:45:00', status: '待复核' },
+      { task_id: 'CT20260703003', waybill_no: 'YT7328049183', customer_name: '南京云帆供应链', planned_collect_time: '2026-07-03 10:00:00', status: '待补录' },
+      { task_id: 'CT20260703004', waybill_no: 'YT7328049207', customer_name: '苏州联创电子', planned_collect_time: '2026-07-03 10:15:00', status: '待复核' },
+      { task_id: 'CT20260703005', waybill_no: 'YT7328049231', customer_name: '无锡华瑞制造', planned_collect_time: '2026-07-03 10:30:00', status: '待补录' },
+      { task_id: 'CT20260703006', waybill_no: 'YT7328049266', customer_name: '宁波远航贸易', planned_collect_time: '2026-07-03 10:45:00', status: '待复核' },
+      { task_id: 'CT20260703007', waybill_no: 'YT7328049292', customer_name: '合肥星河智能', planned_collect_time: '2026-07-03 11:00:00', status: '待补录' },
+      { task_id: 'CT20260703008', waybill_no: 'YT7328049320', customer_name: '厦门明诚物流', planned_collect_time: '2026-07-03 11:15:00', status: '待复核' },
+      { task_id: 'CT20260703009', waybill_no: 'YT7328049354', customer_name: '广州南方食品', planned_collect_time: '2026-07-03 11:30:00', status: '待补录' },
+      { task_id: 'CT20260703010', waybill_no: 'YT7328049381', customer_name: '深圳优选零售', planned_collect_time: '2026-07-03 11:45:00', status: '待复核' }
+    ];
+    var issueValues = ['', 'NULL', '0000-00-00 00:00:00', '2026/07/03', '', '异常文本', '1970-01-01 00:00:00', '2026-13-03 11:15:00', '未采集', ''];
+    return rows.map(function (row, index) {
+      row[issueKey] = issueValues[index];
+      return row;
+    });
+  }
+
+  function getBasicTestSqlColumns(issueKey) {
+    return [
+      { key: 'task_id', label: 'task_id' },
+      { key: 'waybill_no', label: 'waybill_no' },
+      { key: 'customer_name', label: 'customer_name' },
+      { key: 'planned_collect_time', label: 'planned_collect_time' },
+      { key: issueKey, label: issueKey, issue: true },
+      { key: 'status', label: 'status' }
+    ];
+  }
+
+  function createTestSqlModalDraft() {
+    if (state.basicParamModal) {
+      var issueKey = getBasicTestIssueField();
+      return {
+        columns: getBasicTestSqlColumns(issueKey),
+        rows: getBasicTestSqlRows(issueKey)
+      };
+    }
+    return {
+      columns: getTestSqlColumns(),
+      rows: getTestSqlRows()
+    };
+  }
+
+  function renderTestSqlRows(rows, columns) {
+    return rows.map(function (row) {
+      return '<tr>' + columns.map(function (column) {
+        return '<td' + (column.issue ? ' class="dqit-test-issue-cell"' : '') + '>' + escapeHtml(row[column.key] || '') + '</td>';
+      }).join('') + '</tr>';
+    }).join('');
+  }
+
+  function renderTestSqlModal() {
+    if (!state.testSqlModal) return '';
+    var rows = state.testSqlModal.rows || getTestSqlRows();
+    var columns = state.testSqlModal.columns || getTestSqlColumns();
+    return '<div class="dqit-modal-mask dqit-test-sql-mask" data-dqit-modal-mask="test-sql">' +
+      '<div class="dqit-test-sql-dialog" role="dialog" aria-modal="true" aria-label="测试执行">' +
+        '<div class="dqit-test-sql-head"><strong>测试执行(仅显示前10条)</strong><button type="button" data-dqit-action="close-test-sql" aria-label="关闭"><i class="bi bi-x-lg"></i></button></div>' +
+        '<div class="dqit-test-sql-body">' +
+          '<div class="dqit-test-table-wrap">' +
+            '<table class="dqit-test-table">' +
+              '<thead><tr>' + columns.map(function (column) { return '<th' + (column.issue ? ' class="dqit-test-issue-head"' : '') + '>' + escapeHtml(column.label) + '</th>'; }).join('') + '</tr></thead>' +
+              '<tbody>' + renderTestSqlRows(rows, columns) + '</tbody>' +
+            '</table>' +
+          '</div>' +
+        '</div>' +
+        '<div class="dqit-test-sql-foot"><button class="btn btn-primary" type="button" data-dqit-action="close-test-sql"><i class="bi bi-x-lg"></i><span>关闭</span></button></div>' +
+      '</div>' +
+    '</div>';
+  }
+
   function renderReportSqlModal() {
     if (!state.reportSqlModal) return '';
     var run = getSelectedReportRun();
@@ -1979,7 +2234,7 @@ DP.pages.qualityInspectTask = (function () {
     disposeReportGauge();
     pageEl.classList.toggle('form-mode', fullMode);
     pageEl.innerHTML = content +
-      renderOperationModal() + renderRuleModal() + renderStandardModal() + renderBasicFieldModal() + renderReportSqlModal() + renderReportLogModal();
+      renderOperationModal() + renderRuleModal() + renderStandardModal() + renderBasicFieldModal() + renderBasicParamModal() + renderReportSqlModal() + renderReportLogModal() + renderTestSqlModal();
     if (state.view === 'report') {
       if (window.requestAnimationFrame) window.requestAnimationFrame(initReportGauge);
       else initReportGauge();
@@ -2136,10 +2391,8 @@ DP.pages.qualityInspectTask = (function () {
     ['template', 'generated', 'customRule', 'basicCustom'].forEach(function (key) {
       var content = pageEl.querySelector('[data-dqit-sql-content="' + key + '"]');
       if (!content) return;
-      if (key === 'template') state.form.sqlTemplate = content.innerText || content.textContent || '';
-      if (key === 'generated') state.form.sqlGenerated = content.innerText || content.textContent || '';
-      if (key === 'customRule') state.form.sqlCustom = content.innerText || content.textContent || '';
-      if (key === 'basicCustom') state.form.customSql = content.innerText || content.textContent || '';
+      var draft = state.basicParamModal && key !== 'basicCustom' ? state.basicParamModal.draft : state.form;
+      setDraftSqlValue(draft, key, content.innerText || content.textContent || '');
     });
   }
 
@@ -2231,12 +2484,8 @@ DP.pages.qualityInspectTask = (function () {
   }
 
   function setSqlText(key, sql) {
-    if (state.form) {
-      if (key === 'template') state.form.sqlTemplate = sql;
-      if (key === 'generated') state.form.sqlGenerated = sql;
-      if (key === 'customRule') state.form.sqlCustom = sql;
-      if (key === 'basicCustom') state.form.customSql = sql;
-    }
+    var draft = state.basicParamModal && key !== 'basicCustom' ? state.basicParamModal.draft : state.form;
+    setDraftSqlValue(draft, key, sql);
     var content = pageEl.querySelector('[data-dqit-sql-content="' + key + '"]');
     var gutter = pageEl.querySelector('[data-dqit-sql-gutter="' + key + '"]');
     if (content) content.innerHTML = highlightSQL(sql);
@@ -2260,10 +2509,13 @@ DP.pages.qualityInspectTask = (function () {
   }
 
   function generateSql() {
-    captureFormDraft();
-    var idField = (state.form.params[0] && state.form.params[0].field) || 'Id';
-    var nameField = (state.form.params[1] && state.form.params[1].field) || 'Name';
-    var tableName = (state.form.params[2] && state.form.params[2].table) || (state.form.params[0] && state.form.params[0].table) || 'buildinglog';
+    if (state.basicParamModal) captureBasicParamModalDraft();
+    else captureFormDraft();
+    var draft = getActiveConfigDraft() || {};
+    var params = draft.params || [];
+    var idField = (params[0] && params[0].field) || 'Id';
+    var nameField = (params[1] && params[1].field) || 'Name';
+    var tableName = (params[2] && params[2].table) || (params[0] && params[0].table) || 'buildinglog';
     setSqlText('generated', getDefaultGeneratedSql(tableName, idField, nameField));
     showToast('SQL 已生成');
   }
@@ -2374,7 +2626,8 @@ DP.pages.qualityInspectTask = (function () {
     var parts = selectId.split('-');
     var index = Number(parts[1]);
     var field = parts[2];
-    if (state.form && state.form.params[index]) state.form.params[index][field] = value;
+    var draft = getActiveConfigDraft();
+    if (draft && draft.params && draft.params[index]) draft.params[index][field] = value;
     state.openParamSelect = '';
     state.paramKeyword = '';
     renderAll();
@@ -2454,10 +2707,57 @@ DP.pages.qualityInspectTask = (function () {
     if (!state.form) return;
     var index = Number(actionEl.getAttribute('data-index'));
     var ruleId = actionEl.getAttribute('data-rule-id') || 'field-not-null';
-    if (state.form.entities[index]) state.form.entities[index].ruleId = ruleId;
+    var entity = state.form.entities[index];
+    if (entity) {
+      entity.ruleId = ruleId;
+    }
     state.openBasicRuleSelect = '';
     state.basicRuleKeyword = '';
     renderAllKeepFormScroll();
+  }
+
+  function openBasicParamModal(actionEl) {
+    if (!state.form) return;
+    var index = Number(actionEl.getAttribute('data-index'));
+    var entity = state.form.entities && state.form.entities[index];
+    var rule = entity ? getBasicRule(entity.ruleId) : null;
+    if (!entity || !isCustomBasicRule(rule)) {
+      showToast('请选择自定义稽查质量规则后再配置参数');
+      return;
+    }
+    state.basicParamModal = {
+      entityIndex: index,
+      draft: cloneBasicParamDraft(entity.paramConfig || createBasicParamDraft(entity))
+    };
+    state.openPicker = '';
+    state.openParamSelect = '';
+    state.openBasicRuleSelect = '';
+    state.schedulePopup = '';
+    state.basicTimePopup = '';
+    renderAllKeepFormScroll();
+  }
+
+  function captureBasicParamModalDraft() {
+    if (!state.basicParamModal || !pageEl) return;
+    var draft = state.basicParamModal.draft;
+    ['template', 'generated', 'customRule'].forEach(function (key) {
+      var content = pageEl.querySelector('[data-dqit-sql-content="' + key + '"]');
+      if (content) setDraftSqlValue(draft, key, content.innerText || content.textContent || '');
+    });
+  }
+
+  function saveBasicParamModal() {
+    if (!state.basicParamModal || !state.form) return;
+    captureBasicParamModalDraft();
+    var entity = state.form.entities && state.form.entities[state.basicParamModal.entityIndex];
+    if (entity) {
+      state.basicParamModal.draft.configured = true;
+      entity.paramConfig = cloneBasicParamDraft(state.basicParamModal.draft);
+    }
+    state.basicParamModal = null;
+    state.openParamSelect = '';
+    renderAllKeepFormScroll();
+    showToast('参数配置已保存');
   }
 
   function addBasicEntity() {
@@ -2639,6 +2939,9 @@ DP.pages.qualityInspectTask = (function () {
     } else if (action === 'close-report-log') {
       state.reportLogModal = null;
       renderAllKeepFormScroll();
+    } else if (action === 'close-test-sql') {
+      state.testSqlModal = null;
+      renderAllKeepFormScroll();
     } else if (action === 'open-rule-modal') {
       openRuleModal();
     } else if (action === 'close-rule-modal') {
@@ -2678,6 +2981,14 @@ DP.pages.qualityInspectTask = (function () {
       chooseBasicRule(actionEl);
     } else if (action === 'query-basic-rule') {
       renderAllKeepFormScroll();
+    } else if (action === 'open-basic-param-modal') {
+      openBasicParamModal(actionEl);
+    } else if (action === 'close-basic-param-modal') {
+      state.basicParamModal = null;
+      state.openParamSelect = '';
+      renderAllKeepFormScroll();
+    } else if (action === 'save-basic-param-modal') {
+      saveBasicParamModal();
     } else if (action === 'add-basic-entity') {
       addBasicEntity();
     } else if (action === 'delete-basic-entity') {
@@ -2734,7 +3045,8 @@ DP.pages.qualityInspectTask = (function () {
     } else if (action === 'generate-sql') {
       generateSql();
     } else if (action === 'test-sql') {
-      showToast('测试执行完成，未发现重复记录');
+      state.testSqlModal = createTestSqlModalDraft();
+      renderAllKeepFormScroll();
     } else if (action === 'format-sql') {
       var sqlKey = actionEl.getAttribute('data-sql-key') || 'template';
       setSqlText(sqlKey, formatSqlText(getPlainSqlText(sqlKey)));
@@ -2830,8 +3142,13 @@ DP.pages.qualityInspectTask = (function () {
         if (mask.getAttribute('data-dqit-modal-mask') === 'rule') state.ruleModal = null;
         else if (mask.getAttribute('data-dqit-modal-mask') === 'standard') state.standardModal = null;
         else if (mask.getAttribute('data-dqit-modal-mask') === 'basic-field') state.basicFieldModal = null;
+        else if (mask.getAttribute('data-dqit-modal-mask') === 'basic-param') {
+          state.basicParamModal = null;
+          state.openParamSelect = '';
+        }
         else if (mask.getAttribute('data-dqit-modal-mask') === 'report-sql') state.reportSqlModal = null;
         else if (mask.getAttribute('data-dqit-modal-mask') === 'report-log') state.reportLogModal = null;
+        else if (mask.getAttribute('data-dqit-modal-mask') === 'test-sql') state.testSqlModal = null;
         else state.modal = null;
         renderAllKeepFormScroll();
         return;
@@ -3054,10 +3371,8 @@ DP.pages.qualityInspectTask = (function () {
       }
       if (e.target.matches('[data-dqit-sql-content]')) {
         var key = e.target.getAttribute('data-dqit-sql-content');
-        if (state.form && key === 'template') state.form.sqlTemplate = e.target.innerText || e.target.textContent || '';
-        if (state.form && key === 'generated') state.form.sqlGenerated = e.target.innerText || e.target.textContent || '';
-        if (state.form && key === 'customRule') state.form.sqlCustom = e.target.innerText || e.target.textContent || '';
-        if (state.form && key === 'basicCustom') state.form.customSql = e.target.innerText || e.target.textContent || '';
+        var draft = state.basicParamModal && key !== 'basicCustom' ? state.basicParamModal.draft : state.form;
+        setDraftSqlValue(draft, key, e.target.innerText || e.target.textContent || '');
         var gutter = pageEl.querySelector('[data-dqit-sql-gutter="' + key + '"]');
         if (gutter) gutter.innerHTML = lineNumbers(e.target.innerText || e.target.textContent || '');
       }
@@ -3075,11 +3390,13 @@ DP.pages.qualityInspectTask = (function () {
         if (query) query.click();
       }
       if (e.key === 'Escape') {
-        if (state.modal || state.ruleModal || state.standardModal || state.basicFieldModal || state.reportSqlModal || state.reportLogModal || state.openPicker || state.openParamSelect || state.openBasicRuleSelect || state.schedulePopup || state.basicTimePopup) {
+        if (state.modal || state.ruleModal || state.standardModal || state.basicFieldModal || state.basicParamModal || state.testSqlModal || state.reportSqlModal || state.reportLogModal || state.openPicker || state.openParamSelect || state.openBasicRuleSelect || state.schedulePopup || state.basicTimePopup) {
           state.modal = null;
           state.ruleModal = null;
           state.standardModal = null;
           state.basicFieldModal = null;
+          state.basicParamModal = null;
+          state.testSqlModal = null;
           state.reportSqlModal = null;
           state.reportLogModal = null;
           state.openPicker = '';
@@ -3124,6 +3441,8 @@ DP.pages.qualityInspectTask = (function () {
     state.ruleModal = null;
     state.standardModal = null;
     state.basicFieldModal = null;
+    state.basicParamModal = null;
+    state.testSqlModal = null;
     state.openPicker = '';
     state.pickerKeyword = '';
     state.openParamSelect = '';
