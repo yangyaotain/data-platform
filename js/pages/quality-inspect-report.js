@@ -8,6 +8,8 @@ DP.pages = DP.pages || {};
 DP.pages.qualityInspectReport = (function () {
   var pageEl = null;
   var templateEditorSavedRange = null;
+  var templatePieCharts = [];
+  var templatePieResizeHandler = null;
 
   var state = {
     view: 'list',
@@ -146,22 +148,50 @@ DP.pages.qualityInspectReport = (function () {
     report('rep-supplier-contract', 'supplier_contract', '供应商合同表', 'erp_oracle_db', 4, 88.1, 19, 52460, '2026-06-27 10:06:12', '供应商合同日期范围稽查'),
     report('rep-crm-customer-info', 'crm_customer_info', 'CRM客户信息表', 'crm_sqlserver', 5, 81.7, 44, 265890, '2026-06-29 09:45:28', '客户证件与联系方式稽查'),
     report('rep-crm-contact-record', 'crm_contact_record', '客户触达记录表', 'crm_sqlserver', 4, 90.1, 16, 786320, '2026-06-28 09:31:40', '触达记录时间完整性稽查'),
-    report('rep-oa-leave-apply', 'oa_leave_apply', '请假申请表', 'oa_mysql_db', 4, 93.9, 7, 42960, '2026-06-27 08:40:00', '请假流程状态稽查'),
-    report('rep-oa-sys-department', 'sys_department', '部门表', 'oa_mysql_db', 6, 99.5, 12, 2450, '2026-06-30 10:05:02', 'OA组织部门基础数据检核'),
+    report('rep-oa-leave-apply', 'oa_leave_apply', '请假申请表', 'oa_mysql_db', 8, 98.0, 860, 42960, '2026-06-30 10:05:02', '请假流程状态稽查'),
+    report('rep-oa-sys-department', 'sys_departmen', '部门表', 'oa_mysql_db', 6, 99.5, 12, 2450, '2026-06-30 10:05:02', 'OA组织部门基础数据检核'),
     report('rep-oa-sys-user', 'sys_user', '员工主表', 'oa_mysql_db', 7, 99.3, 18, 2452, '2026-06-30 10:05:02', 'OA员工主数据完整性检核'),
     report('rep-oa-sys-post', 'sys_post', '岗位表', 'oa_mysql_db', 5, 98.7, 3, 238, '2026-06-30 10:05:02', 'OA岗位数据有效性检核'),
-    report('rep-oa-sys-role', 'sys_role', '角色表', 'oa_mysql_db', 6, 98.4, 2, 126, '2026-06-30 10:05:02', 'OA角色权限唯一性检核'),
+    report('rep-oa-sys-role', 'sys_role', '角色表', 'oa_mysql_db', 6, 99.2, 1, 126, '2026-06-30 10:05:02', 'OA角色权限唯一性检核'),
+    report('rep-oa-position-grade', 'sys_position_grade', '岗位职级表', 'oa_mysql_db', 4, 98.8, 1, 84, '2026-06-30 10:05:02', 'OA岗位职级基础数据检核'),
+    report('rep-oa-user-role', 'sys_user_role', '用户角色关系表', 'oa_mysql_db', 5, 99.4, 29, 5120, '2026-06-30 10:05:02', 'OA用户角色关系一致性检核'),
+    report('rep-oa-org-relation', 'sys_org_relation', '组织关系表', 'oa_mysql_db', 5, 99.4, 31, 4860, '2026-06-30 10:05:02', 'OA组织关系完整性检核'),
+    report('rep-oa-flow-task', 'oa_flow_task', '流程任务表', 'oa_mysql_db', 8, 97.6, 1640, 68240, '2026-06-30 10:05:02', 'OA流程任务状态一致性检核'),
+    report('rep-oa-attendance-record', 'oa_attendance_record', '考勤记录表', 'oa_mysql_db', 8, 95.8, 3860, 92760, '2026-06-30 10:05:02', 'OA考勤记录及时性检核'),
+    report('rep-oa-notice-read', 'oa_notice_read', '公告阅读表', 'oa_mysql_db', 5, 99.1, 168, 18360, '2026-06-30 10:05:02', 'OA公告阅读记录完整性检核'),
+    report('rep-oa-contract-archive', 'oa_contract_archive', '合同归档表', 'oa_mysql_db', 6, 98.2, 32, 1760, '2026-06-30 10:05:02', 'OA合同归档字段规范性检核'),
+    report('rep-oa-asset-card', 'oa_asset_card', '资产卡片表', 'oa_mysql_db', 6, 98.7, 42, 3210, '2026-06-30 10:05:02', 'OA资产卡片编码唯一性检核'),
+    report('rep-oa-meeting-room', 'oa_meeting_room', '会议室表', 'oa_mysql_db', 4, 98.5, 1, 68, '2026-06-30 10:05:02', 'OA会议室基础信息检核'),
+    report('rep-oa-vehicle-apply', 'oa_vehicle_apply', '用车申请表', 'oa_mysql_db', 6, 96.9, 68, 2190, '2026-06-30 10:05:02', 'OA用车申请流程字段检核'),
     report('rep-test-order-main', 'test_order_main', '测试订单主表', 'test_mysql_db', 4, 78.3, 53, 9280, '2026-06-26 11:20:10', '测试订单基础规则稽查'),
     report('rep-test-clickhouse-log', 'test_event_log_ck', '测试事件日志表', 'test_clickhouse', 4, 82.7, 25, 182640, '2026-06-25 11:08:35', '测试日志字段稽查'),
     report('rep-test-mongodb-profile', 'test_user_profile_doc', '测试用户画像文档', 'test_mongodb', 4, 89.4, 11, 38420, '2026-06-25 10:52:21', '测试画像文档完整性稽查')
   ];
 
+  var oaQualityReportIds = [
+    'rep-oa-sys-department',
+    'rep-oa-sys-user',
+    'rep-oa-sys-post',
+    'rep-oa-sys-role',
+    'rep-oa-position-grade',
+    'rep-oa-user-role',
+    'rep-oa-org-relation',
+    'rep-oa-leave-apply',
+    'rep-oa-flow-task',
+    'rep-oa-attendance-record',
+    'rep-oa-notice-read',
+    'rep-oa-contract-archive',
+    'rep-oa-asset-card',
+    'rep-oa-meeting-room',
+    'rep-oa-vehicle-apply'
+  ];
+
   var reportConfigs = [
-    reportConfig('cfg-core-trade', '核心交易数据质量稽查报告', 3, 22, 55, '已启动', { type: '每天', time: '10:05:02' }, '2026-06-29 10:05:02', '覆盖订单、支付、库存等核心交易链路，汇总关键字段完整性、唯一性和金额范围稽查结果。', ['rep-order-main', 'rep-order-detail', 'rep-order-payment', 'rep-order-status-log', 'rep-inventory-snapshot', 'rep-dwd-order-fact', 'rep-dws-order-daily']),
+    reportConfig('cfg-core-trade', 'OA系统数据质量检核报告', 1, 15, 24, '已启动', { type: '每月', day: '1号', time: '10:05:02' }, '2026-06-30 10:05:02', '按月汇总 OA 系统组织、员工、岗位、角色、流程、考勤、资产等基础表的数据质量检核结果。', oaQualityReportIds.slice()),
     reportConfig('cfg-warehouse-layer', '数仓分层质量稽查报告', 4, 36, 82, '已启动', { type: '每天', time: '03:30:00' }, '2026-06-29 03:30:00', '面向 ODS、DWD、DWS、ADS 分层统计稽查任务执行情况，重点关注入仓完整性和汇总口径一致性。', ['rep-ods-workorder-ticket', 'rep-ods-user-behavior', 'rep-dwd-order-fact', 'rep-dwd-customer-profile', 'rep-dws-order-daily', 'rep-dws-user-profile', 'rep-ads-gmv-summary', 'rep-ads-order-overview']),
     reportConfig('cfg-customer-service', '客户运营数据质量周报', 2, 14, 31, '已启动', { type: '每周', weekday: '周一', time: '10:05:02' }, '2026-06-29 10:05:02', '统计客户主数据、触达记录和用户画像类质量任务，辅助客户运营团队跟踪证件、联系方式和标签取值问题。', ['rep-dwd-customer-profile', 'rep-crm-customer-info', 'rep-crm-contact-record', 'rep-dws-user-profile']),
     reportConfig('cfg-master-data', '主数据标准映射稽查报告', 2, 8, 18, '未启动', { type: '每月', day: '1号', time: '10:05:02' }, '-', '计划汇总商品、区域、供应商等主数据标准映射稽查结果，用于月度主数据治理例会复盘。', ['rep-product-info', 'rep-dim-region', 'rep-supplier-contract']),
-    reportConfig('cfg-business-system', '业务系统数据质量稽查月报', 3, 19, 47, '已启动', { type: '每月', day: '1号', time: '10:05:02' }, '2026-06-01 10:05:02', '汇总 ERP、CRM、OA 等业务系统质量任务运行结果，关注员工、合同、客户和流程状态类数据。', ['rep-employee-info', 'rep-supplier-contract', 'rep-crm-customer-info', 'rep-crm-contact-record', 'rep-oa-leave-apply']),
+    reportConfig('cfg-business-system', 'OA系统数据质量检核报告', 1, 15, 24, '已启动', { type: '每月', day: '1号', time: '10:05:02' }, '2026-06-01 10:05:02', '按月汇总 OA 系统组织、员工、岗位、角色、流程、考勤、资产等基础表的数据质量检核结果。', oaQualityReportIds.slice()),
     reportConfig('cfg-test-env', '测试环境质量稽查报告', 3, 9, 21, '未启动', { type: '每周', weekday: '周一', time: '10:05:02' }, '-', '用于测试库、测试日志和测试画像文档的数据质量演示，当前暂未启用周期生成。', ['rep-test-order-main', 'rep-test-clickhouse-log', 'rep-test-mongodb-profile'])
   ];
 
@@ -186,17 +216,14 @@ DP.pages.qualityInspectReport = (function () {
   ];
 
   var templateVariables = [
-    { name: '模板名称', desc: '当前稽查报告模板的展示名称', sample: 'OA系统数据质量检核报告模板' },
-    { name: '统计范围', desc: '库、表、质量任务的汇总范围', sample: '1个库，4张表，24个质量任务' },
+    { name: '统计范围', desc: '数据源、表、质量任务的汇总范围', sample: '1个数据源，15张表，24个质量任务' },
     { name: '数据源数量', desc: '纳入本报告统计的数据源数量', sample: '1' },
-    { name: '数据库数量', desc: '纳入本报告检核的数据库数量', sample: '1' },
-    { name: '表数量', desc: '纳入本报告统计的数据表数量', sample: '4' },
-    { name: '字段数', desc: '纳入本报告检核的数据量，按万条展示', sample: '52.66' },
+    { name: '表数量', desc: '纳入本报告统计的数据表数量', sample: '15' },
+    { name: '字段数', desc: '纳入本报告检核的数据量，按万条展示', sample: '24.49' },
     { name: '质量任务数', desc: '报告关联质量任务总数', sample: '24' },
-    { name: '平均通过率', desc: '本周期质量任务平均通过率', sample: '99.71%' },
-    { name: '问题记录数', desc: '本周期发现的问题记录数量', sample: '154' },
-    { name: '稽查问题总记录数', desc: '本周期检核发现的问题总记录数', sample: '154' },
-    { name: '稽查总数据记录数', desc: '本周期参与检核的数据总记录数', sample: '526,600' },
+    { name: '平均通过率', desc: '本周期质量任务平均通过率', sample: '97.24%' },
+    { name: '问题总记录数', desc: '本周期发现的问题总记录数量', sample: '6,766' },
+    { name: '稽查总数据记录数', desc: '本周期参与检核的数据总记录数', sample: '244,878' },
     { name: '完整性合规比例', desc: '完整性规则检核合规比例', sample: '99.34%' },
     { name: '一致性合规比例', desc: '一致性规则检核合规比例', sample: '99.58%' },
     { name: '唯一性合规', desc: '唯一性规则检核合规比例', sample: '99.91%' },
@@ -217,10 +244,7 @@ DP.pages.qualityInspectReport = (function () {
 
   var templateDashboardFilters = [
     { key: 'all', label: '全部', icon: 'bi-grid' },
-    { key: 'kpi', label: '指标卡', icon: 'bi-speedometer2' },
-    { key: 'trend', label: '趋势', icon: 'bi-graph-up' },
-    { key: 'bar', label: '柱状', icon: 'bi-bar-chart' },
-    { key: 'pie', label: '饼图', icon: 'bi-pie-chart' },
+    { key: 'chart', label: '图表', icon: 'bi-bar-chart-line' },
     { key: 'table', label: '表格', icon: 'bi-table' }
   ];
 
@@ -230,6 +254,13 @@ DP.pages.qualityInspectReport = (function () {
   var templateZoomMin = 60;
   var templateZoomMax = 160;
   var templateZoomStep = 10;
+  var templateRulePieColors = ['#25577f', '#2f75a8', '#4d94bd', '#6fb0d1', '#9bc8df', '#c7dceb'];
+  var templateTrendChartColors = {
+    bar: '#3f8fc9',
+    barEnd: '#7fc4e8',
+    line: '#27a97b',
+    lineSoft: 'rgba(39,169,123,.12)'
+  };
   var templateScheduleTypes = [
     { value: '每天', label: '每天' },
     { value: '每周', label: '每周' },
@@ -244,32 +275,44 @@ DP.pages.qualityInspectReport = (function () {
   ];
 
   var templateDashboardOptions = [
-    { id: 'dash-quality-overview', name: '质量概览卡片', type: 'kpi', typeLabel: '指标卡', icon: 'bi-speedometer2', scope: '核心交易数据质量稽查报告', desc: '展示质量任务数、平均通过率、问题记录数和本周期变化。', metrics: '3个指标', updateTime: '2026-06-29 10:05:02' },
-    { id: 'dash-pass-rate-trend', name: '规则通过率趋势', type: 'trend', typeLabel: '趋势图', icon: 'bi-graph-up-arrow', scope: '数仓分层质量稽查报告', desc: '按天跟踪质量规则通过率，辅助识别持续波动的数据层。', metrics: '7日趋势', updateTime: '2026-06-29 03:30:00' },
-    { id: 'dash-problem-source-bar', name: '数据源问题记录排行', type: 'bar', typeLabel: '柱状图', icon: 'bi-bar-chart', scope: '业务系统数据质量稽查月报', desc: '对比各数据源问题记录数量，突出高风险库表。', metrics: '13个数据源', updateTime: '2026-06-28 18:20:16' },
-    { id: 'dash-rule-type-pie', name: '规则类型问题分布', type: 'pie', typeLabel: '饼图', icon: 'bi-pie-chart', scope: '主数据标准映射稽查报告', desc: '按完整性、唯一性、准确性、规范性统计问题占比。', metrics: '5类规则', updateTime: '2026-06-27 16:42:08' },
-    { id: 'dash-task-detail-table', name: '质量任务执行明细', type: 'table', typeLabel: '表格', icon: 'bi-table', scope: '核心交易数据质量稽查报告', desc: '列出任务名称、稽查对象、通过率、问题记录和执行时间。', metrics: '55个任务', updateTime: '2026-06-29 10:05:02' },
-    { id: 'dash-field-top-bar', name: '问题字段 TOP10', type: 'bar', typeLabel: '柱状图', icon: 'bi-bar-chart-line', scope: '客户运营数据质量周报', desc: '定位出现问题最多的字段，辅助后续规则和字段治理。', metrics: '10个字段', updateTime: '2026-06-29 10:05:02' },
-    { id: 'dash-rectify-trend', name: '整改闭环趋势', type: 'trend', typeLabel: '趋势图', icon: 'bi-activity', scope: '业务系统数据质量稽查月报', desc: '统计问题发现、处理中、已关闭数量的周期变化。', metrics: '30日趋势', updateTime: '2026-06-26 11:18:34' },
-    { id: 'dash-health-score-card', name: '数据源健康度评分', type: 'kpi', typeLabel: '指标卡', icon: 'bi-clipboard2-pulse', scope: '数仓分层质量稽查报告', desc: '综合通过率、失败任务数和问题记录数形成健康度评分。', metrics: '4个评分项', updateTime: '2026-06-29 03:30:00' }
+    { id: 'dash-template-rule-pie', name: '检核规则数量分布', type: 'pie', typeLabel: '饼图仪表盘', icon: 'bi-pie-chart', scope: '数据质量检核总体情况', desc: '基于规则类型分布表的检核问题条数生成占比饼图。', metrics: '6类规则', updateTime: '2026-06-29 10:05:02' },
+    { id: 'dash-template-rule-table', name: '规则类型分布表', type: 'table', typeLabel: '表格仪表盘', icon: 'bi-table', scope: '数据质量检核总体情况', desc: '展示完整性、一致性、唯一性等规则类型的合规比例和检核问题条数。', metrics: '3列 / 6行', updateTime: '2026-06-29 10:05:02' },
+    { id: 'dash-template-quality-good-top-table', name: '质量好Top10', type: 'table', typeLabel: '表格仪表盘', icon: 'bi-table', scope: '总体概述', desc: '按检核问题率从低到高展示质量最好的10张表。', metrics: '6列 / 10行', updateTime: '2026-06-29 10:05:02' },
+    { id: 'dash-template-quality-bad-top-table', name: '数据差Top10', type: 'table', typeLabel: '表格仪表盘', icon: 'bi-table', scope: '总体概述', desc: '按检核问题率从高到低展示质量最差的10张表。', metrics: '6列 / 10行', updateTime: '2026-06-29 10:05:02' },
+    { id: 'dash-template-check-table', name: '质量维度检核结果表', type: 'table', typeLabel: '表格仪表盘', icon: 'bi-table', scope: '数据质量检核结果', desc: '按质量维度展示相关表的检核数据条数、问题条数和问题率。', metrics: '5列 / 5行', updateTime: '2026-06-29 10:05:02' },
+    { id: 'dash-template-trend-chart', name: '问题整改趋势图', type: 'chart', typeLabel: '柱折图仪表盘', icon: 'bi-bar-chart-line', scope: '问题整改进度', desc: '近12个月检核问题条数与整改率双轴趋势图。', metrics: '近12个月', updateTime: '2026-06-29 10:05:02' },
+    { id: 'dash-template-trend-table', name: '问题整改进度表', type: 'table', typeLabel: '表格仪表盘', icon: 'bi-table', scope: '问题整改进度', desc: '按月份展示表数据量、检核问题条数、问题率和整改率变化。', metrics: '6列 / 12行', updateTime: '2026-06-29 10:05:02' }
   ];
 
   var templateOutlineSections = [
     { number: '1', title: '数据质量检核总体情况', level: 1, page: '1' },
     { number: '1.1', title: '总体概述', level: 2, page: '1' },
-    { number: '1.2', title: '检核结果', level: 2, page: '1' },
-    { number: '1.2.1', title: '数据完整性', level: 3, page: '2' },
-    { number: '1.2.2', title: '数据一致性', level: 3, page: '2' },
-    { number: '1.2.3', title: '数据唯一性', level: 3, page: '3' },
-    { number: '1.2.4', title: '数据准确性', level: 3, page: '3' },
-    { number: '1.2.5', title: '数据有效性', level: 3, page: '4' },
-    { number: '1.2.6', title: '数据及时性', level: 3, page: '4' },
-    { number: '1.3', title: '问题整改进度', level: 2, page: '5' },
-    { number: '2', title: '数据质量检核详细情况', level: 1, page: '6' },
-    { number: '2.1', title: 'sys_departmen（部门表）', level: 2, page: '6' },
+    { number: '1.1.1', title: '质量好Top10', level: 3, page: '2' },
+    { number: '1.1.2', title: '数据差Top10', level: 3, page: '2' },
+    { number: '1.2', title: '检核结果', level: 2, page: '3' },
+    { number: '1.2.1', title: '数据完整性', level: 3, page: '3' },
+    { number: '1.2.2', title: '数据一致性', level: 3, page: '3' },
+    { number: '1.2.3', title: '数据唯一性', level: 3, page: '4' },
+    { number: '1.2.4', title: '数据准确性', level: 3, page: '4' },
+    { number: '1.2.5', title: '数据有效性', level: 3, page: '5' },
+    { number: '1.2.6', title: '数据及时性', level: 3, page: '5' },
+    { number: '1.3', title: '问题整改进度', level: 2, page: '6' },
+    { number: '2', title: '数据质量检核详细情况', level: 1, page: '7' },
+    { number: '2.1', title: 'sys_departmen（部门表）', level: 2, page: '7' },
     { number: '2.2', title: 'sys_user（员工主表）', level: 2, page: '7' },
     { number: '2.3', title: 'sys_post（岗位表）', level: 2, page: '8' },
-    { number: '2.4', title: 'sys_role（角色表）', level: 2, page: '9' }
+    { number: '2.4', title: 'sys_role（角色表）', level: 2, page: '8' },
+    { number: '2.5', title: 'sys_position_grade（岗位职级表）', level: 2, page: '9' },
+    { number: '2.6', title: 'sys_user_role（用户角色关系表）', level: 2, page: '9' },
+    { number: '2.7', title: 'sys_org_relation（组织关系表）', level: 2, page: '10' },
+    { number: '2.8', title: 'oa_leave_apply（请假申请表）', level: 2, page: '10' },
+    { number: '2.9', title: 'oa_flow_task（流程任务表）', level: 2, page: '11' },
+    { number: '2.10', title: 'oa_attendance_record（考勤记录表）', level: 2, page: '11' },
+    { number: '2.11', title: 'oa_notice_read（公告阅读表）', level: 2, page: '12' },
+    { number: '2.12', title: 'oa_contract_archive（合同归档表）', level: 2, page: '12' },
+    { number: '2.13', title: 'oa_asset_card（资产卡片表）', level: 2, page: '13' },
+    { number: '2.14', title: 'oa_meeting_room（会议室表）', level: 2, page: '13' },
+    { number: '2.15', title: 'oa_vehicle_apply（用车申请表）', level: 2, page: '14' }
   ];
 
   var templateRuleDistributionRows = [
@@ -345,19 +388,91 @@ DP.pages.qualityInspectReport = (function () {
   ];
 
   var templateRectifyTrendRows = [
-    ['1月', '4', '5,018', '121', '2.41%', '76%'],
-    ['2月', '4', '5,086', '116', '2.28%', '78%'],
-    ['3月', '4', '5,133', '103', '2.01%', '81%'],
-    ['4月', '4', '5,188', '91', '1.75%', '84%'],
-    ['5月', '4', '5,224', '73', '1.40%', '88%'],
-    ['6月', '4', '5,266', '35', '0.66%', '92%']
+    ['2025-07', '4', '4,812', '168', '3.49%', '58%'],
+    ['2025-08', '4', '4,856', '154', '3.17%', '61%'],
+    ['2025-09', '4', '4,903', '149', '3.04%', '64%'],
+    ['2025-10', '4', '4,956', '136', '2.74%', '67%'],
+    ['2025-11', '4', '4,988', '128', '2.57%', '70%'],
+    ['2025-12', '4', '5,018', '121', '2.41%', '76%'],
+    ['2026-01', '4', '5,086', '116', '2.28%', '78%'],
+    ['2026-02', '4', '5,133', '103', '2.01%', '81%'],
+    ['2026-03', '4', '5,188', '91', '1.75%', '84%'],
+    ['2026-04', '4', '5,224', '73', '1.40%', '88%'],
+    ['2026-05', '4', '5,248', '52', '0.99%', '90%'],
+    ['2026-06', '4', '5,266', '35', '0.66%', '92%']
   ];
 
+  var templateQualityRankSamples = [
+    { tableName: 'sys_role', alias: '角色表', recordCount: 126, problemCount: 1, fieldCount: '11' },
+    { tableName: 'sys_position_grade', alias: '岗位职级表', recordCount: 84, problemCount: 1, fieldCount: '8' },
+    { tableName: 'sys_post', alias: '岗位表', recordCount: 238, problemCount: 3, fieldCount: '9' },
+    { tableName: 'sys_departmen', alias: '部门表', recordCount: 2450, problemCount: 12, fieldCount: '14' },
+    { tableName: 'sys_user_role', alias: '用户角色关系表', recordCount: 5120, problemCount: 29, fieldCount: '10' },
+    { tableName: 'sys_org_relation', alias: '组织关系表', recordCount: 4860, problemCount: 31, fieldCount: '12' },
+    { tableName: 'sys_user', alias: '员工主表', recordCount: 2452, problemCount: 18, fieldCount: '22' },
+    { tableName: 'oa_meeting_room', alias: '会议室表', recordCount: 68, problemCount: 1, fieldCount: '9' },
+    { tableName: 'oa_notice_read', alias: '公告阅读表', recordCount: 18360, problemCount: 168, fieldCount: '15' },
+    { tableName: 'oa_asset_card', alias: '资产卡片表', recordCount: 3210, problemCount: 42, fieldCount: '18' },
+    { tableName: 'oa_contract_archive', alias: '合同归档表', recordCount: 1760, problemCount: 32, fieldCount: '20' },
+    { tableName: 'oa_leave_apply', alias: '请假申请表', recordCount: 42960, problemCount: 860, fieldCount: '19' },
+    { tableName: 'oa_flow_task', alias: '流程任务表', recordCount: 68240, problemCount: 1640, fieldCount: '24' },
+    { tableName: 'oa_vehicle_apply', alias: '用车申请表', recordCount: 2190, problemCount: 68, fieldCount: '16' },
+    { tableName: 'oa_attendance_record', alias: '考勤记录表', recordCount: 92760, problemCount: 3860, fieldCount: '21' }
+  ];
+
+  function getQualityRankRate(item) {
+    return item && item.recordCount ? item.problemCount / item.recordCount : 0;
+  }
+
+  function getQualityRankTotalRecordCount() {
+    return templateQualityRankSamples.reduce(function (sum, item) {
+      return sum + (Number(item.recordCount) || 0);
+    }, 0);
+  }
+
+  function getQualityRankProblemCount() {
+    return templateQualityRankSamples.reduce(function (sum, item) {
+      return sum + (Number(item.problemCount) || 0);
+    }, 0);
+  }
+
+  function getQualityRankRows(order) {
+    var rows = templateQualityRankSamples.slice().sort(function (a, b) {
+      var rateDiff = getQualityRankRate(a) - getQualityRankRate(b);
+      if (rateDiff === 0) return a.problemCount - b.problemCount;
+      return order === 'desc' ? -rateDiff : rateDiff;
+    }).slice(0, 10);
+    return rows.map(function (item, index) {
+      return [
+        String(index + 1),
+        item.tableName,
+        item.alias,
+        formatNumber(item.recordCount),
+        formatNumber(item.problemCount),
+        (getQualityRankRate(item) * 100).toFixed(2) + '%'
+      ];
+    });
+  }
+
+  var templateQualityGoodTopRows = getQualityRankRows('asc');
+  var templateQualityBadTopRows = getQualityRankRows('desc');
+
   var templateDetailSamples = [
-    { tableName: 'sys_departmen', alias: '部门表', fieldCount: '14', dataCount: '2.45', issueCount: '12' },
-    { tableName: 'sys_user', alias: '员工主表', fieldCount: '22', dataCount: '2.45', issueCount: '18' },
-    { tableName: 'sys_post', alias: '岗位表', fieldCount: '9', dataCount: '0.24', issueCount: '3' },
-    { tableName: 'sys_role', alias: '角色表', fieldCount: '11', dataCount: '0.13', issueCount: '2' }
+    { tableName: 'sys_departmen', alias: '部门表', fieldCount: '14', dataCount: '0.25', issueCount: '12' },
+    { tableName: 'sys_user', alias: '员工主表', fieldCount: '22', dataCount: '0.25', issueCount: '18' },
+    { tableName: 'sys_post', alias: '岗位表', fieldCount: '9', dataCount: '0.02', issueCount: '3' },
+    { tableName: 'sys_role', alias: '角色表', fieldCount: '11', dataCount: '0.01', issueCount: '1' },
+    { tableName: 'sys_position_grade', alias: '岗位职级表', fieldCount: '8', dataCount: '0.01', issueCount: '1' },
+    { tableName: 'sys_user_role', alias: '用户角色关系表', fieldCount: '10', dataCount: '0.51', issueCount: '29' },
+    { tableName: 'sys_org_relation', alias: '组织关系表', fieldCount: '12', dataCount: '0.49', issueCount: '31' },
+    { tableName: 'oa_leave_apply', alias: '请假申请表', fieldCount: '19', dataCount: '4.30', issueCount: '860' },
+    { tableName: 'oa_flow_task', alias: '流程任务表', fieldCount: '24', dataCount: '6.82', issueCount: '1,640' },
+    { tableName: 'oa_attendance_record', alias: '考勤记录表', fieldCount: '21', dataCount: '9.28', issueCount: '3,860' },
+    { tableName: 'oa_notice_read', alias: '公告阅读表', fieldCount: '15', dataCount: '1.84', issueCount: '168' },
+    { tableName: 'oa_contract_archive', alias: '合同归档表', fieldCount: '20', dataCount: '0.18', issueCount: '32' },
+    { tableName: 'oa_asset_card', alias: '资产卡片表', fieldCount: '18', dataCount: '0.32', issueCount: '42' },
+    { tableName: 'oa_meeting_room', alias: '会议室表', fieldCount: '9', dataCount: '0.01', issueCount: '1' },
+    { tableName: 'oa_vehicle_apply', alias: '用车申请表', fieldCount: '16', dataCount: '0.22', issueCount: '68' }
   ];
 
   var templateFieldDetailRows = [
@@ -368,6 +483,20 @@ DP.pages.qualityInspectReport = (function () {
     ['REQ_DATE_TIME（检查类别）', '取值范围约束评测', '准确性', '98.45'],
     ['REQ_DEPT（检验时间）', '及时性评测', '及时性', '98.56']
   ];
+
+  templateDashboardOptions = templateDashboardOptions.concat(templateDetailSamples.map(function (item) {
+    return {
+      id: getTemplateFieldDashboardId(item),
+      name: getTemplateFieldDashboardTitle(item),
+      type: 'table',
+      typeLabel: '表格仪表盘',
+      icon: 'bi-table',
+      scope: item.tableName + '（' + item.alias + '）',
+      desc: '展示' + item.alias + '字段对象、评测内容、评测标准和评估结论。',
+      metrics: '4列 / 6行',
+      updateTime: '2026-06-29 10:05:02'
+    };
+  }));
 
   var issueTemplates = [
     { ruleKey: 'required', ruleName: '关键字段非空校验', type: '完整性', field: '主键字段', rateOffset: 6 },
@@ -916,13 +1045,18 @@ DP.pages.qualityInspectReport = (function () {
       '.qir-word-toc p.level-h3{margin-left:32pt;color:#000;}',
       '.qir-word-toc p.level-h4{margin-left:46pt;color:#000;}',
       '.qir-word-page{width:100%;}',
+      '.qir-template-doc-page{width:100%;min-height:23.5cm;page-break-after:always;break-after:page;box-sizing:border-box;}',
+      '.qir-template-doc-page:last-child{page-break-after:auto;break-after:auto;}',
+      '.qir-template-cover-page{height:22cm;text-align:center;}',
+      '.qir-template-cover-content{height:21cm;text-align:center;}',
       '.qir-template-page h1{margin:0 0 12pt;color:#000;font-size:22pt;line-height:1.35;text-align:center;}',
       '.qir-template-page h2{margin:20pt 0 8pt;color:#000;font-size:15pt;line-height:1.45;}',
       '.qir-template-page h3{margin:14pt 0 7pt;color:#000;font-size:12.5pt;line-height:1.45;font-weight:650;}',
       '.qir-template-page h4{margin:12pt 0 6pt;color:#000;font-size:12pt;line-height:1.45;font-weight:650;}',
       '.qir-template-page p{margin-top:6pt;margin-bottom:6pt;mso-para-margin-top:.5gd;mso-para-margin-bottom:.5gd;color:#000;font-family:SimSun,"宋体",serif;font-size:12pt;line-height:150%;mso-line-height-rule:auto;text-indent:24pt;mso-char-indent-count:2.0;}',
-      '.qir-template-doc-system{display:block;margin:0 0 4pt;color:#000;font-size:16pt;font-weight:400;}',
+      '.qir-template-doc-system{display:block;margin:0 0 4pt;color:inherit;font-size:inherit;font-weight:inherit;}',
       '.qir-template-meta{padding-bottom:8pt;border-bottom:1pt solid #edf1f6;color:#000!important;}',
+      '.qir-template-report-date{margin-top:11cm!important;text-align:center!important;text-indent:0!important;mso-char-indent-count:0!important;color:#000!important;}',
       '.qir-template-doc-toc{margin:16pt 0 20pt;padding:0 0 12pt;border-bottom:1pt solid #dfe5ec;}',
       '.qir-template-doc-toc h2{margin:0 0 10pt;color:#000;font-size:15pt;text-align:center;}',
       '.qir-template-doc-toc-row{display:block;margin:4pt 0;color:#000;font-size:10.5pt;line-height:1.5;text-indent:0!important;}',
@@ -946,11 +1080,19 @@ DP.pages.qualityInspectReport = (function () {
       '.qir-inserted-dashboard-head{margin-bottom:8pt;}',
       '.qir-inserted-dashboard-head strong{color:#000;font-size:12pt;font-weight:650;}',
       '.qir-inserted-dashboard-body{padding:10pt;border:1pt solid #e6eff8;background:#fff;}',
+      '.qir-template-table-dashboard .qir-inserted-dashboard-body{min-height:auto;padding:8pt;}',
+      '.qir-template-pie-dashboard .qir-inserted-dashboard-head{text-align:center;}',
+      '.qir-template-pie-dashboard .qir-inserted-dashboard-head strong{color:#000;font-size:15pt;font-weight:500;}',
+      '.qir-template-pie-dashboard .qir-inserted-dashboard-body{padding:8pt;background:#fff;}',
+      '.qir-rule-pie-chart{height:260pt;margin:0;background:#fff;text-align:center;}',
+      '.qir-chart-fallback{height:100%;display:table;width:100%;color:#000;font-size:9pt;text-align:center;}',
+      '.qir-chart-fallback:before{content:"ECharts 图表将在页面预览中渲染";display:table-cell;vertical-align:middle;}',
       '.qir-inserted-kpi-grid{display:table;width:100%;border-spacing:8pt;}',
       '.qir-inserted-kpi-grid div{display:table-cell;padding:10pt;border:1pt solid #dce9f8;background:#f8fbff;}',
       '.qir-inserted-kpi-grid span,.qir-inserted-kpi-grid em{display:block;color:#000;font-size:9pt;font-style:normal;}',
       '.qir-inserted-kpi-grid b{display:block;margin:5pt 0;color:#000;font-size:18pt;}',
       '.qir-inserted-table{width:100%;border-collapse:collapse;color:#000;font-size:9pt;}',
+      '.qir-inserted-table.qir-template-doc-table{margin:0;}',
       '.qir-inserted-table th,.qir-inserted-table td{height:24pt;padding:0 7pt;border:1pt solid #edf1f6;text-align:left;}',
       '.qir-inserted-table th{background:#f7f9fc;color:#000;font-weight:650;}',
       '.qir-inserted-bars div{margin:6pt 0;color:#000;font-size:9pt;}',
@@ -993,17 +1135,51 @@ DP.pages.qualityInspectReport = (function () {
       'font-weight:650',
       'color:#000'
     ].join(';');
+    var coverTitleStyle = [
+      'margin-top:4cm',
+      'margin-right:0',
+      'margin-bottom:0',
+      'margin-left:0',
+      'text-align:center',
+      'line-height:1.35',
+      'font-family:SimSun,"宋体",serif',
+      'font-size:22pt',
+      'font-weight:650',
+      'color:#000'
+    ].join(';');
+    var reportDateStyle = [
+      'margin-top:11cm',
+      'margin-right:0',
+      'margin-bottom:0',
+      'margin-left:0',
+      'text-align:center',
+      'text-indent:0',
+      'mso-char-indent-count:0',
+      'line-height:150%',
+      'mso-line-height-rule:auto',
+      'font-family:SimSun,"宋体",serif',
+      'mso-ascii-font-family:SimSun',
+      'mso-hansi-font-family:SimSun',
+      'font-size:12pt',
+      'color:#000'
+    ].join(';');
     wrap.innerHTML = html || '';
     wrap.querySelectorAll('*').forEach(function (node) {
       node.style.color = '#000';
     });
+    var docPages = Array.prototype.slice.call(wrap.querySelectorAll('.qir-template-doc-page'));
+    docPages.forEach(function (page, index) {
+      page.setAttribute('style', 'width:100%;min-height:23.5cm;page-break-after:' + (index === docPages.length - 1 ? 'auto' : 'always') + ';break-after:' + (index === docPages.length - 1 ? 'auto' : 'page') + ';box-sizing:border-box;color:#000');
+    });
     wrap.querySelectorAll('h1').forEach(function (heading) {
-      heading.setAttribute('style', titleStyle);
+      var isCoverTitle = heading.closest && heading.closest('.qir-template-cover-page');
+      heading.setAttribute('style', isCoverTitle ? coverTitleStyle : titleStyle);
     });
     wrap.querySelectorAll('p').forEach(function (paragraph) {
       var oldClass = paragraph.getAttribute('class') || '';
+      var isReportDate = paragraph.classList.contains('qir-template-report-date');
       paragraph.setAttribute('class', ('MsoNormal ' + oldClass).trim());
-      paragraph.setAttribute('style', paragraphStyle);
+      paragraph.setAttribute('style', isReportDate ? reportDateStyle : paragraphStyle);
     });
     return wrap.innerHTML;
   }
@@ -1038,8 +1214,44 @@ DP.pages.qualityInspectReport = (function () {
     }, 1800);
   }
 
+  function isSameIdList(left, right) {
+    var leftList = (left || []).slice().sort();
+    var rightList = (right || []).slice().sort();
+    if (leftList.length !== rightList.length) return false;
+    return leftList.every(function (id, index) { return id === rightList[index]; });
+  }
+
+  function isOaQualityReportConfig(config) {
+    if (!config) return false;
+    var name = String(config.name || '');
+    return config.id === 'cfg-core-trade' ||
+      config.id === 'cfg-business-system' ||
+      name.indexOf('OA系统数据质量检核报告') >= 0;
+  }
+
+  function normalizeOaQualityReportConfig(config) {
+    if (!isOaQualityReportConfig(config)) return config;
+    config.dbCount = 1;
+    config.tableCount = oaQualityReportIds.length;
+    config.taskCount = 24;
+    if (!isSameIdList(config.reportIds, oaQualityReportIds)) {
+      config.reportIds = oaQualityReportIds.slice();
+    }
+    if (config.id === 'cfg-core-trade') {
+      config.name = 'OA系统数据质量检核报告';
+      config.desc = '按月汇总 OA 系统组织、员工、岗位、角色、流程、考勤、资产等基础表的数据质量检核结果。';
+      config.cycle = { type: '每月', day: '1号', time: '10:05:02' };
+      config.lastGeneratedTime = '2026-06-30 10:05:02';
+    }
+    return config;
+  }
+
+  function normalizeOaQualityReportConfigs() {
+    reportConfigs.forEach(normalizeOaQualityReportConfig);
+  }
+
   function getReportConfigById(id) {
-    return reportConfigs.filter(function (item) { return item.id === id; })[0] || null;
+    return normalizeOaQualityReportConfig(reportConfigs.filter(function (item) { return item.id === id; })[0] || null);
   }
 
   function getSelectedReportConfig() {
@@ -1048,7 +1260,7 @@ DP.pages.qualityInspectReport = (function () {
 
   function createNewTemplateConfig() {
     var id = 'cfg-template-' + String(Date.now()).slice(-6);
-    var item = reportConfig(id, 'OA系统数据质量检核报告模板', 1, 4, 24, '未启动', { type: '每月', day: '1号', time: '10:05:02' }, '-', '按月汇总 OA 系统组织、员工、岗位、角色等基础表的数据质量检核结果。', ['rep-oa-sys-department', 'rep-oa-sys-user', 'rep-oa-sys-post', 'rep-oa-sys-role']);
+    var item = reportConfig(id, 'OA系统数据质量检核报告模板', 1, 15, 24, '未启动', { type: '每月', day: '1号', time: '10:05:02' }, '-', '按月汇总 OA 系统组织、员工、岗位、角色、流程、考勤、资产等基础表的数据质量检核结果。', oaQualityReportIds.slice());
     reportConfigs.unshift(item);
     return item;
   }
@@ -1103,7 +1315,7 @@ DP.pages.qualityInspectReport = (function () {
 
   function getHistoryScopeText(history) {
     var config = getReportConfigById(history.configId) || reportConfigs[0];
-    return (config.dbCount || 0) + '个库，' + (config.tableCount || 0) + '张表，' + (config.taskCount || 0) + '个质量任务';
+    return (config.dbCount || 0) + '个数据源，' + (config.tableCount || 0) + '张表，' + (config.taskCount || 0) + '个质量任务';
   }
 
   function getHistoryReportRows(history) {
@@ -1683,7 +1895,7 @@ DP.pages.qualityInspectReport = (function () {
 
   function renderConfigScope(item) {
     return '<div class="qir-scope">' +
-      '<span><b>' + escapeHtml(item.dbCount) + '</b>个库</span>' +
+      '<span><b>' + escapeHtml(item.dbCount) + '</b>个数据源</span>' +
       '<span><b>' + escapeHtml(item.tableCount) + '</b>张表</span>' +
       '<span><b>' + escapeHtml(item.taskCount) + '</b>个质量任务</span>' +
     '</div>';
@@ -1822,7 +2034,10 @@ DP.pages.qualityInspectReport = (function () {
     var filter = state.templateDashboardFilter || 'all';
     var keyword = String(state.templateDashboardKeyword || '').trim().toLowerCase();
     if (filter !== 'all') {
-      rows = rows.filter(function (item) { return item.type === filter; });
+      rows = rows.filter(function (item) {
+        if (filter === 'chart') return item.type === 'chart' || item.type === 'pie';
+        return item.type === filter;
+      });
     }
     if (keyword) {
       rows = rows.filter(function (item) {
@@ -1854,6 +2069,16 @@ DP.pages.qualityInspectReport = (function () {
     }).length;
   }
 
+  function getTemplateFieldDashboardId(item) {
+    var tableName = item && item.tableName ? item.tableName : 'table';
+    return 'dash-template-field-table-' + String(tableName).replace(/[^a-zA-Z0-9_-]/g, '-');
+  }
+
+  function getTemplateFieldDashboardTitle(item) {
+    if (!item) return '字段评估明细表';
+    return item.tableName + '（' + item.alias + '）-字段评估明细表';
+  }
+
   function getSelectedTemplateDashboards() {
     return templateDashboardOptions.filter(function (item) {
       return !!(state.templateDashboardSelected || {})[item.id];
@@ -1864,10 +2089,26 @@ DP.pages.qualityInspectReport = (function () {
     return pageEl ? pageEl.querySelector('[data-qir-template-editor]') : null;
   }
 
+  function cleanTemplateEchartRuntime(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-qir-echart]').forEach(function (node) {
+      node.innerHTML = '';
+      node.removeAttribute('_echarts_instance_');
+      node.removeAttribute('style');
+    });
+  }
+
+  function getTemplateEditorSerializableHtml(editor) {
+    if (!editor) return '';
+    var clone = editor.cloneNode(true);
+    cleanTemplateEchartRuntime(clone);
+    return clone.innerHTML;
+  }
+
   function saveTemplateEditorContent() {
     var editor = getTemplateEditorEl();
     if (editor) {
-      state.templateEditorHtml = editor.innerHTML;
+      state.templateEditorHtml = getTemplateEditorSerializableHtml(editor);
     }
   }
 
@@ -1960,7 +2201,7 @@ DP.pages.qualityInspectReport = (function () {
       selection.addRange(range);
     }
     templateEditorSavedRange = range.cloneRange();
-    state.templateEditorHtml = editor.innerHTML;
+    state.templateEditorHtml = getTemplateEditorSerializableHtml(editor);
     showToast('已插入变量：${' + name + '}');
     return true;
   }
@@ -1977,7 +2218,7 @@ DP.pages.qualityInspectReport = (function () {
       showToast('保存失败：模板内容不能为空');
       return;
     }
-    state.templateEditorHtml = editor.innerHTML;
+    state.templateEditorHtml = getTemplateEditorSerializableHtml(editor);
     showToast('保存成功：报告模板已保存');
   }
 
@@ -1991,6 +2232,46 @@ DP.pages.qualityInspectReport = (function () {
     if (!options || options.render !== false) {
       renderAll();
     }
+  }
+
+  function normalizeTemplateHeadingText(text) {
+    return String(text || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function findTemplateSectionTarget(number, title) {
+    var editor = getTemplateEditorEl();
+    if (!editor) return null;
+    var expected = normalizeTemplateHeadingText(number + ' ' + title);
+    var safeNumber = normalizeTemplateHeadingText(number);
+    var safeTitle = normalizeTemplateHeadingText(title);
+    var headings = Array.prototype.slice.call(editor.querySelectorAll('h1, h2, h3, h4'));
+    var exact = headings.filter(function (heading) {
+      return normalizeTemplateHeadingText(heading.textContent) === expected;
+    })[0];
+    if (exact) return exact;
+    var byNumberAndTitle = headings.filter(function (heading) {
+      var text = normalizeTemplateHeadingText(heading.textContent);
+      return text.indexOf(safeNumber + ' ') === 0 && text.indexOf(safeTitle) >= 0;
+    })[0];
+    if (byNumberAndTitle) return byNumberAndTitle;
+    return headings.filter(function (heading) {
+      return normalizeTemplateHeadingText(heading.textContent).indexOf(safeTitle) >= 0;
+    })[0] || null;
+  }
+
+  function jumpToTemplateOutlineSection(actionEl) {
+    if (!actionEl) return;
+    var target = findTemplateSectionTarget(actionEl.getAttribute('data-number') || '', actionEl.getAttribute('data-title') || '');
+    if (!target) {
+      showToast('未找到对应章节');
+      return;
+    }
+    saveTemplateEditorContent();
+    pageEl.querySelectorAll('.qir-template-outline-item.active').forEach(function (item) {
+      item.classList.remove('active');
+    });
+    actionEl.classList.add('active');
+    target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
   }
 
   function removeSelectedTemplateVariable(e) {
@@ -2007,7 +2288,7 @@ DP.pages.qualityInspectReport = (function () {
     if (target && target.nodeType === 1 && target !== editor && !editor.contains(target) && activeEl !== editor && !editor.contains(activeEl)) return false;
     e.preventDefault();
     selectedVariable.remove();
-    state.templateEditorHtml = editor.innerHTML;
+    state.templateEditorHtml = getTemplateEditorSerializableHtml(editor);
     focusTemplateEditor(editor);
     saveTemplateEditorSelection();
     showToast('已删除选中的变量');
@@ -2028,7 +2309,7 @@ DP.pages.qualityInspectReport = (function () {
     if (target && target.nodeType === 1 && target !== editor && !editor.contains(target) && activeEl !== editor && !editor.contains(activeEl)) return false;
     e.preventDefault();
     selectedDashboard.remove();
-    state.templateEditorHtml = editor.innerHTML;
+    state.templateEditorHtml = getTemplateEditorSerializableHtml(editor);
     focusTemplateEditor(editor);
     showToast('已删除选中的仪表盘');
     return true;
@@ -2102,7 +2383,7 @@ DP.pages.qualityInspectReport = (function () {
     if (editor) {
       var markers = editor.querySelectorAll('[data-qir-dashboard-insert-marker]');
       markers.forEach(function (marker) { marker.remove(); });
-      state.templateEditorHtml = editor.innerHTML;
+      state.templateEditorHtml = getTemplateEditorSerializableHtml(editor);
       return;
     }
     if (state.templateEditorHtml) {
@@ -2127,7 +2408,7 @@ DP.pages.qualityInspectReport = (function () {
       if (editor.contains(range.commonAncestorContainer) || editor === range.commonAncestorContainer) {
         range.deleteContents();
         range.insertNode(marker);
-        state.templateEditorHtml = editor.innerHTML;
+        state.templateEditorHtml = getTemplateEditorSerializableHtml(editor);
         return;
       }
     }
@@ -2137,46 +2418,456 @@ DP.pages.qualityInspectReport = (function () {
     } else {
       editor.appendChild(marker);
     }
-    state.templateEditorHtml = editor.innerHTML;
+    state.templateEditorHtml = getTemplateEditorSerializableHtml(editor);
+  }
+
+  function renderDashboardTableHtml(headers, rows, className) {
+    var headHtml = headers.map(function (item) {
+      return '<th>' + escapeHtml(item) + '</th>';
+    }).join('');
+    var bodyHtml = rows.map(function (row) {
+      var isTotal = row[0] === '合计';
+      return '<tr' + (isTotal ? ' class="is-total"' : '') + '>' + row.map(function (cell) {
+        return '<td>' + escapeHtml(cell) + '</td>';
+      }).join('') + '</tr>';
+    }).join('');
+    return '<table class="qir-inserted-table qir-template-doc-table ' + (className || '') + '"><thead><tr>' + headHtml + '</tr></thead><tbody>' + bodyHtml + '</tbody></table>';
+  }
+
+  function getTemplateDashboardOptionById(id) {
+    return templateDashboardOptions.filter(function (item) { return item.id === id; })[0] || null;
+  }
+
+  function parseTemplateMetricNumber(value) {
+    var number = Number(String(value || '').replace(/,/g, '').replace(/%/g, ''));
+    return isFinite(number) && number > 0 ? number : 0;
+  }
+
+  function getRuleTypePieChartData(rows) {
+    return (rows || []).map(function (row) {
+      var rawName = String(row[0] || '');
+      return {
+        name: rawName.indexOf('数据') === 0 ? rawName : '数据' + rawName,
+        value: parseTemplateMetricNumber(row[2])
+      };
+    }).filter(function (item) {
+      return item.value > 0;
+    });
+  }
+
+  function getRuleTypePieRichStyles() {
+    var rich = {
+      name: {
+        color: '#26384d',
+        fontSize: 14,
+        fontFamily: 'Microsoft YaHei, Arial, sans-serif',
+        fontWeight: 500,
+        lineHeight: 22
+      },
+      value: {
+        color: '#1f2d3d',
+        fontSize: 14,
+        fontFamily: 'Microsoft YaHei, Arial, sans-serif',
+        fontWeight: 650,
+        lineHeight: 22
+      },
+      pct: {
+        color: '#6f8298',
+        fontSize: 13,
+        fontFamily: 'Microsoft YaHei, Arial, sans-serif',
+        lineHeight: 20
+      },
+      blank: {
+        width: 17
+      }
+    };
+    templateRulePieColors.forEach(function (color, index) {
+      rich['marker' + index] = {
+        width: 8,
+        height: 8,
+        borderRadius: 2,
+        backgroundColor: color
+      };
+    });
+    return rich;
+  }
+
+  function getRuleTypePieChartOption(data) {
+    return {
+      color: templateRulePieColors,
+      animationDuration: 650,
+      animationEasing: 'cubicOut',
+      tooltip: {
+        trigger: 'item',
+        confine: true,
+        backgroundColor: 'rgba(255,255,255,.97)',
+        borderColor: '#d6e2ef',
+        borderWidth: 1,
+        padding: [9, 12],
+        extraCssText: 'border-radius:6px;box-shadow:0 10px 24px rgba(31,45,61,.12);',
+        textStyle: {
+          color: '#26384d',
+          fontSize: 12,
+          fontFamily: 'Microsoft YaHei, Arial, sans-serif'
+        },
+        formatter: function (params) {
+          var percent = Number(params.percent || 0).toFixed(2);
+          return params.name + '<br/>检核问题条数：' + params.value + '<br/>占比：' + percent + '%';
+        }
+      },
+      series: [{
+        type: 'pie',
+        radius: ['0%', '50%'],
+        center: ['50%', '52%'],
+        startAngle: 90,
+        clockwise: true,
+        minAngle: 4,
+        avoidLabelOverlap: true,
+        stillShowZeroSum: false,
+        itemStyle: {
+          borderColor: '#fff',
+          borderWidth: 4,
+          borderRadius: 3,
+          shadowBlur: 3,
+          shadowColor: 'rgba(31,45,61,.08)'
+        },
+        emphasis: {
+          scaleSize: 5,
+          itemStyle: {
+            shadowBlur: 16,
+            shadowOffsetY: 4,
+            shadowColor: 'rgba(31,45,61,.18)'
+          }
+        },
+        label: {
+          show: true,
+          position: 'outside',
+          alignTo: 'edge',
+          edgeDistance: 22,
+          bleedMargin: 8,
+          distanceToLabelLine: 6,
+          lineHeight: 22,
+          formatter: function (params) {
+            var markerIndex = params.dataIndex % templateRulePieColors.length;
+            var percent = Number(params.percent || 0).toFixed(2);
+            return '{marker' + markerIndex + '|} {name|' + params.name + '}{value|, ' + params.value + ',}\n{blank|} {pct|' + percent + '%}';
+          },
+          rich: getRuleTypePieRichStyles()
+        },
+        labelLine: {
+          show: true,
+          length: 22,
+          length2: 44,
+          smooth: 0.12,
+          lineStyle: {
+            color: '#9aaabb',
+            width: 1.2
+          }
+        },
+        labelLayout: {
+          hideOverlap: false,
+          moveOverlap: 'shiftY'
+        },
+        data: data
+      }]
+    };
+  }
+
+  function renderRuleTypePieChart(rows) {
+    var data = getRuleTypePieChartData(rows);
+    if (!data.length) return '';
+    return '<div class="qir-rule-pie-chart" data-qir-echart="rule-type-pie" data-qir-chart-data="' + escapeHtml(encodeURIComponent(JSON.stringify(data))) + '" role="img" aria-label="检核规则数量分布"></div>';
+  }
+
+  function getRectifyTrendChartData(rows) {
+    return (rows || []).map(function (row) {
+      return {
+        month: String(row[0] || ''),
+        problemCount: parseTemplateMetricNumber(row[3]),
+        rectifyRate: parseTemplateMetricNumber(row[5])
+      };
+    }).filter(function (item) {
+      return item.month && (item.problemCount > 0 || item.rectifyRate > 0);
+    });
+  }
+
+  function getRectifyTrendChartOption(data) {
+    var barColor = window.echarts && window.echarts.graphic
+      ? new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
+        { offset: 0, color: templateTrendChartColors.barEnd },
+        { offset: 1, color: templateTrendChartColors.bar }
+      ])
+      : templateTrendChartColors.bar;
+    return {
+      color: [templateTrendChartColors.bar, templateTrendChartColors.line],
+      animationDuration: 650,
+      animationEasing: 'cubicOut',
+      tooltip: {
+        trigger: 'axis',
+        confine: true,
+        axisPointer: {
+          type: 'shadow',
+          shadowStyle: { color: 'rgba(47,117,168,.08)' }
+        },
+        backgroundColor: 'rgba(255,255,255,.97)',
+        borderColor: '#d6e2ef',
+        borderWidth: 1,
+        padding: [9, 12],
+        extraCssText: 'border-radius:6px;box-shadow:0 10px 24px rgba(31,45,61,.12);',
+        textStyle: {
+          color: '#26384d',
+          fontSize: 12,
+          fontFamily: 'Microsoft YaHei, Arial, sans-serif'
+        }
+      },
+      legend: {
+        top: 8,
+        left: 'center',
+        itemGap: 36,
+        itemWidth: 14,
+        itemHeight: 9,
+        selectedMode: false,
+        textStyle: {
+          color: '#526579',
+          fontSize: 12,
+          fontFamily: 'Microsoft YaHei, Arial, sans-serif'
+        },
+        data: ['检核问题条数', '整改率']
+      },
+      grid: {
+        left: 54,
+        right: 58,
+        top: 56,
+        bottom: 48
+      },
+      xAxis: {
+        type: 'category',
+        data: data.map(function (item) { return item.month; }),
+        axisTick: { show: false },
+        axisLine: { lineStyle: { color: '#d9e4f0' } },
+        axisLabel: {
+          color: '#6f8298',
+          fontSize: 11,
+          interval: 0,
+          rotate: 32,
+          margin: 14
+        }
+      },
+      yAxis: [
+        {
+          type: 'value',
+          name: '检核问题条数',
+          nameTextStyle: {
+            color: '#6f8298',
+            fontSize: 12,
+            padding: [0, 0, 8, 0]
+          },
+          min: 0,
+          axisLabel: {
+            color: '#6f8298',
+            formatter: '{value}条'
+          },
+          splitLine: {
+            lineStyle: {
+              color: '#edf2f7',
+              type: 'dashed'
+            }
+          }
+        },
+        {
+          type: 'value',
+          name: '整改率',
+          nameTextStyle: {
+            color: '#6f8298',
+            fontSize: 12,
+            padding: [0, 0, 8, 0]
+          },
+          min: 0,
+          max: 100,
+          axisLabel: {
+            color: '#6f8298',
+            formatter: '{value}%'
+          },
+          splitLine: { show: false }
+        }
+      ],
+      series: [
+        {
+          name: '检核问题条数',
+          type: 'bar',
+          yAxisIndex: 0,
+          barWidth: 18,
+          data: data.map(function (item) { return item.problemCount; }),
+          itemStyle: {
+            color: barColor,
+            borderRadius: [4, 4, 0, 0]
+          }
+        },
+        {
+          name: '整改率',
+          type: 'line',
+          yAxisIndex: 1,
+          smooth: true,
+          symbol: 'circle',
+          symbolSize: 7,
+          data: data.map(function (item) { return item.rectifyRate; }),
+          lineStyle: {
+            width: 3,
+            color: templateTrendChartColors.line
+          },
+          itemStyle: {
+            color: '#fff',
+            borderColor: templateTrendChartColors.line,
+            borderWidth: 2
+          },
+          areaStyle: {
+            color: templateTrendChartColors.lineSoft
+          }
+        }
+      ]
+    };
+  }
+
+  function renderRectifyTrendChart(rows) {
+    var data = getRectifyTrendChartData(rows);
+    if (!data.length) return '';
+    return '<div class="qir-rectify-trend-chart" data-qir-echart="rectify-trend" data-qir-chart-data="' + escapeHtml(encodeURIComponent(JSON.stringify(data))) + '" role="img" aria-label="问题整改趋势图"></div>';
+  }
+
+  function readTemplateEchartData(el) {
+    var raw = el ? el.getAttribute('data-qir-chart-data') : '';
+    if (!raw) return [];
+    try {
+      return JSON.parse(decodeURIComponent(raw));
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function disposeTemplatePieCharts() {
+    templatePieCharts.forEach(function (chart) {
+      if (chart && chart.dispose) {
+        try {
+          chart.dispose();
+        } catch (err) {}
+      }
+    });
+    templatePieCharts = [];
+    if (templatePieResizeHandler) {
+      window.removeEventListener('resize', templatePieResizeHandler);
+      templatePieResizeHandler = null;
+    }
+  }
+
+  function resizeTemplatePieCharts() {
+    templatePieCharts.forEach(function (chart) {
+      if (chart && chart.resize) {
+        try {
+          chart.resize();
+        } catch (err) {}
+      }
+    });
+  }
+
+  function initTemplatePieCharts(root) {
+    var scope = root || pageEl || document;
+    var nodes = Array.prototype.slice.call(scope.querySelectorAll('[data-qir-echart]'));
+    if (!nodes.length) return;
+    nodes.forEach(function (node) {
+      var chartType = node.getAttribute('data-qir-echart') || '';
+      var data = readTemplateEchartData(node);
+      if (!data.length) return;
+      if (!window.echarts) {
+        node.innerHTML = '<div class="qir-chart-fallback">ECharts 加载后显示图表</div>';
+        return;
+      }
+      var oldChart = window.echarts.getInstanceByDom ? window.echarts.getInstanceByDom(node) : null;
+      if (oldChart && oldChart.dispose) oldChart.dispose();
+      node.innerHTML = '';
+      var chart = window.echarts.init(node);
+      if (chartType === 'rectify-trend') {
+        chart.setOption(getRectifyTrendChartOption(data), true);
+      } else {
+        chart.setOption(getRuleTypePieChartOption(data), true);
+      }
+      templatePieCharts.push(chart);
+    });
+    if (templatePieCharts.length && !templatePieResizeHandler) {
+      templatePieResizeHandler = resizeTemplatePieCharts;
+      window.addEventListener('resize', templatePieResizeHandler);
+    }
+  }
+
+  function getTemplateDashboardTableData(id) {
+    if (id === 'dash-template-rule-table') {
+      return {
+        headers: ['规则类型', '合规比例', '检核问题条数'],
+        rows: templateRuleDistributionRows,
+        className: 'qir-template-rule-table'
+      };
+    }
+    if (id === 'dash-template-quality-good-top-table') {
+      return {
+        headers: ['序号', '表名称', '中文名', '检核数据条数', '检核问题条数', '检核问题率'],
+        rows: templateQualityGoodTopRows,
+        className: 'qir-template-quality-rank-table'
+      };
+    }
+    if (id === 'dash-template-quality-bad-top-table') {
+      return {
+        headers: ['序号', '表名称', '中文名', '检核数据条数', '检核问题条数', '检核问题率'],
+        rows: templateQualityBadTopRows,
+        className: 'qir-template-quality-rank-table'
+      };
+    }
+    if (id === 'dash-template-check-table') {
+      return {
+        headers: ['表名称', '中文名', '检核数据条数', '检核问题条数', '检核问题率'],
+        rows: (templateQualityDimensionStats[0] || {}).rows || [],
+        className: 'qir-template-check-table'
+      };
+    }
+    if (id === 'dash-template-trend-table') {
+      return {
+        headers: ['月份', '表数据量', '检核数据条数', '检核问题条数', '检核问题率', '整改率'],
+        rows: templateRectifyTrendRows,
+        className: 'qir-template-trend-table'
+      };
+    }
+    if (id === 'dash-template-field-table' || String(id || '').indexOf('dash-template-field-table-') === 0) {
+      return {
+        headers: ['评测字段（对象）', '评测内容', '评测标准', '评估结论'],
+        rows: templateFieldDetailRows,
+        className: 'qir-template-field-table'
+      };
+    }
+    return {
+      headers: ['质量任务', '稽查对象', '通过率', '问题记录'],
+      rows: [
+        ['关键字段非空校验', 'sys_user', '93.2%', '18'],
+        ['业务主键唯一性校验', 'sys_departmen', '99.6%', '2'],
+        ['状态枚举校验', 'sys_role', '91.1%', '4']
+      ],
+      className: ''
+    };
   }
 
   function renderInsertedDashboardVisual(item) {
-    if (item.type === 'kpi') {
-      return '<div class="qir-inserted-kpi-grid">' +
-        '<div><span>质量任务数</span><b>55</b><em>较上期 +6</em></div>' +
-        '<div><span>平均通过率</span><b>91.6%</b><em>较上期 +2.3%</em></div>' +
-        '<div><span>问题记录数</span><b>1,248</b><em>较上期 -12%</em></div>' +
-      '</div>';
+    if (item.id === 'dash-template-rule-pie') {
+      return renderRuleTypePieChart(templateRuleDistributionRows);
     }
-    if (item.type === 'trend') {
-      return '<div class="qir-inserted-trend">' +
-        '<div class="qir-inserted-trend-line"><span style="height:46%"></span><span style="height:52%"></span><span style="height:43%"></span><span style="height:66%"></span><span style="height:58%"></span><span style="height:74%"></span><span style="height:69%"></span></div>' +
-        '<div class="qir-inserted-chart-axis"><span>06-23</span><span>06-25</span><span>06-27</span><span>06-29</span></div>' +
-      '</div>';
+    if (item.id === 'dash-template-trend-chart') {
+      return renderRectifyTrendChart(templateRectifyTrendRows);
     }
-    if (item.type === 'bar') {
-      return '<div class="qir-inserted-bars">' +
-        '<div><span>生产库</span><b style="width:82%"></b><em>482</em></div>' +
-        '<div><span>数仓层</span><b style="width:64%"></b><em>365</em></div>' +
-        '<div><span>业务系统</span><b style="width:48%"></b><em>276</em></div>' +
-        '<div><span>测试环境</span><b style="width:28%"></b><em>125</em></div>' +
-      '</div>';
-    }
-    if (item.type === 'pie') {
-      return '<div class="qir-inserted-pie-wrap">' +
-        '<div class="qir-inserted-pie"></div>' +
-        '<div class="qir-inserted-legend"><span><i></i>完整性 36%</span><span><i></i>准确性 28%</span><span><i></i>唯一性 21%</span><span><i></i>规范性 15%</span></div>' +
-      '</div>';
-    }
-    return '<table class="qir-inserted-table"><thead><tr><th>质量任务</th><th>稽查对象</th><th>通过率</th><th>问题记录</th></tr></thead><tbody>' +
-      '<tr><td>关键字段非空校验</td><td>order_main</td><td>93.2%</td><td>128</td></tr>' +
-      '<tr><td>业务主键唯一性校验</td><td>dwd_order_fact</td><td>89.6%</td><td>246</td></tr>' +
-      '<tr><td>状态枚举校验</td><td>crm_customer_info</td><td>91.1%</td><td>86</td></tr>' +
-    '</tbody></table>';
+    var tableData = getTemplateDashboardTableData(item.id);
+    return renderDashboardTableHtml(tableData.headers, tableData.rows, tableData.className);
   }
 
   function renderInsertedDashboardBlock(item) {
-    return '<div class="qir-template-inserted-dashboard" contenteditable="false" data-dashboard-id="' + escapeHtml(item.id) + '" data-dashboard-type="' + escapeHtml(item.type) + '">' +
+    var dashboardClass = item.type === 'pie'
+      ? 'qir-template-pie-dashboard'
+      : (item.type === 'chart' ? 'qir-template-chart-dashboard qir-template-trend-dashboard' : 'qir-template-table-dashboard');
+    return '<div class="qir-template-inserted-dashboard ' + dashboardClass + '" contenteditable="false" data-dashboard-id="' + escapeHtml(item.id) + '" data-dashboard-type="' + escapeHtml(item.type) + '">' +
       '<div class="qir-inserted-dashboard-head">' +
         '<strong>' + escapeHtml(item.name) + '</strong>' +
       '</div>' +
@@ -2191,7 +2882,7 @@ DP.pages.qualityInspectReport = (function () {
     if (editor) saveTemplateEditorContent();
     var html = items.map(renderInsertedDashboardBlock).join('') + '<p><br></p>';
     var wrap = document.createElement('div');
-    wrap.innerHTML = state.templateEditorHtml || (editor ? editor.innerHTML : '');
+    wrap.innerHTML = state.templateEditorHtml || (editor ? getTemplateEditorSerializableHtml(editor) : '');
     var marker = wrap.querySelector('[data-qir-dashboard-insert-marker]');
     if (marker) {
       marker.insertAdjacentHTML('beforebegin', html);
@@ -2254,7 +2945,7 @@ DP.pages.qualityInspectReport = (function () {
     return '<div class="qir-dashboard-modal-mask" data-qir-action="close-template-dashboard-modal"></div>' +
       '<section class="qir-dashboard-modal" role="dialog" aria-modal="true" aria-label="插入仪表盘">' +
         '<div class="qir-dashboard-modal-head">' +
-          '<div><h3>插入仪表盘</h3><p>选择需要写入报告模板的质量分析仪表盘</p></div>' +
+          '<div><h3>插入仪表盘</h3><p>选择需要写入报告模板的仪表盘</p></div>' +
           '<button class="qir-dashboard-modal-close" type="button" data-qir-action="close-template-dashboard-modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button>' +
         '</div>' +
         '<div class="qir-dashboard-modal-body">' +
@@ -2324,7 +3015,7 @@ DP.pages.qualityInspectReport = (function () {
       '<div class="qir-template-collapsed-label"><i class="bi bi-list-ul"></i><span>报告目录</span></div>' +
       (collapsed ? '' : '<div class="qir-template-outline-list">' + templateOutlineSections.map(function (item, index) {
         var icon = item.level === 1 ? 'bi-list-ol' : (item.level === 2 ? 'bi-chevron-right' : 'bi-dot');
-        return '<button class="' + (index === 0 ? 'active ' : '') + 'qir-template-outline-item level-' + item.level + '" type="button" data-qir-action="template-action-placeholder"><i class="bi ' + icon + '"></i><span class="qir-outline-num">' + escapeHtml(item.number) + '</span><span class="qir-outline-text">' + escapeHtml(item.title) + '</span></button>';
+        return '<button class="' + (index === 0 ? 'active ' : '') + 'qir-template-outline-item level-' + item.level + '" type="button" data-qir-action="template-outline-jump" data-number="' + escapeHtml(item.number) + '" data-title="' + escapeHtml(item.title) + '"><i class="bi ' + icon + '"></i><span class="qir-outline-num">' + escapeHtml(item.number) + '</span><span class="qir-outline-text">' + escapeHtml(item.title) + '</span></button>';
       }).join('') + '</div>') +
     '</aside>';
   }
@@ -2421,20 +3112,24 @@ DP.pages.qualityInspectReport = (function () {
     var date = year + '年' + month + '月' + day + '日';
     var dateTime = date + ' ' + time;
     var dbCount = config.dbCount || 1;
-    var tableCount = config.tableCount || 4;
+    var tableCount = templateDetailSamples.length;
     var taskCount = config.taskCount || 24;
+    var totalRecordCount = getQualityRankTotalRecordCount();
+    var problemRecordCount = getQualityRankProblemCount();
+    var avgPassRate = totalRecordCount ? (100 - problemRecordCount / totalRecordCount * 100) : 0;
     var values = {
       '模板名称': config.name,
-      '统计范围': dbCount + '个库，' + tableCount + '张表，' + taskCount + '个质量任务',
+      '统计范围': dbCount + '个数据源，' + tableCount + '张表，' + taskCount + '个质量任务',
       '数据源数量': dbCount,
       '数据库数量': dbCount,
       '表数量': tableCount,
-      '字段数': '52.66',
+      '字段数': (totalRecordCount / 10000).toFixed(2),
       '质量任务数': taskCount,
-      '平均通过率': '99.71%',
-      '问题记录数': '154',
-      '稽查问题总记录数': '154',
-      '稽查总数据记录数': '526,600',
+      '平均通过率': avgPassRate.toFixed(2) + '%',
+      '问题总记录数': formatNumber(problemRecordCount),
+      '问题记录数': formatNumber(problemRecordCount),
+      '稽查问题总记录数': formatNumber(problemRecordCount),
+      '稽查总数据记录数': formatNumber(totalRecordCount),
       '完整性合规比例': '99.34%',
       '一致性合规比例': '99.58%',
       '唯一性合规': '99.91%',
@@ -2480,12 +3175,12 @@ DP.pages.qualityInspectReport = (function () {
   function replacePreviewDashboardPlaceholders(root, config, values) {
     root.querySelectorAll('.qir-template-dashboard-block').forEach(function (node) {
       var item = {
-        id: 'preview-quality-overview',
-        name: '质量概览卡片',
-        type: 'kpi',
-        typeLabel: '指标卡',
+        id: 'dash-template-rule-table',
+        name: '规则类型分布表',
+        type: 'table',
+        typeLabel: '表格仪表盘',
         scope: config.name,
-        desc: '展示本周期质量任务数、平均通过率、问题记录数和变化趋势。',
+        desc: '展示完整性、一致性、唯一性等规则类型的合规比例和检核问题条数。',
         updateTime: config.lastGeneratedTime && config.lastGeneratedTime !== '-' ? config.lastGeneratedTime : values['日期时间']
       };
       node.outerHTML = renderInsertedDashboardBlock(item);
@@ -2544,13 +3239,18 @@ DP.pages.qualityInspectReport = (function () {
       '.qir-preview-toc-empty{padding:14px;color:#8aa0b7;font-size:13px;text-align:center;}',
       '.qir-preview-stage{position:relative;min-width:0;height:100vh;overflow:auto;padding:28px 52px 92px;background:#d8dadd;box-sizing:border-box;}',
       '.qir-preview-page-wrap{min-width:920px;display:flex;justify-content:center;align-items:flex-start;}',
-      '.qir-template-page{width:860px;min-height:1180px;margin:0 auto;padding:72px 78px 86px;border:1px solid #c6cbd2;border-radius:0;background:#fff;box-shadow:0 2px 10px rgba(15,23,42,.16);box-sizing:border-box;transform-origin:top center;}',
+      '.qir-template-page{width:860px;margin:0 auto;display:flex;flex-direction:column;gap:22px;box-sizing:border-box;transform-origin:top center;}',
+      '.qir-template-doc-page{width:100%;min-height:1180px;padding:72px 78px 86px;border:1px solid #c6cbd2;border-radius:0;background:#fff;box-shadow:0 2px 10px rgba(15,23,42,.16);box-sizing:border-box;}',
+      '.qir-template-cover-page{display:flex;align-items:stretch;justify-content:center;text-align:center;}',
+      '.qir-template-cover-content{width:100%;min-height:1000px;display:flex;flex-direction:column;justify-content:space-between;padding:120px 0 96px;transform:none;box-sizing:border-box;}',
+      '.qir-template-page .qir-template-cover-page h1{margin-bottom:0;font-size:28px;}',
+      '.qir-template-report-date{margin:30px 0 0!important;color:#526579!important;font-size:15px!important;line-height:1.8!important;text-align:center!important;text-indent:0!important;}',
       '.qir-template-page h1{margin:0 0 14px;color:#1f2d3d;font-size:26px;line-height:1.35;text-align:center;}',
       '.qir-template-page h2{margin:28px 0 12px;color:#1f2d3d;font-size:18px;line-height:1.45;}',
       '.qir-template-page h3{margin:18px 0 8px;color:#26384d;font-size:15px;line-height:1.45;font-weight:650;}',
       '.qir-template-page h4{margin:14px 0 7px;color:#26384d;font-size:14px;line-height:1.45;font-weight:650;}',
       '.qir-template-page p{margin:9px 0;color:#44566c;font-size:14px;line-height:1.9;}',
-      '.qir-template-doc-system{display:block;margin-bottom:4px;color:#44566c;font-size:20px;font-weight:500;}',
+      '.qir-template-doc-system{display:block;margin-bottom:4px;color:inherit;font-size:inherit;font-weight:inherit;}',
       '.qir-template-doc-toc{margin:20px 0 26px;padding:0 0 16px;border-bottom:1px solid #dfe5ec;}',
       '.qir-template-doc-toc h2{margin:0 0 12px;color:#1f2d3d;font-size:18px;text-align:center;}',
       '.qir-template-doc-toc-row{height:24px;display:grid;grid-template-columns:auto minmax(18px,1fr) 28px;align-items:end;gap:6px;color:#37465a;font-size:13px;}',
@@ -2590,13 +3290,16 @@ DP.pages.qualityInspectReport = (function () {
       '.qir-inserted-dashboard-head{min-height:28px;display:flex;align-items:center;gap:8px;margin-bottom:10px;}.qir-inserted-dashboard-head strong{min-width:0;color:#1f2d3d;font-size:15px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
       '.qir-inserted-dashboard-head em,.qir-inserted-dashboard-tag,.qir-inserted-dashboard-sub{display:none!important;}',
       '.qir-inserted-dashboard-body{min-height:180px;padding:12px;border:1px solid #e6eff8;border-radius:6px;background:#fff;}',
+      '.qir-template-table-dashboard .qir-inserted-dashboard-body{min-height:0;padding:10px;overflow:auto;}',
+      '.qir-template-pie-dashboard .qir-inserted-dashboard-head{justify-content:center;margin-bottom:6px;}.qir-template-pie-dashboard .qir-inserted-dashboard-head strong{color:#29445f;font-size:20px;font-weight:500;letter-spacing:0;}.qir-template-pie-dashboard .qir-inserted-dashboard-body{min-height:0;padding:6px 10px 12px;overflow:visible;border-color:#dce8f4;background:linear-gradient(180deg,#fbfdff 0%,#fff 42%);}',
+      '.qir-rule-pie-chart{width:100%;max-width:720px;height:360px;margin:0 auto;background:transparent;}.qir-template-chart-dashboard .qir-inserted-dashboard-head{justify-content:center;margin-bottom:6px;}.qir-template-chart-dashboard .qir-inserted-dashboard-head strong{color:#29445f;font-size:18px;font-weight:600;letter-spacing:0;}.qir-template-chart-dashboard .qir-inserted-dashboard-body{min-height:0;padding:8px 12px 14px;overflow:visible;border-color:#dce8f4;background:linear-gradient(180deg,#fbfdff 0%,#fff 48%);}.qir-rectify-trend-chart{width:100%;height:330px;margin:0 auto;background:transparent;}.qir-chart-fallback{height:100%;min-height:180px;display:flex;align-items:center;justify-content:center;color:#8aa0b7;font-size:13px;}',
       '.qir-inserted-kpi-grid{height:156px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}.qir-inserted-kpi-grid div{display:flex;flex-direction:column;justify-content:center;gap:8px;padding:14px;border:1px solid #dce9f8;border-radius:6px;background:#f8fbff;}.qir-inserted-kpi-grid span,.qir-inserted-kpi-grid em{color:#6f8298;font-size:12px;font-style:normal;}.qir-inserted-kpi-grid b{color:#1677ff;font-size:24px;font-weight:650;}',
       '.qir-inserted-trend{height:156px;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;}.qir-inserted-trend-line{height:124px;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));align-items:end;gap:12px;padding:12px 14px 0;border-bottom:1px solid #e6ebf2;background:repeating-linear-gradient(to top,#fff,#fff 30px,#f2f6fb 31px);}.qir-inserted-trend-line span{display:block;min-height:24px;border-radius:4px 4px 0 0;background:linear-gradient(180deg,#69b1ff,#1677ff);}.qir-inserted-chart-axis{display:flex;align-items:center;justify-content:space-between;color:#8aa0b7;font-size:12px;}',
       '.qir-inserted-bars{display:grid;gap:13px;padding-top:4px;}.qir-inserted-bars div{display:grid;grid-template-columns:72px minmax(0,1fr) 44px;align-items:center;gap:10px;color:#526579;font-size:12px;}.qir-inserted-bars b{height:12px;border-radius:6px;background:linear-gradient(90deg,#1677ff,#69b1ff);}.qir-inserted-bars em{color:#26384d;font-style:normal;font-weight:650;text-align:right;}',
       '.qir-inserted-pie-wrap{height:156px;display:grid;grid-template-columns:180px minmax(0,1fr);align-items:center;gap:20px;}.qir-inserted-pie{width:126px;height:126px;margin:0 auto;border-radius:50%;background:conic-gradient(#1677ff 0 36%,#36cfc9 36% 64%,#faad14 64% 85%,#ff7875 85% 100%);box-shadow:inset 0 0 0 24px #fff,0 0 0 1px #e6eff8;}.qir-inserted-legend{display:grid;gap:10px;color:#526579;font-size:12px;}.qir-inserted-legend span{display:inline-flex;align-items:center;gap:7px;}.qir-inserted-legend i{width:9px;height:9px;border-radius:2px;background:#1677ff;}.qir-inserted-legend span:nth-child(2) i{background:#36cfc9;}.qir-inserted-legend span:nth-child(3) i{background:#faad14;}.qir-inserted-legend span:nth-child(4) i{background:#ff7875;}',
-      '.qir-inserted-table{width:100%;border-collapse:collapse;color:#44566c;font-size:12px;}.qir-inserted-table th,.qir-inserted-table td{height:36px;padding:0 10px;border:1px solid #edf1f6;text-align:left;}.qir-inserted-table th{background:#f7f9fc;color:#26384d;font-weight:650;}',
-      '@media (max-width:900px){body{overflow:auto}.qir-preview-app{height:auto;min-height:100vh;grid-template-columns:1fr}.qir-preview-toc{height:auto;max-height:240px;border-right:none;border-bottom:1px solid #c9cdd3}.qir-preview-stage{height:auto;min-height:calc(100vh - 240px);padding:18px 14px 78px}.qir-preview-page-wrap{min-width:0}.qir-template-page{width:100%;min-height:860px;padding:34px 28px}.qir-preview-close-btn{top:12px;right:14px}.qir-preview-zoom-toolbar{right:14px;bottom:14px}}',
-      '@media print{body{overflow:auto;background:#fff}.qir-preview-toc,.qir-preview-close-btn,.qir-preview-zoom-toolbar{display:none!important}.qir-preview-app{display:block;height:auto;background:#fff}.qir-preview-stage{height:auto;overflow:visible;padding:0;background:#fff}.qir-preview-page-wrap{min-width:0;display:block}.qir-template-page{zoom:1!important;width:auto;min-height:auto;border:none;box-shadow:none;}}'
+      '.qir-inserted-table{width:100%;border-collapse:collapse;color:#44566c;font-size:12px;}.qir-inserted-table.qir-template-doc-table{margin:0;}.qir-inserted-table th,.qir-inserted-table td{height:36px;padding:0 10px;border:1px solid #edf1f6;text-align:left;}.qir-inserted-table th{background:#f7f9fc;color:#26384d;font-weight:650;}.qir-template-table-dashboard .qir-inserted-table tr.is-total td{background:#fafafa;color:#1f2d3d;font-weight:650;}',
+      '@media (max-width:900px){body{overflow:auto}.qir-preview-app{height:auto;min-height:100vh;grid-template-columns:1fr}.qir-preview-toc{height:auto;max-height:240px;border-right:none;border-bottom:1px solid #c9cdd3}.qir-preview-stage{height:auto;min-height:calc(100vh - 240px);padding:18px 14px 78px}.qir-preview-page-wrap{min-width:0}.qir-template-page{width:100%;gap:16px}.qir-template-doc-page{min-height:860px;padding:34px 28px}.qir-template-cover-content{min-height:760px;padding:72px 0 56px}.qir-preview-close-btn{top:12px;right:14px}.qir-preview-zoom-toolbar{right:14px;bottom:14px}}',
+      '@media print{body{overflow:auto;background:#fff}.qir-preview-toc,.qir-preview-close-btn,.qir-preview-zoom-toolbar{display:none!important}.qir-preview-app{display:block;height:auto;background:#fff}.qir-preview-stage{height:auto;overflow:visible;padding:0;background:#fff}.qir-preview-page-wrap{min-width:0;display:block}.qir-template-page{zoom:1!important;width:auto;display:block;gap:0}.qir-template-doc-page{min-height:auto;border:none;box-shadow:none;page-break-after:always}.qir-template-doc-page:last-child{page-break-after:auto}}'
     ].join('');
   }
 
@@ -2610,9 +3313,18 @@ DP.pages.qualityInspectReport = (function () {
       'var inBtn=document.querySelector("[data-qir-preview-zoom-in]");',
       'var resetBtn=document.querySelector("[data-qir-preview-zoom-reset]");',
       'var closeBtn=document.querySelector("[data-qir-preview-close]");',
+      'var rulePieCharts=[];',
+      'var rulePieColors=["#25577f","#2f75a8","#4d94bd","#6fb0d1","#9bc8df","#c7dceb"];',
+      'var trendColors={bar:"#3f8fc9",barEnd:"#7fc4e8",line:"#27a97b",lineSoft:"rgba(39,169,123,.12)"};',
       'var min=60,max=180,step=10,zoom=100;',
       'function clamp(next){next=Number(next)||100;return Math.max(min,Math.min(max,Math.round(next/step)*step));}',
-      'function apply(next){zoom=clamp(next);if(page){page.style.zoom=(zoom/100).toFixed(2);}if(range){range.value=zoom;}if(value){value.textContent=zoom+"%";}if(outBtn){outBtn.disabled=zoom<=min;}if(inBtn){inBtn.disabled=zoom>=max;}}',
+      'function apply(next){zoom=clamp(next);if(page){page.style.zoom=(zoom/100).toFixed(2);}if(range){range.value=zoom;}if(value){value.textContent=zoom+"%";}if(outBtn){outBtn.disabled=zoom<=min;}if(inBtn){inBtn.disabled=zoom>=max;}resizeRulePieCharts();}',
+      'function readRulePieData(node){var raw=node?node.getAttribute("data-qir-chart-data"):"";if(!raw){return [];}try{return JSON.parse(decodeURIComponent(raw));}catch(err){return [];}}',
+      'function getRulePieRich(){var rich={name:{color:"#26384d",fontSize:14,fontFamily:"Microsoft YaHei, Arial, sans-serif",fontWeight:500,lineHeight:22},value:{color:"#1f2d3d",fontSize:14,fontFamily:"Microsoft YaHei, Arial, sans-serif",fontWeight:650,lineHeight:22},pct:{color:"#6f8298",fontSize:13,fontFamily:"Microsoft YaHei, Arial, sans-serif",lineHeight:20},blank:{width:17}};rulePieColors.forEach(function(color,index){rich["marker"+index]={width:8,height:8,borderRadius:2,backgroundColor:color};});return rich;}',
+      'function getRulePieOption(data){return {color:rulePieColors,animationDuration:650,animationEasing:"cubicOut",tooltip:{trigger:"item",confine:true,backgroundColor:"rgba(255,255,255,.97)",borderColor:"#d6e2ef",borderWidth:1,padding:[9,12],extraCssText:"border-radius:6px;box-shadow:0 10px 24px rgba(31,45,61,.12);",textStyle:{color:"#26384d",fontSize:12,fontFamily:"Microsoft YaHei, Arial, sans-serif"},formatter:function(params){var percent=Number(params.percent||0).toFixed(2);return params.name+"<br/>检核问题条数："+params.value+"<br/>占比："+percent+"%";}},series:[{type:"pie",radius:["0%","50%"],center:["50%","52%"],startAngle:90,clockwise:true,minAngle:4,avoidLabelOverlap:true,stillShowZeroSum:false,itemStyle:{borderColor:"#fff",borderWidth:4,borderRadius:3,shadowBlur:3,shadowColor:"rgba(31,45,61,.08)"},emphasis:{scaleSize:5,itemStyle:{shadowBlur:16,shadowOffsetY:4,shadowColor:"rgba(31,45,61,.18)"}},label:{show:true,position:"outside",alignTo:"edge",edgeDistance:22,bleedMargin:8,distanceToLabelLine:6,lineHeight:22,formatter:function(params){var markerIndex=params.dataIndex%rulePieColors.length;var percent=Number(params.percent||0).toFixed(2);return "{marker"+markerIndex+"|} {name|"+params.name+"}{value|, "+params.value+",}\\n{blank|} {pct|"+percent+"%}";},rich:getRulePieRich()},labelLine:{show:true,length:22,length2:44,smooth:.12,lineStyle:{color:"#9aaabb",width:1.2}},labelLayout:{hideOverlap:false,moveOverlap:"shiftY"},data:data}]};}',
+      'function getTrendOption(data){var barColor=window.echarts&&window.echarts.graphic?new window.echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:trendColors.barEnd},{offset:1,color:trendColors.bar}]):trendColors.bar;return {color:[trendColors.bar,trendColors.line],animationDuration:650,animationEasing:"cubicOut",tooltip:{trigger:"axis",confine:true,axisPointer:{type:"shadow",shadowStyle:{color:"rgba(47,117,168,.08)"}},backgroundColor:"rgba(255,255,255,.97)",borderColor:"#d6e2ef",borderWidth:1,padding:[9,12],extraCssText:"border-radius:6px;box-shadow:0 10px 24px rgba(31,45,61,.12);",textStyle:{color:"#26384d",fontSize:12,fontFamily:"Microsoft YaHei, Arial, sans-serif"}},legend:{top:8,left:"center",itemGap:36,itemWidth:14,itemHeight:9,selectedMode:false,textStyle:{color:"#526579",fontSize:12,fontFamily:"Microsoft YaHei, Arial, sans-serif"},data:["检核问题条数","整改率"]},grid:{left:54,right:58,top:56,bottom:48},xAxis:{type:"category",data:data.map(function(item){return item.month;}),axisTick:{show:false},axisLine:{lineStyle:{color:"#d9e4f0"}},axisLabel:{color:"#6f8298",fontSize:11,interval:0,rotate:32,margin:14}},yAxis:[{type:"value",name:"检核问题条数",nameTextStyle:{color:"#6f8298",fontSize:12,padding:[0,0,8,0]},min:0,axisLabel:{color:"#6f8298",formatter:"{value}条"},splitLine:{lineStyle:{color:"#edf2f7",type:"dashed"}}},{type:"value",name:"整改率",nameTextStyle:{color:"#6f8298",fontSize:12,padding:[0,0,8,0]},min:0,max:100,axisLabel:{color:"#6f8298",formatter:"{value}%"},splitLine:{show:false}}],series:[{name:"检核问题条数",type:"bar",yAxisIndex:0,barWidth:18,data:data.map(function(item){return item.problemCount;}),itemStyle:{color:barColor,borderRadius:[4,4,0,0]}},{name:"整改率",type:"line",yAxisIndex:1,smooth:true,symbol:"circle",symbolSize:7,data:data.map(function(item){return item.rectifyRate;}),lineStyle:{width:3,color:trendColors.line},itemStyle:{color:"#fff",borderColor:trendColors.line,borderWidth:2},areaStyle:{color:trendColors.lineSoft}}]};}',
+      'function resizeRulePieCharts(){rulePieCharts.forEach(function(chart){if(chart&&chart.resize){try{chart.resize();}catch(err){}}});}',
+      'function initRulePieCharts(root){var scope=root||document;var nodes=Array.prototype.slice.call(scope.querySelectorAll("[data-qir-echart]"));nodes.forEach(function(node){var chartType=node.getAttribute("data-qir-echart")||"";var data=readRulePieData(node);if(!data.length){return;}if(!window.echarts){node.innerHTML="<div class=\\"qir-chart-fallback\\">ECharts 加载后显示图表</div>";return;}var oldChart=window.echarts.getInstanceByDom?window.echarts.getInstanceByDom(node):null;if(oldChart&&oldChart.dispose){oldChart.dispose();}node.innerHTML="";var chart=window.echarts.init(node);chart.setOption(chartType==="rectify-trend"?getTrendOption(data):getRulePieOption(data),true);rulePieCharts.push(chart);});}',
       'if(range){range.addEventListener("input",function(){apply(this.value);});}',
       'if(outBtn){outBtn.addEventListener("click",function(){apply(zoom-step);});}',
       'if(inBtn){inBtn.addEventListener("click",function(){apply(zoom+step);});}',
@@ -2620,6 +3332,8 @@ DP.pages.qualityInspectReport = (function () {
       'if(closeBtn){closeBtn.addEventListener("click",function(){window.close();});}',
       'var firstLink=document.querySelector(".qir-preview-toc a");if(firstLink){firstLink.classList.add("active");}',
       'document.querySelectorAll(".qir-preview-toc a").forEach(function(link){link.addEventListener("click",function(e){var selector=link.getAttribute("href");var target=selector?document.querySelector(selector):null;if(target){e.preventDefault();document.querySelectorAll(".qir-preview-toc a.active").forEach(function(item){item.classList.remove("active");});link.classList.add("active");target.scrollIntoView({behavior:"smooth",block:"start"});}});});',
+      'initRulePieCharts(document);',
+      'window.addEventListener("resize",resizeRulePieCharts);',
       'apply(100);',
       '})();'
     ].join('');
@@ -2635,7 +3349,7 @@ DP.pages.qualityInspectReport = (function () {
       return;
     }
     previewWindow.document.open();
-    previewWindow.document.write('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + escapeHtml(title) + '</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><style>' + getTemplatePreviewStyles() + '</style></head><body><div class="qir-preview-app"><aside class="qir-preview-toc"><h2><i class="bi bi-list-ul"></i><span>报告目录</span></h2><nav>' + previewData.toc + '</nav></aside><main class="qir-preview-stage"><div class="qir-preview-page-wrap"><article class="qir-template-page" data-qir-preview-page>' + previewData.html + '</article></div></main></div><button class="qir-preview-close-btn" type="button" data-qir-preview-close title="关闭预览" aria-label="关闭预览"><i class="bi bi-x-lg"></i><span>关闭</span></button><div class="qir-preview-zoom-toolbar" aria-label="预览缩放工具条"><button type="button" data-qir-preview-zoom-out title="缩小" aria-label="缩小"><i class="bi bi-dash-lg"></i></button><input type="range" min="60" max="180" step="10" value="100" data-qir-preview-zoom-range aria-label="缩放比例"><button type="button" data-qir-preview-zoom-in title="放大" aria-label="放大"><i class="bi bi-plus-lg"></i></button><button class="qir-preview-zoom-value" type="button" data-qir-preview-zoom-reset title="恢复 100%" aria-label="恢复 100%"><i class="bi bi-aspect-ratio"></i><span data-qir-preview-zoom-value>100%</span></button></div><script>' + getTemplatePreviewScripts() + '</script></body></html>');
+    previewWindow.document.write('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + escapeHtml(title) + '</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script><style>' + getTemplatePreviewStyles() + '</style></head><body><div class="qir-preview-app"><aside class="qir-preview-toc"><h2><i class="bi bi-list-ul"></i><span>报告目录</span></h2><nav>' + previewData.toc + '</nav></aside><main class="qir-preview-stage"><div class="qir-preview-page-wrap"><article class="qir-template-page" data-qir-preview-page>' + previewData.html + '</article></div></main></div><button class="qir-preview-close-btn" type="button" data-qir-preview-close title="关闭预览" aria-label="关闭预览"><i class="bi bi-x-lg"></i><span>关闭</span></button><div class="qir-preview-zoom-toolbar" aria-label="预览缩放工具条"><button type="button" data-qir-preview-zoom-out title="缩小" aria-label="缩小"><i class="bi bi-dash-lg"></i></button><input type="range" min="60" max="180" step="10" value="100" data-qir-preview-zoom-range aria-label="缩放比例"><button type="button" data-qir-preview-zoom-in title="放大" aria-label="放大"><i class="bi bi-plus-lg"></i></button><button class="qir-preview-zoom-value" type="button" data-qir-preview-zoom-reset title="恢复 100%" aria-label="恢复 100%"><i class="bi bi-aspect-ratio"></i><span data-qir-preview-zoom-value>100%</span></button></div><script>' + getTemplatePreviewScripts() + '</script></body></html>');
     previewWindow.document.close();
     previewWindow.focus();
   }
@@ -2665,6 +3379,7 @@ DP.pages.qualityInspectReport = (function () {
       '字段数': (metrics.totalRecordCount / 10000).toFixed(2),
       '质量任务数': config.taskCount || 0,
       '平均通过率': avg.toFixed(1) + '%',
+      '问题总记录数': formatNumber(metrics.problemRecordCount),
       '问题记录数': formatNumber(metrics.problemRecordCount),
       '稽查问题总记录数': formatNumber(metrics.problemRecordCount),
       '稽查总数据记录数': formatNumber(metrics.totalRecordCount),
@@ -2803,7 +3518,7 @@ DP.pages.qualityInspectReport = (function () {
       return;
     }
     previewWindow.document.open();
-    previewWindow.document.write('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + escapeHtml(title) + '</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><style>' + getHistoryReportWindowStyles() + '</style></head><body><div class="qir-history-report-window"><header class="qir-history-report-topbar"><div class="qir-history-report-tabs"><button class="active" type="button" data-history-tab="overview"><i class="bi bi-file-earmark-richtext"></i><span>报告概述</span></button><button type="button" data-history-tab="data"><i class="bi bi-table"></i><span>数据详情</span></button></div><div class="qir-history-report-title"><strong>' + escapeHtml(title) + '</strong><span>生成时间：' + escapeHtml(history.generatedTime) + ' · 统计范围：' + escapeHtml(getHistoryScopeText(history)) + '</span></div><button class="qir-history-report-close" type="button" data-qir-preview-close><i class="bi bi-x-lg"></i><span>关闭</span></button></header><main class="qir-history-report-body"><section class="qir-history-report-panel active" data-history-panel="overview"><div class="qir-preview-app"><aside class="qir-preview-toc"><h2><i class="bi bi-list-ul"></i><span>报告目录</span></h2><nav>' + previewData.toc + '</nav></aside><main class="qir-preview-stage"><div class="qir-preview-page-wrap"><article class="qir-template-page" data-qir-preview-page>' + previewData.html + '</article></div></main></div></section>' + renderHistoryWindowDataTab(history) + '</main></div><div class="qir-preview-zoom-toolbar" aria-label="预览缩放工具条"><button type="button" data-qir-preview-zoom-out title="缩小" aria-label="缩小"><i class="bi bi-dash-lg"></i></button><input type="range" min="60" max="180" step="10" value="100" data-qir-preview-zoom-range aria-label="缩放比例"><button type="button" data-qir-preview-zoom-in title="放大" aria-label="放大"><i class="bi bi-plus-lg"></i></button><button class="qir-preview-zoom-value" type="button" data-qir-preview-zoom-reset title="恢复 100%" aria-label="恢复 100%"><i class="bi bi-aspect-ratio"></i><span data-qir-preview-zoom-value>100%</span></button></div><script>' + getTemplatePreviewScripts() + getHistoryReportWindowScripts() + '</script></body></html>');
+    previewWindow.document.write('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + escapeHtml(title) + '</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script><style>' + getHistoryReportWindowStyles() + '</style></head><body><div class="qir-history-report-window"><header class="qir-history-report-topbar"><div class="qir-history-report-tabs"><button class="active" type="button" data-history-tab="overview"><i class="bi bi-file-earmark-richtext"></i><span>报告概述</span></button><button type="button" data-history-tab="data"><i class="bi bi-table"></i><span>数据详情</span></button></div><div class="qir-history-report-title"><strong>' + escapeHtml(title) + '</strong><span>生成时间：' + escapeHtml(history.generatedTime) + ' · 统计范围：' + escapeHtml(getHistoryScopeText(history)) + '</span></div><button class="qir-history-report-close" type="button" data-qir-preview-close><i class="bi bi-x-lg"></i><span>关闭</span></button></header><main class="qir-history-report-body"><section class="qir-history-report-panel active" data-history-panel="overview"><div class="qir-preview-app"><aside class="qir-preview-toc"><h2><i class="bi bi-list-ul"></i><span>报告目录</span></h2><nav>' + previewData.toc + '</nav></aside><main class="qir-preview-stage"><div class="qir-preview-page-wrap"><article class="qir-template-page" data-qir-preview-page>' + previewData.html + '</article></div></main></div></section>' + renderHistoryWindowDataTab(history) + '</main></div><div class="qir-preview-zoom-toolbar" aria-label="预览缩放工具条"><button type="button" data-qir-preview-zoom-out title="缩小" aria-label="缩小"><i class="bi bi-dash-lg"></i></button><input type="range" min="60" max="180" step="10" value="100" data-qir-preview-zoom-range aria-label="缩放比例"><button type="button" data-qir-preview-zoom-in title="放大" aria-label="放大"><i class="bi bi-plus-lg"></i></button><button class="qir-preview-zoom-value" type="button" data-qir-preview-zoom-reset title="恢复 100%" aria-label="恢复 100%"><i class="bi bi-aspect-ratio"></i><span data-qir-preview-zoom-value>100%</span></button></div><script>' + getTemplatePreviewScripts() + getHistoryReportWindowScripts() + '</script></body></html>');
     previewWindow.document.close();
     previewWindow.focus();
   }
@@ -2817,59 +3532,93 @@ DP.pages.qualityInspectReport = (function () {
     '</section>';
   }
 
-  function renderTemplateDocTable(headers, rows, className) {
-    var headHtml = headers.map(function (item) {
-      return '<th>' + escapeHtml(item) + '</th>';
-    }).join('');
-    var bodyHtml = rows.map(function (row) {
-      var isTotal = row[0] === '合计';
-      return '<tr' + (isTotal ? ' class="is-total"' : '') + '>' + row.map(function (cell) {
-        return '<td>' + escapeHtml(cell) + '</td>';
-      }).join('') + '</tr>';
-    }).join('');
-    return '<table class="qir-template-doc-table ' + (className || '') + '"><thead><tr>' + headHtml + '</tr></thead><tbody>' + bodyHtml + '</tbody></table>';
+  function renderTemplateDocTable(headers, rows, className, title, dashboardId) {
+    var safeTitle = title || '表格仪表盘';
+    return '<div class="qir-template-inserted-dashboard qir-template-table-dashboard" contenteditable="false" data-dashboard-id="' + escapeHtml(dashboardId || 'dash-template-doc-table') + '" data-dashboard-type="table">' +
+      '<div class="qir-inserted-dashboard-head"><strong>' + escapeHtml(safeTitle) + '</strong></div>' +
+      '<div class="qir-inserted-dashboard-body">' + renderDashboardTableHtml(headers, rows, className) + '</div>' +
+    '</div>';
   }
 
-  function renderTemplateQualityDimensionBlocks() {
-    return templateQualityDimensionStats.map(function (item, index) {
-      return '<h4>1.2.' + (index + 1) + ' ' + escapeHtml(item.name) + '</h4>' +
+  function renderTemplateDashboardById(id) {
+    var item = getTemplateDashboardOptionById(id);
+    return item ? renderInsertedDashboardBlock(item) : '';
+  }
+
+  function renderTemplateQualityDimensionBlocks(startIndex, endIndex) {
+    var start = typeof startIndex === 'number' ? startIndex : 0;
+    var rows = templateQualityDimensionStats.slice(start, typeof endIndex === 'number' ? endIndex : undefined);
+    return rows.map(function (item, index) {
+      return '<h4>1.2.' + (start + index + 1) + ' ' + escapeHtml(item.name) + '</h4>' +
         '<p>' + escapeHtml(item.name) + '涉及相关表统计如下：</p>' +
-        renderTemplateDocTable(['表名称', '中文名', '检核数据条数', '检核问题条数', '检核问题率'], item.rows, 'qir-template-check-table');
+        renderTemplateDocTable(['表名称', '中文名', '检核数据条数', '检核问题条数', '检核问题率'], item.rows, 'qir-template-check-table', item.name + '检核结果表', 'dash-template-check-table-' + (start + index + 1));
     }).join('');
   }
 
-  function renderTemplateFieldDetailTable() {
-    return renderTemplateDocTable(['评测字段（对象）', '评测内容', '评测标准', '评估结论'], templateFieldDetailRows, 'qir-template-field-table');
+  function renderTemplateFieldDetailTable(item) {
+    return renderTemplateDocTable(['评测字段（对象）', '评测内容', '评测标准', '评估结论'], templateFieldDetailRows, 'qir-template-field-table', getTemplateFieldDashboardTitle(item), getTemplateFieldDashboardId(item));
   }
 
-  function renderTemplateDetailBlocks() {
-    return templateDetailSamples.map(function (item, index) {
-      return '<h3>2.' + (index + 1) + ' ' + escapeHtml(item.tableName) + '（' + escapeHtml(item.alias) + '）</h3>' +
+  function renderTemplateDetailBlocks(startIndex, endIndex) {
+    var start = typeof startIndex === 'number' ? startIndex : 0;
+    var rows = templateDetailSamples.slice(start, typeof endIndex === 'number' ? endIndex : undefined);
+    return rows.map(function (item, index) {
+      return '<h3>2.' + (start + index + 1) + ' ' + escapeHtml(item.tableName) + '（' + escapeHtml(item.alias) + '）</h3>' +
         '<p>该表涉及评测' + escapeHtml(item.fieldCount) + '个字段，' + escapeHtml(item.dataCount) + '万条数据，涉及数据质量校验规则共' + escapeHtml(item.issueCount) + '条。</p>' +
         '<p>具体详情如下：</p>' +
-        renderTemplateFieldDetailTable();
+        renderTemplateFieldDetailTable(item);
     }).join('');
+  }
+
+  function renderTemplateDetailPages() {
+    var pages = [];
+    var chunkSize = 2;
+    for (var start = 0; start < templateDetailSamples.length; start += chunkSize) {
+      var content = (start === 0 ? '<h2>2 数据质量检核详细情况</h2>' : '') +
+        renderTemplateDetailBlocks(start, start + chunkSize);
+      pages.push(renderTemplateDocPage(content));
+    }
+    return pages.join('');
+  }
+
+  function renderTemplateDocPage(content, className) {
+    return '<section class="qir-template-doc-page ' + (className || 'qir-template-content-page') + '">' + content + '</section>';
   }
 
   function renderTemplateEditorDefaultContent() {
-    return '<h1><span class="qir-template-doc-system">OA系统</span>数据质量检核报告</h1>' +
-      '<p class="qir-template-meta">模板名称：' + renderEditorVariableToken('模板名称', 'qir-template-token') + ' · 报告生成日期：' + renderEditorVariableToken('日期时间', 'qir-template-token') + '</p>' +
-      renderTemplateDocTocBlock() +
-      '<h2>1 数据质量检核总体情况</h2>' +
+    var coverPage = '<div class="qir-template-cover-content">' +
+      '<h1><span class="qir-template-doc-system">OA系统</span>数据质量检核报告</h1>' +
+      '<p class="qir-template-report-date">报告生成日期：' + renderEditorVariableToken('日期时间', 'qir-template-token') + '</p>' +
+      '</div>';
+    var overviewPage = '<h2>1 数据质量检核总体情况</h2>' +
       '<h3>1.1 总体概述</h3>' +
       '<p>本轮稽查已完成对OA系统的数据质量进行了完整性、一致性、唯一性、有效性、准确性、及时性的数据质量评估。</p>' +
       '<p>共执行' + renderEditorVariableToken('质量任务数', 'qir-template-token') + '个质量任务，平均通过率为' + renderEditorVariableToken('平均通过率', 'qir-template-token') + '。</p>' +
-      '<p>检核范围涉及' + renderEditorVariableToken('数据库数量', 'qir-template-token') + '个数据库、' + renderEditorVariableToken('表数量', 'qir-template-token') + '张表、' + renderEditorVariableToken('字段数', 'qir-template-token') + '万条数据，涉及数据质量校验规则共' + renderEditorVariableToken('稽查问题总记录数', 'qir-template-token') + '条，检核规则分布如下表所示：</p>' +
-      renderTemplateDocTable(['规则类型', '合规比例', '检核问题条数'], templateRuleDistributionRows, 'qir-template-rule-table') +
+      '<p>检核范围涉及' + renderEditorVariableToken('数据源数量', 'qir-template-token') + '个数据源、' + renderEditorVariableToken('表数量', 'qir-template-token') + '张表、' + renderEditorVariableToken('字段数', 'qir-template-token') + '万条数据，涉及数据质量校验规则共' + renderEditorVariableToken('问题总记录数', 'qir-template-token') + '条，检核规则分布如下表所示：</p>' +
+      renderTemplateDashboardById('dash-template-rule-pie') +
+      renderTemplateDocTable(['规则类型', '合规比例', '检核问题条数'], templateRuleDistributionRows, 'qir-template-rule-table', '规则类型分布表', 'dash-template-rule-table') +
       '<p>其中：完整性' + renderEditorVariableToken('完整性合规比例', 'qir-template-token') + '、一致性' + renderEditorVariableToken('一致性合规比例', 'qir-template-token') + '、唯一性' + renderEditorVariableToken('唯一性合规', 'qir-template-token') + '、有效性' + renderEditorVariableToken('有效性合规比例', 'qir-template-token') + '、准确性' + renderEditorVariableToken('准确性合规比例', 'qir-template-token') + '、及时性' + renderEditorVariableToken('及时性合规比例', 'qir-template-token') + '。</p>' +
       '<p>本次评估总记录数：' + renderEditorVariableToken('稽查总数据记录数', 'qir-template-token') + '条；</p>' +
-      '<p>评测完成时间：' + renderEditorVariableToken('日期时间', 'qir-template-token') + '。</p>' +
-      '<h3>1.2 检核结果</h3>' +
-      renderTemplateQualityDimensionBlocks() +
+      '<p>评测完成时间：' + renderEditorVariableToken('日期时间', 'qir-template-token') + '。</p>';
+    var topPage = '<h4>1.1.1 质量好Top10</h4>' +
+      '<p>数据质量总体评估最好的表Top统计如下：</p>' +
+      renderTemplateDocTable(['序号', '表名称', '中文名', '检核数据条数', '检核问题条数', '检核问题率'], templateQualityGoodTopRows, 'qir-template-quality-rank-table', '质量好Top10', 'dash-template-quality-good-top-table') +
+      '<h4>1.1.2 数据差Top10</h4>' +
+      '<p>数据质量总体评估最差的表Top统计如下：</p>' +
+      renderTemplateDocTable(['序号', '表名称', '中文名', '检核数据条数', '检核问题条数', '检核问题率'], templateQualityBadTopRows, 'qir-template-quality-rank-table', '数据差Top10', 'dash-template-quality-bad-top-table');
+    var resultFirstPage = '<h3>1.2 检核结果</h3>' + renderTemplateQualityDimensionBlocks(0, 2);
+    var resultSecondPage = renderTemplateQualityDimensionBlocks(2, 4);
+    var resultThirdPage = renderTemplateQualityDimensionBlocks(4) +
       '<h3>1.3 问题整改进度</h3>' +
-      renderTemplateDocTable(['月份', '表数据量', '检核数据条数', '检核问题条数', '检核问题率', '整改率'], templateRectifyTrendRows, 'qir-template-trend-table') +
-      '<h2>2 数据质量检核详细情况</h2>' +
-      renderTemplateDetailBlocks();
+      renderTemplateDashboardById('dash-template-trend-chart') +
+      renderTemplateDocTable(['月份', '表数据量', '检核数据条数', '检核问题条数', '检核问题率', '整改率'], templateRectifyTrendRows, 'qir-template-trend-table', '问题整改进度表', 'dash-template-trend-table');
+    return renderTemplateDocPage(coverPage, 'qir-template-cover-page') +
+      renderTemplateDocPage(overviewPage) +
+      renderTemplateDocPage(topPage) +
+      renderTemplateDocPage(resultFirstPage) +
+      renderTemplateDocPage(resultSecondPage) +
+      renderTemplateDocPage(resultThirdPage) +
+      renderTemplateDetailPages();
   }
 
   function renderTemplateEditor(config) {
@@ -3366,6 +4115,7 @@ DP.pages.qualityInspectReport = (function () {
 
   function renderAll() {
     if (!pageEl) return;
+    disposeTemplatePieCharts();
     pageEl.classList.toggle('detail-mode', state.view === 'detail');
     pageEl.classList.toggle('template-mode', state.view === 'template');
     pageEl.classList.toggle('report-view-mode', state.view === 'report-view');
@@ -3383,6 +4133,7 @@ DP.pages.qualityInspectReport = (function () {
     } else {
       pageEl.innerHTML = renderListShell();
     }
+    initTemplatePieCharts(pageEl);
   }
 
   function bindEvents() {
@@ -3610,6 +4361,8 @@ DP.pages.qualityInspectReport = (function () {
             renderAll();
             showToast('已插入 ' + insertedCount + ' 个仪表盘');
           }
+        } else if (action === 'template-outline-jump') {
+          jumpToTemplateOutlineSection(actionEl);
         } else if (action === 'template-action-placeholder') {
           showToast('编辑模板功能后续设计');
         } else if (action === 'template-scope-add') {
@@ -3981,6 +4734,7 @@ DP.pages.qualityInspectReport = (function () {
       pageEl = document.querySelector('.page-quality-inspect-report');
       if (!pageEl) return;
       resetState();
+      normalizeOaQualityReportConfigs();
       bindEvents();
       renderAll();
     }
