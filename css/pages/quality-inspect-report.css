@@ -250,6 +250,7 @@
   height: 34px;
   display: inline-flex;
   align-items: center;
+  flex: 0 0 auto;
   padding: 0 9px;
   border: 1px solid #d9dfe6;
   border-right: none;
@@ -282,17 +283,23 @@
 }
 
 .qir-query-select {
+  box-sizing: border-box;
+  flex: 0 0 104px;
   width: 104px;
   height: 34px;
   padding: 0 28px 0 9px;
   border: 1px solid #d9dfe6;
-  border-right: none;
   border-radius: 0;
   background: #fff;
   color: #1f2d3d;
   font-family: inherit;
   font-size: 13px;
   outline: none;
+}
+
+.qir-query-select-wide {
+  flex-basis: 126px;
+  width: 126px;
 }
 
 .qir-query-select:focus {
@@ -326,7 +333,7 @@
 }
 
 .qir-config-table-wrap {
-  overflow-x: hidden;
+  overflow-x: auto;
   overflow-y: auto;
 }
 
@@ -395,6 +402,10 @@
   min-width: 0;
 }
 
+.qir-config-table-schedule {
+  min-width: 1370px;
+}
+
 .qir-config-table th,
 .qir-config-table td {
   height: auto;
@@ -443,6 +454,75 @@
   width: 286px;
   max-width: none;
   overflow: visible;
+  white-space: nowrap;
+  padding-right: 4px;
+  padding-left: 4px;
+}
+
+.qir-config-table-report th:nth-child(3),
+.qir-config-table-report td:nth-child(3) {
+  width: auto;
+}
+
+.qir-config-table-report th:nth-child(4),
+.qir-config-table-report td:nth-child(4) {
+  width: 132px;
+}
+
+.qir-config-table-report th:nth-child(5),
+.qir-config-table-report td:nth-child(5) {
+  width: 140px;
+}
+
+.qir-config-table-report th:nth-child(6),
+.qir-config-table-report td:nth-child(6) {
+  width: 170px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.qir-config-table-schedule th:nth-child(1),
+.qir-config-table-schedule td:nth-child(1) {
+  width: 180px;
+}
+
+.qir-config-table-schedule th:nth-child(2),
+.qir-config-table-schedule td:nth-child(2) {
+  width: 205px;
+}
+
+.qir-config-table-schedule th:nth-child(3),
+.qir-config-table-schedule td:nth-child(3) {
+  width: 76px;
+}
+
+.qir-config-table-schedule th:nth-child(4),
+.qir-config-table-schedule td:nth-child(4) {
+  width: 335px;
+}
+
+.qir-config-table-schedule th:nth-child(5),
+.qir-config-table-schedule td:nth-child(5) {
+  width: 118px;
+}
+
+.qir-config-table-schedule th:nth-child(6),
+.qir-config-table-schedule td:nth-child(6) {
+  width: 98px;
+  white-space: nowrap;
+}
+
+.qir-config-table-schedule th:nth-child(7),
+.qir-config-table-schedule td:nth-child(7) {
+  width: 128px;
+}
+
+.qir-config-table-schedule th:nth-child(8),
+.qir-config-table-schedule td:nth-child(8) {
+  width: 218px;
+  max-width: none;
+  overflow: visible;
+  text-align: center;
   white-space: nowrap;
   padding-right: 4px;
   padding-left: 4px;
@@ -679,6 +759,14 @@
   color: #6f8298;
 }
 
+.qir-status.success {
+  color: #237804;
+}
+
+.qir-status.failure {
+  color: #cf1322;
+}
+
 .qir-config-desc {
   display: block;
   overflow: visible;
@@ -787,10 +875,19 @@
 .qir-config-table .qir-table-actions {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   flex-wrap: nowrap;
   gap: 2px;
   width: auto;
   white-space: nowrap;
+}
+
+.qir-config-table-schedule .qir-table-actions {
+  width: 100%;
+}
+
+.qir-config-table-report .qir-table-actions {
+  width: 100%;
 }
 
 .qir-config-table .qir-view-btn {
@@ -847,6 +944,26 @@
 .qir-export-link:hover {
   border-color: #b7eb8f;
   background: #f6ffed;
+}
+
+.qir-success-link i,
+.qir-success-link span {
+  color: #237804;
+}
+
+.qir-success-link:hover {
+  border-color: #b7eb8f;
+  background: #f6ffed;
+}
+
+.qir-warning-link i,
+.qir-warning-link span {
+  color: #ad6800;
+}
+
+.qir-warning-link:hover {
+  border-color: #ffe58f;
+  background: #fffbe6;
 }
 
 .qir-danger-link i,

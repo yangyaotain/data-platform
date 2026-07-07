@@ -76,8 +76,11 @@ DP.showPage = function (menuKey, opts) {
     DP.pages.dataQualityRule.init();
   } else if (menuKey === 'quality-inspect-report' || menuKey === '稽查报告') {
     c.innerHTML = DP.pages.qualityInspectReport.html;
-    DP.pages.qualityInspectReport.init();
-  } else if (menuKey === 'quality-inspect-task' || menuKey === '稽查任务') {
+    DP.pages.qualityInspectReport.init({ section: 'report' });
+  } else if (menuKey === 'quality-inspect-schedule' || menuKey === '任务调度') {
+    c.innerHTML = DP.pages.qualityInspectReport.html;
+    DP.pages.qualityInspectReport.init({ section: 'schedule' });
+  } else if (menuKey === 'quality-inspect-task' || menuKey === '任务配置' || menuKey === '稽查任务') {
     c.innerHTML = DP.pages.qualityInspectTask.html;
     DP.pages.qualityInspectTask.init();
   } else if (menuKey === 'svc-api-dev' || menuKey === '接口开发') {

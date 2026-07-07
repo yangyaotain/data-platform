@@ -13,8 +13,10 @@ DP.pages.qualityInspectReport = (function () {
 
   var state = {
     view: 'list',
+    section: 'report',
     configKeyword: '',
     configStatus: '',
+    configExecStatus: '',
     configPage: 1,
     configPageSize: 10,
     selectedConfigId: '',
@@ -60,6 +62,14 @@ DP.pages.qualityInspectReport = (function () {
       test: true
     }
   };
+
+  function normalizeSection(section) {
+    return section === 'schedule' ? 'schedule' : 'report';
+  }
+
+  function isScheduleSection() {
+    return state.section === 'schedule';
+  }
 
   var dataSourceParents = {
     prod_mysql_master: '生产数据库',
@@ -186,13 +196,22 @@ DP.pages.qualityInspectReport = (function () {
     'rep-oa-vehicle-apply'
   ];
 
+  var configExecutionStatusMap = {
+    'cfg-core-trade': '执行成功',
+    'cfg-warehouse-layer': '执行成功',
+    'cfg-customer-service': '执行失败',
+    'cfg-master-data': '执行失败',
+    'cfg-business-system': '执行成功',
+    'cfg-test-env': '执行失败'
+  };
+
   var reportConfigs = [
     reportConfig('cfg-core-trade', 'OA系统数据质量检核报告', 1, 15, 24, '已启动', { type: '每月', day: '1号', time: '10:05:02' }, '2026-06-30 10:05:02', '按月汇总 OA 系统组织、员工、岗位、角色、流程、考勤、资产等基础表的数据质量检核结果。', oaQualityReportIds.slice()),
     reportConfig('cfg-warehouse-layer', '数仓分层质量稽查报告', 4, 36, 82, '已启动', { type: '每天', time: '03:30:00' }, '2026-06-29 03:30:00', '面向 ODS、DWD、DWS、ADS 分层统计稽查任务执行情况，重点关注入仓完整性和汇总口径一致性。', ['rep-ods-workorder-ticket', 'rep-ods-user-behavior', 'rep-dwd-order-fact', 'rep-dwd-customer-profile', 'rep-dws-order-daily', 'rep-dws-user-profile', 'rep-ads-gmv-summary', 'rep-ads-order-overview']),
     reportConfig('cfg-customer-service', '客户运营数据质量周报', 2, 14, 31, '已启动', { type: '每周', weekday: '周一', time: '10:05:02' }, '2026-06-29 10:05:02', '统计客户主数据、触达记录和用户画像类质量任务，辅助客户运营团队跟踪证件、联系方式和标签取值问题。', ['rep-dwd-customer-profile', 'rep-crm-customer-info', 'rep-crm-contact-record', 'rep-dws-user-profile']),
-    reportConfig('cfg-master-data', '主数据标准映射稽查报告', 2, 8, 18, '未启动', { type: '每月', day: '1号', time: '10:05:02' }, '-', '计划汇总商品、区域、供应商等主数据标准映射稽查结果，用于月度主数据治理例会复盘。', ['rep-product-info', 'rep-dim-region', 'rep-supplier-contract']),
+    reportConfig('cfg-master-data', '主数据标准映射稽查报告', 2, 8, 18, '未启动', { type: '每月', day: '1号', time: '10:05:02' }, '2026-06-01 10:05:02', '计划汇总商品、区域、供应商等主数据标准映射稽查结果，用于月度主数据治理例会复盘。', ['rep-product-info', 'rep-dim-region', 'rep-supplier-contract']),
     reportConfig('cfg-business-system', 'OA系统数据质量检核报告', 1, 15, 24, '已启动', { type: '每月', day: '1号', time: '10:05:02' }, '2026-06-01 10:05:02', '按月汇总 OA 系统组织、员工、岗位、角色、流程、考勤、资产等基础表的数据质量检核结果。', oaQualityReportIds.slice()),
-    reportConfig('cfg-test-env', '测试环境质量稽查报告', 3, 9, 21, '未启动', { type: '每周', weekday: '周一', time: '10:05:02' }, '-', '用于测试库、测试日志和测试画像文档的数据质量演示，当前暂未启用周期生成。', ['rep-test-order-main', 'rep-test-clickhouse-log', 'rep-test-mongodb-profile'])
+    reportConfig('cfg-test-env', '测试环境质量稽查报告', 3, 9, 21, '未启动', { type: '每周', weekday: '周一', time: '10:05:02' }, '2026-06-22 10:05:02', '用于测试库、测试日志和测试画像文档的数据质量演示，当前暂未启用周期生成。', ['rep-test-order-main', 'rep-test-clickhouse-log', 'rep-test-mongodb-profile'])
   ];
 
   var reportHistories = [
@@ -233,7 +252,7 @@ DP.pages.qualityInspectReport = (function () {
     { name: '该表稽查字段数', desc: '单表参与检核的字段数量', sample: '16' },
     { name: '该表字段数', desc: '单表参与检核的数据量，按万条展示', sample: '2.45' },
     { name: '该表稽查问题总记录数', desc: '单表检核发现的问题记录数', sample: '12' },
-    { name: '生成周期', desc: '报告模板的定时生成周期', sample: '每月 / 1号 / 10:05:02' },
+    { name: '调度周期', desc: '报告模板的定时调度周期', sample: '每月 / 1号 / 10:05:02' },
     { name: '最后生成时间', desc: '报告最近一次生成时间', sample: '2026-06-30 10:05:02' },
     { name: '年份', desc: '报告生成时的当前年份', sample: '2026年' },
     { name: '月份', desc: '报告生成时的当前月份', sample: '2026年7月' },
@@ -280,8 +299,8 @@ DP.pages.qualityInspectReport = (function () {
     { id: 'dash-template-quality-good-top-table', name: '质量好Top10', type: 'table', typeLabel: '表格仪表盘', icon: 'bi-table', scope: '总体概述', desc: '按检核问题率从低到高展示质量最好的10张表。', metrics: '6列 / 10行', updateTime: '2026-06-29 10:05:02' },
     { id: 'dash-template-quality-bad-top-table', name: '数据差Top10', type: 'table', typeLabel: '表格仪表盘', icon: 'bi-table', scope: '总体概述', desc: '按检核问题率从高到低展示质量最差的10张表。', metrics: '6列 / 10行', updateTime: '2026-06-29 10:05:02' },
     { id: 'dash-template-check-table', name: '质量维度检核结果表', type: 'table', typeLabel: '表格仪表盘', icon: 'bi-table', scope: '数据质量检核结果', desc: '按质量维度展示相关表的检核数据条数、问题条数和问题率。', metrics: '5列 / 5行', updateTime: '2026-06-29 10:05:02' },
-    { id: 'dash-template-trend-chart', name: '问题整改趋势图', type: 'chart', typeLabel: '柱折图仪表盘', icon: 'bi-bar-chart-line', scope: '问题整改进度', desc: '近12个月检核问题条数与整改率双轴趋势图。', metrics: '近12个月', updateTime: '2026-06-29 10:05:02' },
-    { id: 'dash-template-trend-table', name: '问题整改进度表', type: 'table', typeLabel: '表格仪表盘', icon: 'bi-table', scope: '问题整改进度', desc: '按月份展示表数据量、检核问题条数、问题率和整改率变化。', metrics: '6列 / 12行', updateTime: '2026-06-29 10:05:02' }
+    { id: 'dash-template-trend-chart', name: '问题整改趋势图', type: 'chart', typeLabel: '柱折图仪表盘', icon: 'bi-bar-chart-line', scope: '问题整改进度', desc: '近12次检核问题条数与整改率双轴趋势图。', metrics: '近12次', updateTime: '2026-06-29 10:05:02' },
+    { id: 'dash-template-trend-table', name: '问题整改进度表', type: 'table', typeLabel: '表格仪表盘', icon: 'bi-table', scope: '问题整改进度', desc: '按序号和日期时间展示表数据量、检核问题条数、问题率和整改率变化。', metrics: '7列 / 12行', updateTime: '2026-06-29 10:05:02' }
   ];
 
   var templateOutlineSections = [
@@ -388,18 +407,18 @@ DP.pages.qualityInspectReport = (function () {
   ];
 
   var templateRectifyTrendRows = [
-    ['2025-07', '4', '4,812', '168', '3.49%', '58%'],
-    ['2025-08', '4', '4,856', '154', '3.17%', '61%'],
-    ['2025-09', '4', '4,903', '149', '3.04%', '64%'],
-    ['2025-10', '4', '4,956', '136', '2.74%', '67%'],
-    ['2025-11', '4', '4,988', '128', '2.57%', '70%'],
-    ['2025-12', '4', '5,018', '121', '2.41%', '76%'],
-    ['2026-01', '4', '5,086', '116', '2.28%', '78%'],
-    ['2026-02', '4', '5,133', '103', '2.01%', '81%'],
-    ['2026-03', '4', '5,188', '91', '1.75%', '84%'],
-    ['2026-04', '4', '5,224', '73', '1.40%', '88%'],
-    ['2026-05', '4', '5,248', '52', '0.99%', '90%'],
-    ['2026-06', '4', '5,266', '35', '0.66%', '92%']
+    ['第1次', '2025-07-31 10:05:02', '4', '4,812', '168', '3.49%', '58%'],
+    ['第2次', '2025-08-31 10:05:02', '4', '4,856', '154', '3.17%', '61%'],
+    ['第3次', '2025-09-30 10:05:02', '4', '4,903', '149', '3.04%', '64%'],
+    ['第4次', '2025-10-31 10:05:02', '4', '4,956', '136', '2.74%', '67%'],
+    ['第5次', '2025-11-30 10:05:02', '4', '4,988', '128', '2.57%', '70%'],
+    ['第6次', '2025-12-31 10:05:02', '4', '5,018', '121', '2.41%', '76%'],
+    ['第7次', '2026-01-31 10:05:02', '4', '5,086', '116', '2.28%', '78%'],
+    ['第8次', '2026-02-28 10:05:02', '4', '5,133', '103', '2.01%', '81%'],
+    ['第9次', '2026-03-31 10:05:02', '4', '5,188', '91', '1.75%', '84%'],
+    ['第10次', '2026-04-30 10:05:02', '4', '5,224', '73', '1.40%', '88%'],
+    ['第11次', '2026-05-31 10:05:02', '4', '5,248', '52', '0.99%', '90%'],
+    ['第12次', '2026-06-30 10:05:02', '4', '5,266', '35', '0.66%', '92%']
   ];
 
   var templateQualityRankSamples = [
@@ -535,6 +554,7 @@ DP.pages.qualityInspectReport = (function () {
       status: status,
       cycle: cycle,
       lastGeneratedTime: lastGeneratedTime,
+      lastExecutionStatus: configExecutionStatusMap[id] || (status === '已启动' ? '执行成功' : '执行失败'),
       desc: desc,
       reportIds: reportIds || []
     };
@@ -1379,14 +1399,20 @@ DP.pages.qualityInspectReport = (function () {
   function getConfigRows() {
     var rows = reportConfigs.slice();
     var keyword = state.configKeyword.trim().toLowerCase();
-    if (state.configStatus) {
+    if (isScheduleSection() && state.configStatus) {
       rows = rows.filter(function (item) { return item.status === state.configStatus; });
+    }
+    if (isScheduleSection() && state.configExecStatus) {
+      rows = rows.filter(function (item) { return getConfigExecutionStatus(item) === state.configExecStatus; });
     }
     if (keyword) {
       rows = rows.filter(function (item) {
-        return item.name.toLowerCase().indexOf(keyword) >= 0 ||
+        var displayName = isScheduleSection() ? getScheduleTaskName(item) : item.name;
+        return displayName.toLowerCase().indexOf(keyword) >= 0 ||
+          item.name.toLowerCase().indexOf(keyword) >= 0 ||
           item.desc.toLowerCase().indexOf(keyword) >= 0 ||
-          item.status.toLowerCase().indexOf(keyword) >= 0;
+          (isScheduleSection() && item.status.toLowerCase().indexOf(keyword) >= 0) ||
+          (isScheduleSection() && getConfigExecutionStatus(item).toLowerCase().indexOf(keyword) >= 0);
       });
     }
     rows.sort(function (a, b) {
@@ -1413,21 +1439,49 @@ DP.pages.qualityInspectReport = (function () {
   function deleteReportConfig(id) {
     var item = getReportConfigById(id);
     if (!item) return;
+    var entityName = isScheduleSection() ? '任务调度' : '稽查报告';
+    var displayName = isScheduleSection() ? getScheduleTaskName(item) : item.name;
     function doDelete() {
       reportConfigs = reportConfigs.filter(function (config) { return config.id !== id; });
       if (state.selectedConfigId === id) state.selectedConfigId = '';
       clampConfigPage(getConfigRows().length);
       renderAll();
-      showToast('稽查报告已删除');
+      showToast(entityName + '已删除');
     }
     if (window.DP && typeof DP.confirm === 'function') {
-      DP.confirm('确认删除报告 <b>' + escapeHtml(item.name) + '</b> 吗？', {
+      DP.confirm('确认删除' + entityName + ' <b>' + escapeHtml(displayName) + '</b> 吗？', {
         icon: 'danger',
         okText: '删除',
         onOk: doDelete
       });
-    } else if (window.confirm('确认删除报告 ' + item.name + ' 吗？')) {
+    } else if (window.confirm('确认删除' + entityName + ' ' + displayName + ' 吗？')) {
       doDelete();
+    }
+  }
+
+  function confirmConfigScheduleAction(id, actionType) {
+    var item = getReportConfigById(id);
+    if (!item) return;
+    var isStart = actionType === 'start';
+    var title = isStart ? '确认启动任务调度' : '确认停止任务调度';
+    var okText = isStart ? '启动' : '停止';
+    var nextStatus = isStart ? '已启动' : '未启动';
+    var displayName = getScheduleTaskName(item);
+    var message = title + ' <b>' + escapeHtml(displayName) + '</b> 吗？' +
+      (isStart ? '启动后将按调度周期自动生成报告。' : '停止后将不再按调度周期自动生成报告。');
+    function applyStatus() {
+      item.status = nextStatus;
+      renderAll();
+      showToast('任务调度已' + okText);
+    }
+    if (window.DP && typeof DP.confirm === 'function') {
+      DP.confirm(message, {
+        icon: isStart ? 'info' : 'warning',
+        okText: okText,
+        onOk: applyStatus
+      });
+    } else if (window.confirm(message.replace(/<[^>]+>/g, ''))) {
+      applyStatus();
     }
   }
 
@@ -1907,6 +1961,35 @@ DP.pages.qualityInspectReport = (function () {
     return '<span class="qir-status ' + cls + '"><i class="bi ' + icon + '"></i><span>' + escapeHtml(status) + '</span></span>';
   }
 
+  function getConfigExecutionStatus(item) {
+    if (!item) return '执行失败';
+    return item.lastExecutionStatus || configExecutionStatusMap[item.id] || (item.status === '已启动' ? '执行成功' : '执行失败');
+  }
+
+  function getScheduleTaskName(item) {
+    var name = String(item && item.name ? item.name : '未命名').trim();
+    var baseName = name
+      .replace(/稽查报告模板$/, '')
+      .replace(/稽查报告$/, '')
+      .replace(/检核报告模板$/, '')
+      .replace(/检核报告$/, '')
+      .replace(/质量周报$/, '质量')
+      .replace(/周报$/, '')
+      .replace(/报告模板$/, '')
+      .replace(/报告$/, '')
+      .replace(/模板$/, '')
+      .trim();
+    if (!baseName) baseName = '未命名';
+    return /的任务$/.test(baseName) ? baseName : baseName + '的任务';
+  }
+
+  function renderConfigExecutionStatus(status) {
+    var success = status === '执行成功';
+    var cls = success ? 'success' : 'failure';
+    var icon = success ? 'bi-check-circle-fill' : 'bi-x-circle-fill';
+    return '<span class="qir-status ' + cls + '"><i class="bi ' + icon + '"></i><span>' + escapeHtml(status) + '</span></span>';
+  }
+
   function renderConfigCycle(cycle) {
     cycle = cycle || {};
     var parts = [];
@@ -1987,7 +2070,7 @@ DP.pages.qualityInspectReport = (function () {
     state.templateScheduleModalOpen = false;
     state.templateScheduleDraft = null;
     renderAll();
-    showToast('生成周期配置已保存');
+    showToast('调度周期配置已保存');
   }
 
   function getTemplateVariableRows() {
@@ -2098,10 +2181,18 @@ DP.pages.qualityInspectReport = (function () {
     });
   }
 
+  function cleanTemplateRuntimeMarkers(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-qir-dashboard-scroll-target]').forEach(function (node) {
+      node.removeAttribute('data-qir-dashboard-scroll-target');
+    });
+  }
+
   function getTemplateEditorSerializableHtml(editor) {
     if (!editor) return '';
     var clone = editor.cloneNode(true);
     cleanTemplateEchartRuntime(clone);
+    cleanTemplateRuntimeMarkers(clone);
     return clone.innerHTML;
   }
 
@@ -2226,9 +2317,9 @@ DP.pages.qualityInspectReport = (function () {
     if (!state.templateNameEditing) return;
     var config = getSelectedReportConfig() || reportConfigs[0];
     if (!config || !input) return;
-    config.name = input.value.trim() || '未命名稽查报告模板';
+    config.name = input.value.trim() || '未命名任务调度';
     state.templateNameEditing = false;
-    showToast('模板名称已保存');
+    showToast('名称已保存');
     if (!options || options.render !== false) {
       renderAll();
     }
@@ -2582,12 +2673,13 @@ DP.pages.qualityInspectReport = (function () {
   function getRectifyTrendChartData(rows) {
     return (rows || []).map(function (row) {
       return {
-        month: String(row[0] || ''),
-        problemCount: parseTemplateMetricNumber(row[3]),
-        rectifyRate: parseTemplateMetricNumber(row[5])
+        label: String(row[0] || ''),
+        dateTime: String(row[1] || ''),
+        problemCount: parseTemplateMetricNumber(row[4]),
+        rectifyRate: parseTemplateMetricNumber(row[6])
       };
     }).filter(function (item) {
-      return item.month && (item.problemCount > 0 || item.rectifyRate > 0);
+      return item.dateTime && (item.problemCount > 0 || item.rectifyRate > 0);
     });
   }
 
@@ -2618,6 +2710,18 @@ DP.pages.qualityInspectReport = (function () {
           color: '#26384d',
           fontSize: 12,
           fontFamily: 'Microsoft YaHei, Arial, sans-serif'
+        },
+        formatter: function (params) {
+          var list = Array.isArray(params) ? params : [params];
+          var label = list[0] ? list[0].axisValue : '';
+          var row = data.filter(function (item) { return item.label === label; })[0] || {};
+          var html = '<b>' + label + '</b>';
+          if (row.dateTime) html += '<br>' + row.dateTime;
+          list.forEach(function (item) {
+            var unit = item.seriesName === '整改率' ? '%' : '条';
+            html += '<br>' + (item.marker || '') + item.seriesName + '：<b>' + item.value + unit + '</b>';
+          });
+          return html;
         }
       },
       legend: {
@@ -2642,15 +2746,15 @@ DP.pages.qualityInspectReport = (function () {
       },
       xAxis: {
         type: 'category',
-        data: data.map(function (item) { return item.month; }),
+        data: data.map(function (item) { return item.label; }),
         axisTick: { show: false },
         axisLine: { lineStyle: { color: '#d9e4f0' } },
         axisLabel: {
           color: '#6f8298',
           fontSize: 11,
           interval: 0,
-          rotate: 32,
-          margin: 14
+          rotate: 0,
+          margin: 12
         }
       },
       yAxis: [
@@ -2829,7 +2933,7 @@ DP.pages.qualityInspectReport = (function () {
     }
     if (id === 'dash-template-trend-table') {
       return {
-        headers: ['月份', '表数据量', '检核数据条数', '检核问题条数', '检核问题率', '整改率'],
+        headers: ['序号', '日期时间', '表数据量', '检核数据条数', '检核问题条数', '检核问题率', '整改率'],
         rows: templateRectifyTrendRows,
         className: 'qir-template-trend-table'
       };
@@ -2863,11 +2967,13 @@ DP.pages.qualityInspectReport = (function () {
     return renderDashboardTableHtml(tableData.headers, tableData.rows, tableData.className);
   }
 
-  function renderInsertedDashboardBlock(item) {
+  function renderInsertedDashboardBlock(item, options) {
+    options = options && typeof options === 'object' ? options : {};
     var dashboardClass = item.type === 'pie'
       ? 'qir-template-pie-dashboard'
       : (item.type === 'chart' ? 'qir-template-chart-dashboard qir-template-trend-dashboard' : 'qir-template-table-dashboard');
-    return '<div class="qir-template-inserted-dashboard ' + dashboardClass + '" contenteditable="false" data-dashboard-id="' + escapeHtml(item.id) + '" data-dashboard-type="' + escapeHtml(item.type) + '">' +
+    var scrollTargetAttr = options.scrollTarget ? ' data-qir-dashboard-scroll-target="inserted"' : '';
+    return '<div class="qir-template-inserted-dashboard ' + dashboardClass + '" contenteditable="false" data-dashboard-id="' + escapeHtml(item.id) + '" data-dashboard-type="' + escapeHtml(item.type) + '"' + scrollTargetAttr + '>' +
       '<div class="qir-inserted-dashboard-head">' +
         '<strong>' + escapeHtml(item.name) + '</strong>' +
       '</div>' +
@@ -2880,7 +2986,9 @@ DP.pages.qualityInspectReport = (function () {
     if (!items.length) return 0;
     var editor = getTemplateEditorEl();
     if (editor) saveTemplateEditorContent();
-    var html = items.map(renderInsertedDashboardBlock).join('') + '<p><br></p>';
+    var html = items.map(function (item, index) {
+      return renderInsertedDashboardBlock(item, { scrollTarget: index === 0 });
+    }).join('') + '<p><br></p>';
     var wrap = document.createElement('div');
     wrap.innerHTML = state.templateEditorHtml || (editor ? getTemplateEditorSerializableHtml(editor) : '');
     var marker = wrap.querySelector('[data-qir-dashboard-insert-marker]');
@@ -2982,9 +3090,9 @@ DP.pages.qualityInspectReport = (function () {
     var config = getSelectedReportConfig() || reportConfigs[0];
     state.templateScheduleDraft = normalizeTemplateScheduleDraft(state.templateScheduleDraft || createTemplateScheduleDraft(config));
     return '<div class="qir-schedule-modal-mask" data-qir-action="close-template-schedule-modal"></div>' +
-      '<section class="qir-schedule-modal" role="dialog" aria-modal="true" aria-label="配置生成周期">' +
+      '<section class="qir-schedule-modal" role="dialog" aria-modal="true" aria-label="配置调度周期">' +
         '<div class="qir-dashboard-modal-head">' +
-          '<div><h3>配置生成周期</h3><p>参考稽查任务调度配置，设置报告模板自动生成时间</p></div>' +
+          '<div><h3>配置调度周期</h3><p>参考任务调度配置，设置报告模板自动生成时间</p></div>' +
           '<button class="qir-dashboard-modal-close" type="button" data-qir-action="close-template-schedule-modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button>' +
         '</div>' +
         '<div class="qir-schedule-modal-body">' +
@@ -2996,10 +3104,10 @@ DP.pages.qualityInspectReport = (function () {
             '<div class="qir-schedule-label"><span>*</span>调度配置</div>' +
             '<div class="qir-schedule-main"><div class="qir-schedule-row">' + renderTemplateScheduleControls() + '</div></div>' +
           '</div>' +
-          '<div class="qir-schedule-note"><i class="bi bi-lightning-charge"></i><span>保存后从下一次生成周期开始生效，已生成的历史报告不受影响。</span></div>' +
+          '<div class="qir-schedule-note"><i class="bi bi-lightning-charge"></i><span>保存后从下一次调度周期开始生效，已生成的历史报告不受影响。</span></div>' +
         '</div>' +
         '<div class="qir-dashboard-modal-foot">' +
-          '<span>生成周期：<b data-qir-template-schedule-summary>' + escapeHtml(getTemplateScheduleHint(state.templateScheduleDraft)) + '</b></span>' +
+          '<span>调度周期：<b data-qir-template-schedule-summary>' + escapeHtml(getTemplateScheduleHint(state.templateScheduleDraft)) + '</b></span>' +
           '<div><button class="btn btn-outline" type="button" data-qir-action="close-template-schedule-modal"><i class="bi bi-x-lg"></i><span>取消</span></button><button class="btn btn-primary" type="button" data-qir-action="template-schedule-save"><i class="bi bi-check-lg"></i><span>保存配置</span></button></div>' +
         '</div>' +
       '</section>';
@@ -3140,6 +3248,7 @@ DP.pages.qualityInspectReport = (function () {
       '该表字段数': '2.45',
       '该表稽查问题总记录数': '12',
       '生成周期': getCycleText(config.cycle),
+      '调度周期': getCycleText(config.cycle),
       '最后生成时间': config.lastGeneratedTime && config.lastGeneratedTime !== '-' ? config.lastGeneratedTime : dateTime,
       '年份': year + '年',
       '月份': year + '年' + month + '月',
@@ -3322,7 +3431,7 @@ DP.pages.qualityInspectReport = (function () {
       'function readRulePieData(node){var raw=node?node.getAttribute("data-qir-chart-data"):"";if(!raw){return [];}try{return JSON.parse(decodeURIComponent(raw));}catch(err){return [];}}',
       'function getRulePieRich(){var rich={name:{color:"#26384d",fontSize:14,fontFamily:"Microsoft YaHei, Arial, sans-serif",fontWeight:500,lineHeight:22},value:{color:"#1f2d3d",fontSize:14,fontFamily:"Microsoft YaHei, Arial, sans-serif",fontWeight:650,lineHeight:22},pct:{color:"#6f8298",fontSize:13,fontFamily:"Microsoft YaHei, Arial, sans-serif",lineHeight:20},blank:{width:17}};rulePieColors.forEach(function(color,index){rich["marker"+index]={width:8,height:8,borderRadius:2,backgroundColor:color};});return rich;}',
       'function getRulePieOption(data){return {color:rulePieColors,animationDuration:650,animationEasing:"cubicOut",tooltip:{trigger:"item",confine:true,backgroundColor:"rgba(255,255,255,.97)",borderColor:"#d6e2ef",borderWidth:1,padding:[9,12],extraCssText:"border-radius:6px;box-shadow:0 10px 24px rgba(31,45,61,.12);",textStyle:{color:"#26384d",fontSize:12,fontFamily:"Microsoft YaHei, Arial, sans-serif"},formatter:function(params){var percent=Number(params.percent||0).toFixed(2);return params.name+"<br/>检核问题条数："+params.value+"<br/>占比："+percent+"%";}},series:[{type:"pie",radius:["0%","50%"],center:["50%","52%"],startAngle:90,clockwise:true,minAngle:4,avoidLabelOverlap:true,stillShowZeroSum:false,itemStyle:{borderColor:"#fff",borderWidth:4,borderRadius:3,shadowBlur:3,shadowColor:"rgba(31,45,61,.08)"},emphasis:{scaleSize:5,itemStyle:{shadowBlur:16,shadowOffsetY:4,shadowColor:"rgba(31,45,61,.18)"}},label:{show:true,position:"outside",alignTo:"edge",edgeDistance:22,bleedMargin:8,distanceToLabelLine:6,lineHeight:22,formatter:function(params){var markerIndex=params.dataIndex%rulePieColors.length;var percent=Number(params.percent||0).toFixed(2);return "{marker"+markerIndex+"|} {name|"+params.name+"}{value|, "+params.value+",}\\n{blank|} {pct|"+percent+"%}";},rich:getRulePieRich()},labelLine:{show:true,length:22,length2:44,smooth:.12,lineStyle:{color:"#9aaabb",width:1.2}},labelLayout:{hideOverlap:false,moveOverlap:"shiftY"},data:data}]};}',
-      'function getTrendOption(data){var barColor=window.echarts&&window.echarts.graphic?new window.echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:trendColors.barEnd},{offset:1,color:trendColors.bar}]):trendColors.bar;return {color:[trendColors.bar,trendColors.line],animationDuration:650,animationEasing:"cubicOut",tooltip:{trigger:"axis",confine:true,axisPointer:{type:"shadow",shadowStyle:{color:"rgba(47,117,168,.08)"}},backgroundColor:"rgba(255,255,255,.97)",borderColor:"#d6e2ef",borderWidth:1,padding:[9,12],extraCssText:"border-radius:6px;box-shadow:0 10px 24px rgba(31,45,61,.12);",textStyle:{color:"#26384d",fontSize:12,fontFamily:"Microsoft YaHei, Arial, sans-serif"}},legend:{top:8,left:"center",itemGap:36,itemWidth:14,itemHeight:9,selectedMode:false,textStyle:{color:"#526579",fontSize:12,fontFamily:"Microsoft YaHei, Arial, sans-serif"},data:["检核问题条数","整改率"]},grid:{left:54,right:58,top:56,bottom:48},xAxis:{type:"category",data:data.map(function(item){return item.month;}),axisTick:{show:false},axisLine:{lineStyle:{color:"#d9e4f0"}},axisLabel:{color:"#6f8298",fontSize:11,interval:0,rotate:32,margin:14}},yAxis:[{type:"value",name:"检核问题条数",nameTextStyle:{color:"#6f8298",fontSize:12,padding:[0,0,8,0]},min:0,axisLabel:{color:"#6f8298",formatter:"{value}条"},splitLine:{lineStyle:{color:"#edf2f7",type:"dashed"}}},{type:"value",name:"整改率",nameTextStyle:{color:"#6f8298",fontSize:12,padding:[0,0,8,0]},min:0,max:100,axisLabel:{color:"#6f8298",formatter:"{value}%"},splitLine:{show:false}}],series:[{name:"检核问题条数",type:"bar",yAxisIndex:0,barWidth:18,data:data.map(function(item){return item.problemCount;}),itemStyle:{color:barColor,borderRadius:[4,4,0,0]}},{name:"整改率",type:"line",yAxisIndex:1,smooth:true,symbol:"circle",symbolSize:7,data:data.map(function(item){return item.rectifyRate;}),lineStyle:{width:3,color:trendColors.line},itemStyle:{color:"#fff",borderColor:trendColors.line,borderWidth:2},areaStyle:{color:trendColors.lineSoft}}]};}',
+      'function getTrendOption(data){var barColor=window.echarts&&window.echarts.graphic?new window.echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:trendColors.barEnd},{offset:1,color:trendColors.bar}]):trendColors.bar;return {color:[trendColors.bar,trendColors.line],animationDuration:650,animationEasing:"cubicOut",tooltip:{trigger:"axis",confine:true,axisPointer:{type:"shadow",shadowStyle:{color:"rgba(47,117,168,.08)"}},backgroundColor:"rgba(255,255,255,.97)",borderColor:"#d6e2ef",borderWidth:1,padding:[9,12],extraCssText:"border-radius:6px;box-shadow:0 10px 24px rgba(31,45,61,.12);",textStyle:{color:"#26384d",fontSize:12,fontFamily:"Microsoft YaHei, Arial, sans-serif"},formatter:function(params){var list=Array.isArray(params)?params:[params];var label=list[0]?list[0].axisValue:"";var row=data.filter(function(item){return item.label===label;})[0]||{};var html="<b>"+label+"</b>";if(row.dateTime){html+="<br>"+row.dateTime;}list.forEach(function(item){var unit=item.seriesName==="整改率"?"%":"条";html+="<br>"+(item.marker||"")+item.seriesName+"：<b>"+item.value+unit+"</b>";});return html;}},legend:{top:8,left:"center",itemGap:36,itemWidth:14,itemHeight:9,selectedMode:false,textStyle:{color:"#526579",fontSize:12,fontFamily:"Microsoft YaHei, Arial, sans-serif"},data:["检核问题条数","整改率"]},grid:{left:54,right:58,top:56,bottom:48},xAxis:{type:"category",data:data.map(function(item){return item.label;}),axisTick:{show:false},axisLine:{lineStyle:{color:"#d9e4f0"}},axisLabel:{color:"#6f8298",fontSize:11,interval:0,rotate:0,margin:12}},yAxis:[{type:"value",name:"检核问题条数",nameTextStyle:{color:"#6f8298",fontSize:12,padding:[0,0,8,0]},min:0,axisLabel:{color:"#6f8298",formatter:"{value}条"},splitLine:{lineStyle:{color:"#edf2f7",type:"dashed"}}},{type:"value",name:"整改率",nameTextStyle:{color:"#6f8298",fontSize:12,padding:[0,0,8,0]},min:0,max:100,axisLabel:{color:"#6f8298",formatter:"{value}%"},splitLine:{show:false}}],series:[{name:"检核问题条数",type:"bar",yAxisIndex:0,barWidth:18,data:data.map(function(item){return item.problemCount;}),itemStyle:{color:barColor,borderRadius:[4,4,0,0]}},{name:"整改率",type:"line",yAxisIndex:1,smooth:true,symbol:"circle",symbolSize:7,data:data.map(function(item){return item.rectifyRate;}),lineStyle:{width:3,color:trendColors.line},itemStyle:{color:"#fff",borderColor:trendColors.line,borderWidth:2},areaStyle:{color:trendColors.lineSoft}}]};}',
       'function resizeRulePieCharts(){rulePieCharts.forEach(function(chart){if(chart&&chart.resize){try{chart.resize();}catch(err){}}});}',
       'function initRulePieCharts(root){var scope=root||document;var nodes=Array.prototype.slice.call(scope.querySelectorAll("[data-qir-echart]"));nodes.forEach(function(node){var chartType=node.getAttribute("data-qir-echart")||"";var data=readRulePieData(node);if(!data.length){return;}if(!window.echarts){node.innerHTML="<div class=\\"qir-chart-fallback\\">ECharts 加载后显示图表</div>";return;}var oldChart=window.echarts.getInstanceByDom?window.echarts.getInstanceByDom(node):null;if(oldChart&&oldChart.dispose){oldChart.dispose();}node.innerHTML="";var chart=window.echarts.init(node);chart.setOption(chartType==="rectify-trend"?getTrendOption(data):getRulePieOption(data),true);rulePieCharts.push(chart);});}',
       'if(range){range.addEventListener("input",function(){apply(this.value);});}',
@@ -3390,6 +3499,7 @@ DP.pages.qualityInspectReport = (function () {
       '准确性合规比例': clampHistoryRate(avg - 0.4).toFixed(2) + '%',
       '及时性合规比例': clampHistoryRate(avg + 0.2).toFixed(2) + '%',
       '生成周期': getCycleText(config.cycle),
+      '调度周期': getCycleText(config.cycle),
       '最后生成时间': history.generatedTime,
       '年份': dateValues.year + '年',
       '月份': dateValues.year + '年' + dateValues.month + '月',
@@ -3611,7 +3721,7 @@ DP.pages.qualityInspectReport = (function () {
     var resultThirdPage = renderTemplateQualityDimensionBlocks(4) +
       '<h3>1.3 问题整改进度</h3>' +
       renderTemplateDashboardById('dash-template-trend-chart') +
-      renderTemplateDocTable(['月份', '表数据量', '检核数据条数', '检核问题条数', '检核问题率', '整改率'], templateRectifyTrendRows, 'qir-template-trend-table', '问题整改进度表', 'dash-template-trend-table');
+      renderTemplateDocTable(['序号', '日期时间', '表数据量', '检核数据条数', '检核问题条数', '检核问题率', '整改率'], templateRectifyTrendRows, 'qir-template-trend-table', '问题整改进度表', 'dash-template-trend-table');
     return renderTemplateDocPage(coverPage, 'qir-template-cover-page') +
       renderTemplateDocPage(overviewPage) +
       renderTemplateDocPage(topPage) +
@@ -3645,9 +3755,9 @@ DP.pages.qualityInspectReport = (function () {
   function renderTemplateNameControl(config) {
     config = config || getSelectedReportConfig() || reportConfigs[0];
     if (state.templateNameEditing) {
-      return '<div class="qir-template-name is-editing"><span>模板名称：</span><input type="text" data-qir-template-name-input value="' + escapeHtml(config.name) + '" maxlength="50" aria-label="模板名称"></div>';
+      return '<div class="qir-template-name is-editing"><span>名称：</span><input type="text" data-qir-template-name-input value="' + escapeHtml(config.name) + '" maxlength="50" aria-label="名称"></div>';
     }
-    return '<div class="qir-template-name"><span>模板名称：</span><b title="' + escapeHtml(config.name) + '">' + escapeHtml(config.name) + '</b><button class="btn btn-outline btn-sm" type="button" data-qir-action="edit-template-name"><i class="bi bi-pencil-square"></i><span>编辑</span></button></div>';
+    return '<div class="qir-template-name"><span>名称：</span><b title="' + escapeHtml(config.name) + '">' + escapeHtml(config.name) + '</b><button class="btn btn-outline btn-sm" type="button" data-qir-action="edit-template-name"><i class="bi bi-pencil-square"></i><span>编辑</span></button></div>';
   }
 
   function renderTemplateReportContent(config) {
@@ -3655,7 +3765,7 @@ DP.pages.qualityInspectReport = (function () {
     return renderTemplateResourcePanel() +
       '<section class="qir-template-main">' +
         '<div class="qir-template-topbar">' +
-          '<div class="qir-template-topbar-left">' + renderTemplateNameControl(config) + '<div class="qir-template-cycle"><span>生成周期：</span><b>' + escapeHtml(getCycleText(config.cycle)) + '</b><button class="btn btn-outline btn-sm" type="button" data-qir-action="open-template-schedule-modal"><i class="bi bi-gear"></i><span>配置</span></button></div></div>' +
+          '<div class="qir-template-topbar-left">' + renderTemplateNameControl(config) + '<div class="qir-template-cycle"><span>调度周期：</span><b>' + escapeHtml(getCycleText(config.cycle)) + '</b><button class="btn btn-outline btn-sm" type="button" data-qir-action="open-template-schedule-modal"><i class="bi bi-gear"></i><span>配置</span></button></div></div>' +
           '<div class="qir-template-actions">' +
             '<button class="btn btn-outline" type="button" data-qir-action="template-preview"><i class="bi bi-eye"></i><span>预览</span></button>' +
             '<button class="btn btn-outline" type="button" data-qir-action="template-back-list"><i class="bi bi-arrow-left"></i><span>返回</span></button>' +
@@ -3850,31 +3960,41 @@ DP.pages.qualityInspectReport = (function () {
 
   function renderConfigRows() {
     var rows = getVisibleConfigRows();
+    var scheduleMode = isScheduleSection();
     if (!rows.length) {
-      return '<tr class="qir-empty-row"><td colspan="7">暂无匹配稽查报告</td></tr>';
+      return '<tr class="qir-empty-row"><td colspan="' + (scheduleMode ? '8' : '6') + '">' + (scheduleMode ? '暂无匹配任务调度' : '暂无匹配稽查报告') + '</td></tr>';
     }
     return rows.map(function (item) {
+      var configName = scheduleMode ? getScheduleTaskName(item) : item.name;
+      var actionHtml = scheduleMode
+        ? '<button class="qir-view-btn" type="button"><i class="bi bi-clock-history"></i><span>执行记录</span></button>' +
+          '<button class="qir-view-btn" type="button" data-qir-action="template-placeholder" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-pencil-square"></i><span>编辑</span></button>' +
+          (item.status === '已启动'
+          ? '<button class="qir-view-btn qir-warning-link" type="button" data-qir-action="stop-config" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-pause-circle"></i><span>停止</span></button>'
+          : '<button class="qir-view-btn qir-success-link" type="button" data-qir-action="start-config" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-play-circle"></i><span>启动</span></button>') +
+          '<button class="qir-view-btn qir-danger-link" type="button" data-qir-action="delete-config" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-trash3"></i><span>删除</span></button>'
+        : '<button class="qir-view-btn" type="button" data-qir-action="open-report-view" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-file-earmark-text"></i><span>查看报告</span></button>' +
+          '<button class="qir-view-btn" type="button" data-qir-action="open-history-list" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-clock-history"></i><span>历史报告</span></button>';
       return '<tr>' +
-        '<td><div class="qir-config-name"><b>' + escapeHtml(item.name) + '</b></div></td>' +
+        '<td><div class="qir-config-name"><b>' + escapeHtml(configName) + '</b></div></td>' +
         '<td>' + renderConfigScope(item) + '</td>' +
-        '<td>' + renderConfigStatus(item.status) + '</td>' +
+        (scheduleMode ? '<td>' + renderConfigStatus(item.status) + '</td>' : '') +
         '<td><div class="qir-config-desc" title="' + escapeHtml(item.desc) + '">' + escapeHtml(item.desc) + '</div></td>' +
         '<td>' + renderConfigCycle(item.cycle) + '</td>' +
+        (scheduleMode ? '<td>' + renderConfigExecutionStatus(getConfigExecutionStatus(item)) + '</td>' : '') +
         '<td>' + escapeHtml(item.lastGeneratedTime) + '</td>' +
-        '<td><div class="qir-table-actions">' +
-          '<button class="qir-view-btn" type="button" data-qir-action="open-report-view" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-file-earmark-text"></i><span>查看报告</span></button>' +
-          '<button class="qir-view-btn" type="button" data-qir-action="open-history-list" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-clock-history"></i><span>历史报告</span></button>' +
-          '<button class="qir-view-btn" type="button" data-qir-action="template-placeholder" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-file-earmark-ruled"></i><span>编辑模板</span></button>' +
-          '<button class="qir-view-btn qir-danger-link" type="button" data-qir-action="delete-config" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-trash3"></i><span>删除</span></button>' +
-        '</div></td>' +
+        '<td><div class="qir-table-actions">' + actionHtml + '</div></td>' +
       '</tr>';
     }).join('');
   }
 
   function renderConfigTable() {
+    var headHtml = isScheduleSection()
+      ? '<tr><th>名称</th><th>统计范围</th><th>状态</th><th>报告描述</th><th>调度周期</th><th>最后执行状态</th><th>最后执行时间</th><th>操作</th></tr>'
+      : '<tr><th>名称</th><th>统计范围</th><th>报告描述</th><th>生成周期</th><th>最后生成时间</th><th>操作</th></tr>';
     return '<div class="qir-table-wrap qir-config-table-wrap">' +
-      '<table class="ds-table qir-table qir-config-table">' +
-        '<thead><tr><th>模板名称</th><th>统计范围</th><th>状态</th><th>报告描述</th><th>生成周期</th><th>最后生成时间</th><th>操作</th></tr></thead>' +
+      '<table class="ds-table qir-table qir-config-table ' + (isScheduleSection() ? 'qir-config-table-schedule' : 'qir-config-table-report') + '">' +
+        '<thead>' + headHtml + '</thead>' +
         '<tbody>' + renderConfigRows() + '</tbody>' +
       '</table>' +
     '</div>';
@@ -3942,8 +4062,16 @@ DP.pages.qualityInspectReport = (function () {
   }
 
   function renderListShell() {
+    var scheduleMode = isScheduleSection();
+    var leadingContent = isScheduleSection()
+      ? '<div class="qir-toolbar-actions"><button class="btn btn-primary" type="button" data-qir-action="template-placeholder"><i class="bi bi-plus-lg"></i><span>新增</span></button></div>'
+      : '<div class="qir-toolbar-title">稽查报告列表</div>';
+    var scheduleQueryPrefix = scheduleMode
+      ? '<span class="qir-query-label">状态</span><select class="qir-query-select" data-qir-config-status aria-label="状态查询"><option value="">全部</option><option value="已启动"' + (state.configStatus === '已启动' ? ' selected' : '') + '>已启动</option><option value="未启动"' + (state.configStatus === '未启动' ? ' selected' : '') + '>未启动</option></select>' +
+        '<span class="qir-query-label qir-query-label-gap">最后执行状态</span><select class="qir-query-select qir-query-select-wide" data-qir-config-exec-status aria-label="最后执行状态查询"><option value="">全部</option><option value="执行成功"' + (state.configExecStatus === '执行成功' ? ' selected' : '') + '>执行成功</option><option value="执行失败"' + (state.configExecStatus === '执行失败' ? ' selected' : '') + '>执行失败</option></select>'
+      : '';
     return '<section class="qir-main-panel qir-main-panel-full">' +
-      '<div class="qir-toolbar"><div class="qir-toolbar-actions"><button class="btn btn-primary" type="button" data-qir-action="template-placeholder"><i class="bi bi-plus-lg"></i><span>新增模板</span></button></div><div class="qir-query-box"><span class="qir-query-label">模板名称</span><input type="text" data-qir-config-keyword value="' + escapeHtml(state.configKeyword) + '" placeholder="请输入模板名称/描述" aria-label="模板名称或描述查询"><span class="qir-query-label qir-query-label-gap">状态</span><select class="qir-query-select" data-qir-config-status aria-label="状态查询"><option value="">全部</option><option value="已启动"' + (state.configStatus === '已启动' ? ' selected' : '') + '>已启动</option><option value="未启动"' + (state.configStatus === '未启动' ? ' selected' : '') + '>未启动</option></select><button class="btn btn-primary" type="button" data-qir-action="query-config"><i class="bi bi-search"></i><span>查询</span></button></div></div>' +
+      '<div class="qir-toolbar">' + leadingContent + '<div class="qir-query-box">' + scheduleQueryPrefix + '<span class="qir-query-label' + (scheduleMode ? ' qir-query-label-gap' : '') + '">名称</span><input type="text" data-qir-config-keyword value="' + escapeHtml(state.configKeyword) + '" placeholder="请输入名称/描述" aria-label="名称或描述查询"><button class="btn btn-primary" type="button" data-qir-action="query-config"><i class="bi bi-search"></i><span>查询</span></button></div></div>' +
       renderConfigTable() +
       renderConfigFooter() +
     '</section>';
@@ -4113,6 +4241,21 @@ DP.pages.qualityInspectReport = (function () {
     '</section>';
   }
 
+  function restoreTemplateDashboardInsertPosition() {
+    if (!pageEl || state.view !== 'template') return;
+    var target = pageEl.querySelector('[data-qir-dashboard-scroll-target]');
+    if (!target) return;
+    window.setTimeout(function () {
+      if (!pageEl || !pageEl.contains(target)) return;
+      target.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'nearest' });
+      target.removeAttribute('data-qir-dashboard-scroll-target');
+      var editor = getTemplateEditorEl();
+      if (editor) {
+        state.templateEditorHtml = getTemplateEditorSerializableHtml(editor);
+      }
+    }, 0);
+  }
+
   function renderAll() {
     if (!pageEl) return;
     disposeTemplatePieCharts();
@@ -4134,6 +4277,7 @@ DP.pages.qualityInspectReport = (function () {
       pageEl.innerHTML = renderListShell();
     }
     initTemplatePieCharts(pageEl);
+    restoreTemplateDashboardInsertPosition();
   }
 
   function bindEvents() {
@@ -4174,8 +4318,10 @@ DP.pages.qualityInspectReport = (function () {
         } else if (action === 'query-config') {
           var configInput = pageEl.querySelector('[data-qir-config-keyword]');
           var configStatus = pageEl.querySelector('[data-qir-config-status]');
+          var configExecStatus = pageEl.querySelector('[data-qir-config-exec-status]');
           state.configKeyword = configInput ? configInput.value.trim() : '';
           state.configStatus = configStatus ? configStatus.value : '';
+          state.configExecStatus = configExecStatus ? configExecStatus.value : '';
           state.configPage = 1;
           renderAll();
         } else if (action === 'query') {
@@ -4364,7 +4510,7 @@ DP.pages.qualityInspectReport = (function () {
         } else if (action === 'template-outline-jump') {
           jumpToTemplateOutlineSection(actionEl);
         } else if (action === 'template-action-placeholder') {
-          showToast('编辑模板功能后续设计');
+          showToast('编辑功能后续设计');
         } else if (action === 'template-scope-add') {
           state.templateScopeModalOpen = true;
           state.templateScopeModalTreeKey = 'all';
@@ -4424,6 +4570,10 @@ DP.pages.qualityInspectReport = (function () {
           exportAllDetailReports(actionEl);
         } else if (action === 'delete-config') {
           deleteReportConfig(actionEl.getAttribute('data-id') || '');
+        } else if (action === 'start-config') {
+          confirmConfigScheduleAction(actionEl.getAttribute('data-id') || '', 'start');
+        } else if (action === 'stop-config') {
+          confirmConfigScheduleAction(actionEl.getAttribute('data-id') || '', 'stop');
         }
         return;
       }
@@ -4657,8 +4807,10 @@ DP.pages.qualityInspectReport = (function () {
         saveTemplateNameFromInput(e.target);
       } else if (e.key === 'Enter' && e.target.matches('[data-qir-config-keyword]')) {
         var configStatus = pageEl.querySelector('[data-qir-config-status]');
+        var configExecStatus = pageEl.querySelector('[data-qir-config-exec-status]');
         state.configKeyword = e.target.value.trim();
         state.configStatus = configStatus ? configStatus.value : '';
+        state.configExecStatus = configExecStatus ? configExecStatus.value : '';
         state.configPage = 1;
         renderAll();
       } else if (e.key === 'Enter' && e.target.matches('[data-qir-keyword]')) {
@@ -4678,10 +4830,12 @@ DP.pages.qualityInspectReport = (function () {
     });
   }
 
-  function resetState() {
+  function resetState(section) {
     state.view = 'list';
+    state.section = normalizeSection(section);
     state.configKeyword = '';
     state.configStatus = '';
+    state.configExecStatus = '';
     state.configPage = 1;
     state.configPageSize = 10;
     state.selectedConfigId = '';
@@ -4730,10 +4884,10 @@ DP.pages.qualityInspectReport = (function () {
 
   return {
     html: '<div class="page-quality-inspect-report"></div>',
-    init: function () {
+    init: function (opts) {
       pageEl = document.querySelector('.page-quality-inspect-report');
       if (!pageEl) return;
-      resetState();
+      resetState(opts && (opts.section || opts.mode));
       normalizeOaQualityReportConfigs();
       bindEvents();
       renderAll();
