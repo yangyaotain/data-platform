@@ -32,7 +32,8 @@ DP.pages.qualityInspectTask = (function () {
     filters: {
       status: '',
       type: '',
-      keyword: ''
+      keyword: '',
+      targetKeyword: ''
     },
     form: null,
     modal: null,
@@ -60,7 +61,7 @@ DP.pages.qualityInspectTask = (function () {
       generated: { theme: 'dark', font: '14px', searchOpen: false },
       customRule: { theme: 'dark', font: '14px', searchOpen: false },
       basicCustom: { theme: 'dark', font: '14px', searchOpen: false },
-      reportSql: { theme: 'light', font: '14px', searchOpen: false }
+      reportSql: { theme: 'dark', font: '14px', searchOpen: false }
     }
   };
 
@@ -81,6 +82,33 @@ DP.pages.qualityInspectTask = (function () {
     '25号', '26号', '27号', '28号', '29号', '30号', '31号', '最后一天'
   ];
   var tableOptions = ['buildinglog', 'ods_workorder_ticket', 'dwd_order_detail_di', 'crm_member_base', 'fin_settlement_bill', 'api_access_log'];
+  var inspectTableAliases = {
+    buildinglog: '楼宇日志表',
+    crm_member_base: '会员基础表',
+    express_task_collect: '快递采集任务表',
+    dwd_order_detail_di: '订单明细表',
+    dim_order_status: '订单状态维表',
+    crm_customer_identity: '客户证件信息表',
+    ods_workorder_ticket: '工单票据贴源表',
+    hr_attendance_record: '考勤打卡记录表',
+    hr_employee_org: '员工组织关系表',
+    fin_payment_record: '支付记录表',
+    fin_settlement_bill: '结算账单表',
+    logistics_waybill: '物流运单表',
+    logistics_address_area: '物流地址区域表',
+    ods_order_main: '订单主表',
+    dwd_order_user_wide: '订单用户宽表',
+    dws_order_daily: '订单日汇总表',
+    ads_order_overview: '订单经营看板表',
+    ads_member_profile_tag: '会员画像标签表',
+    dim_product_sku: '商品SKU维表',
+    api_access_log: '接口访问日志表',
+    meta_field_security: '字段安全分级表',
+    meta_model_field: '元模型字段表',
+    std_common_code: '公共代码表',
+    mart_campaign_effect: '营销活动效果表',
+    dws_inventory_snapshot: '库存快照汇总表'
+  };
   var fieldOptions = ['Id', 'Name', 'OrderNo', 'TicketNo', 'CreateTime', 'CloseTime', 'Status', 'Amount'];
   var customRuleModeOptions = [
     { value: 'existing', label: '已有规则' },
@@ -409,6 +437,10 @@ DP.pages.qualityInspectTask = (function () {
     return String(value || '').trim().toLowerCase();
   }
 
+  function getInspectTableAlias(target) {
+    return inspectTableAliases[target] || '-';
+  }
+
   function formatDateTime(date) {
     function pad(value) { return String(value).padStart(2, '0'); }
     return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + ' ' +
@@ -506,13 +538,17 @@ DP.pages.qualityInspectTask = (function () {
   function getFilteredRows() {
     var keys = getCurrentTreeKeys();
     var keyword = normalize(state.filters.keyword);
+    var targetKeyword = normalize(state.filters.targetKeyword);
     return taskRows.filter(function (item) {
       if (keys.length && keys.indexOf(item.group) < 0) return false;
       if (state.filters.status && item.status !== state.filters.status) return false;
       if (state.filters.type && item.type !== state.filters.type) return false;
       if (keyword) {
-        var text = [item.name, item.frequency, item.status, item.creator, item.createdAt, item.lastRunAt, item.type, item.target, item.desc].join(' ');
-        if (normalize(text).indexOf(keyword) < 0) return false;
+        if (normalize(item.name).indexOf(keyword) < 0) return false;
+      }
+      if (targetKeyword) {
+        var targetText = [item.target, getInspectTableAlias(item.target)].join(' ');
+        if (normalize(targetText).indexOf(targetKeyword) < 0) return false;
       }
       return true;
     });
@@ -665,7 +701,8 @@ DP.pages.qualityInspectTask = (function () {
         '<select class="dqit-type-select" data-dqit-filter="type" aria-label="任务类型">' + renderTypeOptions() + '</select>' +
         '<select class="dqit-status-select" data-dqit-filter="status" aria-label="运行状态">' + renderStatusOptions() + '</select>' +
         '<div class="dqit-query-box">' +
-          '<input id="dqitKeywordInput" type="text" value="' + escapeHtml(state.filters.keyword) + '" placeholder="关键字查询" aria-label="关键字查询">' +
+          '<label class="dqit-query-field"><span>任务名称</span><input id="dqitKeywordInput" type="text" value="' + escapeHtml(state.filters.keyword) + '" placeholder="请输入任务名称" aria-label="任务名称查询"></label>' +
+          '<label class="dqit-query-field is-table"><span>稽查表</span><input id="dqitTargetInput" type="text" value="' + escapeHtml(state.filters.targetKeyword) + '" placeholder="请输入英文名/中文名" aria-label="稽查表查询"></label>' +
           '<button class="btn btn-primary" type="button" data-dqit-action="query"><i class="bi bi-search"></i><span>查询</span></button>' +
         '</div>' +
       '</div>' +
@@ -687,12 +724,14 @@ DP.pages.qualityInspectTask = (function () {
   function renderTableRows() {
     var rows = getVisibleRows();
     if (!rows.length) {
-      return '<tr class="dqit-empty-row"><td colspan="9">暂无匹配稽查任务</td></tr>';
+      return '<tr class="dqit-empty-row"><td colspan="10">暂无匹配稽查任务</td></tr>';
     }
     return rows.map(function (item) {
+      var targetAlias = getInspectTableAlias(item.target);
       return '<tr>' +
         '<td><input type="checkbox" data-dqit-row-check="' + escapeHtml(item.id) + '"' + (state.selectedIds[item.id] ? ' checked' : '') + ' aria-label="选择稽查任务"></td>' +
-        '<td title="' + escapeHtml(item.desc) + '"><a class="dqit-task-name" data-dqit-action="view-row" data-id="' + escapeHtml(item.id) + '">' + escapeHtml(item.name) + '</a><span>' + escapeHtml(item.target) + '</span></td>' +
+        '<td title="' + escapeHtml(item.desc) + '"><a class="dqit-task-name" data-dqit-action="view-row" data-id="' + escapeHtml(item.id) + '">' + escapeHtml(item.name) + '</a></td>' +
+        '<td><div class="dqit-task-target"><b title="' + escapeHtml(item.target) + '">' + escapeHtml(item.target) + '</b><span title="' + escapeHtml(targetAlias) + '">' + escapeHtml(targetAlias) + '</span></div></td>' +
         '<td>' + renderTaskType(item.type) + '</td>' +
         '<td>' + escapeHtml(item.frequency) + '</td>' +
         '<td>' + renderStatus(item.status) + '</td>' +
@@ -711,12 +750,12 @@ DP.pages.qualityInspectTask = (function () {
     return '<div class="dqit-table-wrap">' +
       '<table class="ds-table dqit-table">' +
         '<colgroup>' +
-          '<col class="dqit-w-check"><col class="dqit-w-name"><col class="dqit-w-type"><col class="dqit-w-frequency"><col class="dqit-w-status">' +
+          '<col class="dqit-w-check"><col class="dqit-w-name"><col class="dqit-w-target"><col class="dqit-w-type"><col class="dqit-w-frequency"><col class="dqit-w-status">' +
           '<col class="dqit-w-creator"><col class="dqit-w-created"><col class="dqit-w-last"><col class="dqit-w-action">' +
         '</colgroup>' +
         '<thead><tr>' +
           '<th class="col-ck"><input type="checkbox" data-dqit-check-all' + (allChecked ? ' checked' : '') + ' aria-label="全选稽查任务"></th>' +
-          '<th>任务名称</th><th>任务类型</th><th>频率</th><th>运行状态</th><th>创建人</th><th>创建时间</th><th>最后执行时间</th><th>操作</th>' +
+          '<th>任务名称</th><th>稽查表</th><th>任务类型</th><th>频率</th><th>运行状态</th><th>创建人</th><th>创建时间</th><th>最后执行时间</th><th>操作</th>' +
         '</tr></thead>' +
         '<tbody>' + renderTableRows() + '</tbody>' +
       '</table>' +
@@ -2294,7 +2333,7 @@ DP.pages.qualityInspectTask = (function () {
       generated: { theme: 'dark', font: '14px', searchOpen: false },
       customRule: { theme: 'dark', font: '14px', searchOpen: false },
       basicCustom: { theme: 'dark', font: '14px', searchOpen: false },
-      reportSql: { theme: 'light', font: '14px', searchOpen: false }
+      reportSql: { theme: 'dark', font: '14px', searchOpen: false }
     };
     renderAllKeepFormScroll();
   }
@@ -2889,7 +2928,9 @@ DP.pages.qualityInspectTask = (function () {
       renderAllKeepFormScroll();
     } else if (action === 'query') {
       var input = pageEl.querySelector('#dqitKeywordInput');
+      var targetInput = pageEl.querySelector('#dqitTargetInput');
       state.filters.keyword = input ? input.value.trim() : '';
+      state.filters.targetKeyword = targetInput ? targetInput.value.trim() : '';
       state.page = 1;
       state.selectedIds = {};
       renderAllKeepFormScroll();
@@ -3385,7 +3426,7 @@ DP.pages.qualityInspectTask = (function () {
     });
 
     pageEl.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' && e.target.id === 'dqitKeywordInput') {
+      if (e.key === 'Enter' && (e.target.id === 'dqitKeywordInput' || e.target.id === 'dqitTargetInput')) {
         var query = pageEl.querySelector('[data-dqit-action="query"]');
         if (query) query.click();
       }
@@ -3435,7 +3476,7 @@ DP.pages.qualityInspectTask = (function () {
     state.selectedIds = {};
     state.page = 1;
     state.pageSize = 16;
-    state.filters = { status: '', type: '', keyword: '' };
+    state.filters = { status: '', type: '', keyword: '', targetKeyword: '' };
     state.form = null;
     state.modal = null;
     state.ruleModal = null;
@@ -3456,7 +3497,7 @@ DP.pages.qualityInspectTask = (function () {
       generated: { theme: 'dark', font: '14px', searchOpen: false },
       customRule: { theme: 'dark', font: '14px', searchOpen: false },
       basicCustom: { theme: 'dark', font: '14px', searchOpen: false },
-      reportSql: { theme: 'light', font: '14px', searchOpen: false }
+      reportSql: { theme: 'dark', font: '14px', searchOpen: false }
     };
   }
 

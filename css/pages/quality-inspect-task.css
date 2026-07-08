@@ -231,8 +231,9 @@
 .dqit-toolbar {
   min-height: 56px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 16px;
   padding: 10px 14px;
   border-bottom: 1px solid #e6ebf2;
@@ -254,6 +255,7 @@
 
 .dqit-toolbar-right {
   margin-left: auto;
+  flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
 }
@@ -299,30 +301,55 @@
 .dqit-query-box {
   display: flex;
   align-items: center;
+  gap: 6px;
   flex-shrink: 0;
 }
 
-.dqit-query-box input {
-  width: 180px;
+.dqit-query-field {
+  display: flex;
+  align-items: center;
   height: 34px;
-  padding: 0 10px;
   border: 1px solid #d9dfe6;
-  border-right: none;
-  border-radius: 2px 0 0 2px;
+  border-radius: 2px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.dqit-query-field span {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 8px;
+  border-right: 1px solid #e6ebf2;
+  background: #f7f9fc;
+  color: #5f728a;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.dqit-query-field input {
+  width: 138px;
+  height: 32px;
+  padding: 0 9px;
+  border: none;
   color: #1f2d3d;
   font-family: inherit;
   font-size: 13px;
   outline: none;
 }
 
-.dqit-query-box input:focus {
+.dqit-query-field.is-table input {
+  width: 164px;
+}
+
+.dqit-query-field:focus-within {
   border-color: var(--primary);
 }
 
 .dqit-query-box .btn {
   min-width: 70px;
   justify-content: center;
-  border-radius: 0 2px 2px 0;
+  border-radius: 3px;
 }
 
 .dqit-table-wrap {
@@ -333,7 +360,7 @@
 }
 
 .dqit-table {
-  min-width: 1400px;
+  min-width: 1480px;
   table-layout: fixed;
   border: 1px solid #dfe5ec;
 }
@@ -362,7 +389,8 @@
 }
 
 .dqit-w-check { width: 38px; }
-.dqit-w-name { width: 20%; }
+.dqit-w-name { width: 17%; }
+.dqit-w-target { width: 13%; }
 .dqit-w-type { width: 10%; }
 .dqit-w-frequency { width: 11%; }
 .dqit-w-status { width: 9%; }
@@ -390,14 +418,32 @@
   color: var(--primary);
 }
 
-.dqit-task-name + span {
+.dqit-task-target {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dqit-task-target b,
+.dqit-task-target span {
   display: block;
-  margin-top: 3px;
-  color: #7b8fa8;
-  font-size: 12px;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 16px;
   white-space: nowrap;
+}
+
+.dqit-task-target b {
+  color: #26384d;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.dqit-task-target span {
+  color: #7b8fa8;
+  font-size: 12px;
 }
 
 .dqit-status {
@@ -2702,12 +2748,17 @@
 .dqit-view-sql-body {
   flex: 1;
   min-height: 0;
-  padding: 22px 32px 16px;
+  padding: 16px 24px 6px;
 }
 
 .dqit-view-sql-body .dqit-sql-editor {
   height: 100%;
   min-height: 0;
+}
+
+.dqit-view-sql-dialog .dqit-rule-foot {
+  height: 52px;
+  padding: 8px 22px;
 }
 
 .dqit-test-sql-dialog {

@@ -17,6 +17,7 @@ DP.pages.qualityInspectReport = (function () {
     configKeyword: '',
     configStatus: '',
     configExecStatus: '',
+    configDataRangeStatus: '',
     configPage: 1,
     configPageSize: 10,
     selectedConfigId: '',
@@ -27,6 +28,23 @@ DP.pages.qualityInspectReport = (function () {
     pageSize: 10,
     historyPage: 1,
     historyPageSize: 10,
+    scheduleRecordPage: 1,
+    scheduleRecordPageSize: 10,
+    scheduleDetailPage: 1,
+    scheduleDetailPageSize: 10,
+    scheduleRecordStatus: '',
+    scheduleRecordStartDate: '',
+    scheduleRecordEndDate: '',
+    scheduleDetailStatus: '',
+    scheduleDetailTaskKeyword: '',
+    scheduleDetailTableKeyword: '',
+    scheduleRunOverrides: {},
+    scheduleRuleOverrides: {},
+    selectedScheduleRunId: '',
+    selectedScheduleRuleRunId: '',
+    scheduleLogBackView: 'schedule-records',
+    scheduleSqlModalOpen: false,
+    scheduleSql: { theme: 'dark', font: '14px', searchOpen: false },
     selectedReportId: '',
     reportViewTab: 'overview',
     rulePages: {},
@@ -44,6 +62,17 @@ DP.pages.qualityInspectReport = (function () {
     templateScopeModalTreeKey: 'all',
     templateScopeModalKeyword: '',
     templateScopeModalSelected: {},
+    templateFilterKeyword: '',
+    templateFilterActiveGroupId: '',
+    templateFilterModalOpen: false,
+    templateFilterModalGroupId: '',
+    templateFilterModalRowId: '',
+    templateFilterModalMode: 'visual',
+    templateFilterModalDraft: null,
+    templateFilterFieldKeyword: '',
+    templateFilterSql: { theme: 'dark', font: '14px', searchOpen: false },
+    templateFilterPages: {},
+    templateFilterPageSizes: {},
     templateVariableKeyword: '',
     templateVariableCollapsed: false,
     templateOutlineCollapsed: false,
@@ -53,6 +82,8 @@ DP.pages.qualityInspectReport = (function () {
     templateDashboardPage: 1,
     templateDashboardSelected: {},
     templateScheduleModalOpen: false,
+    startScheduleModalOpen: false,
+    startScheduleConfigId: '',
     templateScheduleDraft: null,
     treeOpen: {
       all: true,
@@ -198,7 +229,7 @@ DP.pages.qualityInspectReport = (function () {
 
   var configExecutionStatusMap = {
     'cfg-core-trade': '执行成功',
-    'cfg-warehouse-layer': '执行成功',
+    'cfg-warehouse-layer': '执行中',
     'cfg-customer-service': '执行失败',
     'cfg-master-data': '执行失败',
     'cfg-business-system': '执行成功',
@@ -233,6 +264,118 @@ DP.pages.qualityInspectReport = (function () {
     historyReport('hist-test-env-20260622', 'cfg-test-env', '2026-06-22 10:05:02', 0.2, 0.9),
     historyReport('hist-test-env-20260615', 'cfg-test-env', '2026-06-15 10:05:02', -0.6, 0.88)
   ];
+
+  var templateFilterGroupsByConfig = {
+    'cfg-core-trade': [],
+    'cfg-warehouse-layer': [
+      {
+        id: 'fg-warehouse-ods',
+        name: 'ODS有效业务数据',
+        desc: '排除测试、逻辑删除和非生产状态记录。',
+        editing: false,
+        rows: [
+          { id: 'fr-warehouse-ods-ticket', reportId: 'rep-ods-workorder-ticket', tableName: 'ods_workorder_ticket', alias: '工单贴源表', condition: "is_deleted = 0 AND env_flag = 'prod'", desc: '仅统计生产环境有效工单。' },
+          { id: 'fr-warehouse-ods-behavior', reportId: 'rep-ods-user-behavior', tableName: 'ods_user_behavior_log', alias: '用户行为日志表', condition: "event_type IS NOT NULL AND event_time >= '${biz_date}'", desc: '过滤无事件类型和非本周期行为日志。' }
+        ]
+      },
+      {
+        id: 'fg-warehouse-summary',
+        name: '汇总层口径过滤',
+        desc: '限定订单、GMV 和用户汇总的有效统计口径。',
+        editing: false,
+        rows: [
+          { id: 'fr-warehouse-dwd-order', reportId: 'rep-dwd-order-fact', tableName: 'dwd_order_fact', alias: '订单事实宽表', condition: "order_status NOT IN ('CANCELLED','TEST')", desc: '剔除取消订单和测试订单。' },
+          { id: 'fr-warehouse-ads-gmv', reportId: 'rep-ads-gmv-summary', tableName: 'ads_gmv_summary', alias: 'GMV汇总表', condition: 'stat_date BETWEEN ${start_date} AND ${end_date}', desc: '按报告周期限定 GMV 汇总范围。' }
+        ]
+      }
+    ],
+    'cfg-customer-service': [
+      {
+        id: 'fg-customer-master',
+        name: '客户主数据有效性',
+        desc: '限定可触达客户与有效画像标签。',
+        editing: false,
+        rows: [
+          { id: 'fr-customer-crm-info', reportId: 'rep-crm-customer-info', tableName: 'crm_customer_info', alias: 'CRM客户信息表', condition: "customer_status = 'ACTIVE' AND mobile IS NOT NULL", desc: '仅纳入可运营客户。' },
+          { id: 'fr-customer-dwd-profile', reportId: 'rep-dwd-customer-profile', tableName: 'dwd_customer_profile', alias: '客户画像明细表', condition: "tag_version = '${latest_version}'", desc: '使用最新画像标签版本。' }
+        ]
+      },
+      {
+        id: 'fg-customer-contact',
+        name: '触达记录范围',
+        desc: '按运营周期统计有效触达记录。',
+        editing: false,
+        rows: [
+          { id: 'fr-customer-contact-record', reportId: 'rep-crm-contact-record', tableName: 'crm_contact_record', alias: '客户触达记录表', condition: "contact_result <> 'INVALID'", desc: '排除无效触达结果。' }
+        ]
+      }
+    ],
+    'cfg-master-data': [
+      {
+        id: 'fg-master-product',
+        name: '商品主数据过滤',
+        desc: '只统计上架或待上架商品主数据。',
+        editing: false,
+        rows: [
+          { id: 'fr-master-product', reportId: 'rep-product-info', tableName: 'product_info', alias: '商品信息表', condition: "product_status IN ('ON_SHELF','PENDING')", desc: '排除已删除和历史归档商品。' },
+          { id: 'fr-master-region', reportId: 'rep-dim-region', tableName: 'dim_region', alias: '区域维度表', condition: 'region_level <= 4 AND enabled_flag = 1', desc: '纳入有效行政区划层级。' }
+        ]
+      },
+      {
+        id: 'fg-master-supplier',
+        name: '供应商合同周期',
+        desc: '过滤报告周期内仍有效的供应商合同。',
+        editing: false,
+        rows: [
+          { id: 'fr-master-supplier-contract', reportId: 'rep-supplier-contract', tableName: 'supplier_contract', alias: '供应商合同表', condition: "contract_status = 'VALID' AND expire_date >= '${biz_date}'", desc: '仅保留有效合同。' }
+        ]
+      }
+    ],
+    'cfg-business-system': [
+      {
+        id: 'fg-business-org',
+        name: 'OA组织人员有效数据',
+        desc: '限定启用组织、在岗员工和有效角色关系。',
+        editing: false,
+        rows: [
+          { id: 'fr-business-dept', reportId: 'rep-oa-sys-department', tableName: 'sys_departmen', alias: '部门表', condition: 'del_flag = 0 AND status = 1', desc: '排除停用和逻辑删除部门。' },
+          { id: 'fr-business-user', reportId: 'rep-oa-sys-user', tableName: 'sys_user', alias: '员工主表', condition: "employee_status = 'ON_DUTY'", desc: '仅统计在岗员工。' },
+          { id: 'fr-business-user-role', reportId: 'rep-oa-user-role', tableName: 'sys_user_role', alias: '用户角色关系表', condition: 'valid_flag = 1', desc: '仅纳入有效授权关系。' }
+        ]
+      },
+      {
+        id: 'fg-business-flow',
+        name: 'OA流程周期过滤',
+        desc: '按报告月份限定流程、考勤和资产相关数据。',
+        editing: false,
+        rows: [
+          { id: 'fr-business-flow-task', reportId: 'rep-oa-flow-task', tableName: 'oa_flow_task', alias: '流程任务表', condition: "created_time >= '${month_start}' AND created_time < '${next_month_start}'", desc: '统计本月发起流程任务。' },
+          { id: 'fr-business-attendance', reportId: 'rep-oa-attendance-record', tableName: 'oa_attendance_record', alias: '考勤记录表', condition: "attendance_date BETWEEN '${month_start}' AND '${month_end}'", desc: '限定本月考勤记录。' }
+        ]
+      }
+    ],
+    'cfg-test-env': [
+      {
+        id: 'fg-test-demo',
+        name: '测试环境演示过滤',
+        desc: '保留测试环境内可演示的数据质量样本。',
+        editing: false,
+        rows: [
+          { id: 'fr-test-order', reportId: 'rep-test-order-main', tableName: 'test_order_main', alias: '测试订单主表', condition: "mock_flag = 0", desc: '剔除自动造数样本。' },
+          { id: 'fr-test-log', reportId: 'rep-test-clickhouse-log', tableName: 'test_event_log_ck', alias: '测试事件日志表', condition: 'event_time >= now() - INTERVAL 30 DAY', desc: '只看近30天事件日志。' }
+        ]
+      },
+      {
+        id: 'fg-test-profile',
+        name: '测试画像文档过滤',
+        desc: '排除空画像与废弃测试账号。',
+        editing: false,
+        rows: [
+          { id: 'fr-test-profile', reportId: 'rep-test-mongodb-profile', tableName: 'test_user_profile_doc', alias: '测试用户画像文档', condition: 'profile_tags IS NOT NULL', desc: '仅统计存在标签的画像文档。' }
+        ]
+      }
+    ]
+  };
 
   var templateVariables = [
     { name: '统计范围', desc: '数据源、表、质量任务的汇总范围', sample: '1个数据源，15张表，24个质量任务' },
@@ -577,6 +720,28 @@ DP.pages.qualityInspectReport = (function () {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  function normalize(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function highlightSQL(code) {
+    var h = escapeHtml(code);
+    h = h.replace(/(\/\/[^\n]*)/g, '<span class="dp-sql-comment">$1</span>');
+    h = h.replace(/(\/\*[\s\S]*?\*\/|\/\*[\s\S]*$)/g, '<span class="dp-sql-comment">$1</span>');
+    h = h.replace(/('[^']*'|`[^`]*`)/g, '<span class="dp-sql-string">$1</span>');
+    h = h.replace(/(\$\{[^}]+\})/g, '<span class="dp-sql-var">$1</span>');
+    h = h.replace(/\b(WITH|SELECT|FROM|WHERE|AND|OR|IN|AS|COUNT|SUM|CASE|WHEN|THEN|ELSE|END|JOIN|LEFT|RIGHT|INNER|ON|GROUP|BY|HAVING|ORDER|LIMIT|IS|NOT|NULL|UNION|ALL)\b/gi,
+      '<span class="dp-sql-keyword">$1</span>');
+    return h;
+  }
+
+  function lineNumbers(code) {
+    var total = Math.max(1, String(code || '').split('\n').length);
+    var html = '';
+    for (var i = 1; i <= total; i++) html += '<div>' + i + '</div>';
+    return html;
   }
 
   function formatNumber(value) {
@@ -1260,7 +1425,7 @@ DP.pages.qualityInspectReport = (function () {
     if (config.id === 'cfg-core-trade') {
       config.name = 'OA系统数据质量检核报告';
       config.desc = '按月汇总 OA 系统组织、员工、岗位、角色、流程、考勤、资产等基础表的数据质量检核结果。';
-      config.cycle = { type: '每月', day: '1号', time: '10:05:02' };
+      if (!config.cycle || !config.cycle.type) config.cycle = { type: '每月', day: '1号', time: '10:05:02' };
       config.lastGeneratedTime = '2026-06-30 10:05:02';
     }
     return config;
@@ -1270,8 +1435,54 @@ DP.pages.qualityInspectReport = (function () {
     reportConfigs.forEach(normalizeOaQualityReportConfig);
   }
 
+  function getConfigBaseId(id) {
+    return String(id || '').split('::filter::')[0];
+  }
+
+  function getConfigFilterGroupId(id) {
+    var parts = String(id || '').split('::filter::');
+    return parts.length > 1 ? parts[1] : '';
+  }
+
+  function cloneConfigForDataRangeGroup(config, group) {
+    var clone = {};
+    Object.keys(config || {}).forEach(function (key) {
+      clone[key] = config[key];
+    });
+    clone.id = config.id + '::filter::' + group.id;
+    clone.baseConfigId = config.id;
+    clone.dataRangeGroupId = group.id;
+    clone.dataRangeGroupName = group.name;
+    clone.name = config.name + '-' + group.name;
+    clone.reportIds = (config.reportIds || []).slice();
+    return clone;
+  }
+
+  function getReportConfigRowsForReportList() {
+    var rows = [];
+    reportConfigs.forEach(function (item) {
+      var config = normalizeOaQualityReportConfig(item);
+      var groups = templateFilterGroupsByConfig[config.id] || [];
+      if (groups.length) {
+        groups.forEach(function (group) {
+          rows.push(cloneConfigForDataRangeGroup(config, group));
+        });
+      } else {
+        rows.push(config);
+      }
+    });
+    return rows;
+  }
+
   function getReportConfigById(id) {
-    return normalizeOaQualityReportConfig(reportConfigs.filter(function (item) { return item.id === id; })[0] || null);
+    var baseId = getConfigBaseId(id);
+    var config = normalizeOaQualityReportConfig(reportConfigs.filter(function (item) { return item.id === baseId; })[0] || null);
+    var groupId = getConfigFilterGroupId(id);
+    if (config && groupId) {
+      var group = (templateFilterGroupsByConfig[config.id] || []).filter(function (item) { return item.id === groupId; })[0];
+      if (group) return cloneConfigForDataRangeGroup(config, group);
+    }
+    return config;
   }
 
   function getSelectedReportConfig() {
@@ -1302,7 +1513,14 @@ DP.pages.qualityInspectReport = (function () {
   }
 
   function getHistoryReportById(id) {
-    return reportHistories.filter(function (item) { return item.id === id; })[0] || null;
+    var item = reportHistories.filter(function (history) { return history.id === id; })[0] || null;
+    if (!item) return null;
+    var clone = {};
+    Object.keys(item).forEach(function (key) { clone[key] = item[key]; });
+    if (state.selectedConfigId && getConfigBaseId(state.selectedConfigId) === item.configId) {
+      clone.contextConfigId = state.selectedConfigId;
+    }
+    return clone;
   }
 
   function getHistoryDate(history) {
@@ -1329,18 +1547,21 @@ DP.pages.qualityInspectReport = (function () {
   }
 
   function getHistoryReportName(history) {
-    var config = getReportConfigById(history.configId) || reportConfigs[0];
+    var contextConfigId = history.contextConfigId || (state.selectedConfigId && getConfigBaseId(state.selectedConfigId) === history.configId ? state.selectedConfigId : history.configId);
+    var config = getReportConfigById(contextConfigId) || reportConfigs[0];
     return (config ? config.name : '稽查报告') + '-' + getHistoryDate(history);
   }
 
   function getHistoryScopeText(history) {
-    var config = getReportConfigById(history.configId) || reportConfigs[0];
+    var contextConfigId = history.contextConfigId || (state.selectedConfigId && getConfigBaseId(state.selectedConfigId) === history.configId ? state.selectedConfigId : history.configId);
+    var config = getReportConfigById(contextConfigId) || reportConfigs[0];
     return (config.dbCount || 0) + '个数据源，' + (config.tableCount || 0) + '张表，' + (config.taskCount || 0) + '个质量任务';
   }
 
   function getHistoryReportRows(history) {
     history = history || reportHistories[0];
-    var config = getReportConfigById(history.configId) || reportConfigs[0];
+    var contextConfigId = history.contextConfigId || (state.selectedConfigId && getConfigBaseId(state.selectedConfigId) === history.configId ? state.selectedConfigId : history.configId);
+    var config = getReportConfigById(contextConfigId) || reportConfigs[0];
     var factor = history.volumeFactor || 1;
     return getConfigBaseReportRows(config).map(function (item, index) {
       var clone = {};
@@ -1378,7 +1599,13 @@ DP.pages.qualityInspectReport = (function () {
 
   function getHistoryRows() {
     var configId = state.selectedConfigId || (reportConfigs[0] && reportConfigs[0].id) || '';
-    var rows = reportHistories.filter(function (item) { return item.configId === configId; });
+    var baseConfigId = getConfigBaseId(configId);
+    var rows = reportHistories.filter(function (item) { return item.configId === baseConfigId; }).map(function (item) {
+      var clone = {};
+      Object.keys(item).forEach(function (key) { clone[key] = item[key]; });
+      clone.contextConfigId = configId;
+      return clone;
+    });
     rows.sort(function (a, b) { return String(b.generatedTime).localeCompare(String(a.generatedTime)); });
     return rows;
   }
@@ -1396,14 +1623,253 @@ DP.pages.qualityInspectReport = (function () {
     return rows.slice(start, start + state.historyPageSize);
   }
 
+  function parseDateTime(value) {
+    var text = String(value || '').trim();
+    var match = text.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}):(\d{2}))?/);
+    if (!match) return new Date(2026, 5, 30, 10, 5, 2);
+    return new Date(
+      Number(match[1]),
+      Number(match[2]) - 1,
+      Number(match[3]),
+      Number(match[4] || 0),
+      Number(match[5] || 0),
+      Number(match[6] || 0)
+    );
+  }
+
+  function addSeconds(date, seconds) {
+    return new Date(date.getTime() + seconds * 1000);
+  }
+
+  function parseDurationSeconds(duration) {
+    var text = String(duration || '');
+    var hours = text.match(/(\d+)小时/);
+    var minutes = text.match(/(\d+)分/);
+    var seconds = text.match(/(\d+)秒/);
+    return (hours ? Number(hours[1]) * 3600 : 0) +
+      (minutes ? Number(minutes[1]) * 60 : 0) +
+      (seconds ? Number(seconds[1]) : 0);
+  }
+
+  function formatDurationText(seconds) {
+    var total = Math.max(1, Math.round(Number(seconds) || 0));
+    var hours = Math.floor(total / 3600);
+    var minutes = Math.floor((total % 3600) / 60);
+    var rest = total % 60;
+    if (hours) return hours + '小时' + minutes + '分' + rest + '秒';
+    if (minutes) return minutes + '分' + rest + '秒';
+    return rest + '秒';
+  }
+
+  function getScheduleCycleTime(config) {
+    return (config && config.cycle && config.cycle.time) || '10:05:02';
+  }
+
+  function getScheduleRunOverrideKey(configId, runId) {
+    return String(configId || '') + '::' + String(runId || '');
+  }
+
+  function getScheduleRuleOverrideKey(configId, ruleRunId) {
+    return String(configId || '') + '::' + String(ruleRunId || '');
+  }
+
+  function applyScheduleRunOverride(row) {
+    var override = state.scheduleRunOverrides[getScheduleRunOverrideKey(row.configId, row.id)];
+    if (!override) return row;
+    Object.keys(override).forEach(function (key) {
+      row[key] = override[key];
+    });
+    return row;
+  }
+
+  function applyScheduleRuleOverride(row) {
+    var override = state.scheduleRuleOverrides[getScheduleRuleOverrideKey(row.configId, row.id)];
+    if (!override) return row;
+    Object.keys(override).forEach(function (key) {
+      row[key] = override[key];
+    });
+    return row;
+  }
+
+  function getAllScheduleRecordRows() {
+    var config = getSelectedReportConfig() || reportConfigs[0];
+    var baseTime = config && config.lastGeneratedTime && config.lastGeneratedTime !== '-'
+      ? config.lastGeneratedTime
+      : '2026-06-30 ' + getScheduleCycleTime(config);
+    var baseDate = parseDateTime(baseTime);
+    var currentStatus = getConfigExecutionStatus(config);
+    var durations = ['56秒', '1分32秒', '1小时2分35秒', '47秒', '3分08秒', '18分46秒', '1小时12分08秒', '2分15秒', '38秒', '4分21秒', '1小时05分18秒', '59秒'];
+    var statuses = ['执行中', currentStatus, '执行成功', '执行失败', '执行成功', '执行成功', '执行失败', '执行成功', '执行成功', '执行成功', '执行失败', '执行成功'];
+    return durations.map(function (duration, index) {
+      var startDate = new Date(baseDate.getTime() - index * 24 * 60 * 60 * 1000);
+      var status = statuses[index] || '执行成功';
+      var running = status === '执行中';
+      return applyScheduleRunOverride({
+        id: 'schedule-run-' + index,
+        index: index,
+        taskName: getScheduleTaskName(config),
+        startAt: formatDateTime(startDate),
+        endAt: running ? '-' : formatDateTime(addSeconds(startDate, parseDurationSeconds(duration))),
+        duration: running ? '0秒' : duration,
+        status: status,
+        cycle: getCycleText(config && config.cycle),
+        configId: config ? config.id : ''
+      });
+    });
+  }
+
+  function getScheduleRecordRows() {
+    var rows = getAllScheduleRecordRows();
+    if (state.scheduleRecordStatus) {
+      rows = rows.filter(function (item) { return item.status === state.scheduleRecordStatus; });
+    }
+    var startDate = state.scheduleRecordStartDate;
+    var endDate = state.scheduleRecordEndDate;
+    if (startDate) {
+      rows = rows.filter(function (item) { return item.startAt.slice(0, 10) >= startDate; });
+    }
+    if (endDate) {
+      rows = rows.filter(function (item) { return item.startAt.slice(0, 10) <= endDate; });
+    }
+    return rows;
+  }
+
+  function clampScheduleRecordPage(total) {
+    var totalPages = Math.max(1, Math.ceil(total / state.scheduleRecordPageSize));
+    state.scheduleRecordPage = Math.max(1, Math.min(totalPages, state.scheduleRecordPage));
+    return totalPages;
+  }
+
+  function getVisibleScheduleRecordRows() {
+    var rows = getScheduleRecordRows();
+    clampScheduleRecordPage(rows.length);
+    var start = (state.scheduleRecordPage - 1) * state.scheduleRecordPageSize;
+    return rows.slice(start, start + state.scheduleRecordPageSize);
+  }
+
+  function getSelectedScheduleRecordRun() {
+    var rows = getAllScheduleRecordRows();
+    return rows.filter(function (item) { return item.id === state.selectedScheduleRunId; })[0] || rows[0];
+  }
+
+  function getScheduleRuleTaskName(report, index) {
+    var labels = [
+      '字段非空校验',
+      '唯一性校验',
+      '标准代码值域校验',
+      '数据格式校验',
+      '时间范围校验',
+      '引用完整性校验',
+      '数值范围校验',
+      '重复记录校验'
+    ];
+    var prefix = report ? report.alias || report.tableName : '数据表';
+    return prefix + '-' + labels[index % labels.length];
+  }
+
+  function getScheduleRuleExecutionRows(run) {
+    run = run || getSelectedScheduleRecordRun();
+    var config = getReportConfigById(run && run.configId) || getSelectedReportConfig() || reportConfigs[0];
+    var reports = getConfigBaseReportRows(config);
+    if (!reports.length) reports = reportRows.slice(0, 1);
+    var total = Math.max(1, Number(config && config.taskCount) || reports.length);
+    var durationSeconds = [18, 24, 37, 56, 72, 93, 118, 146, 205, 312, 641, 1295];
+    var rows = [];
+    function appendRuleRow(report, ruleIndex) {
+      if (rows.length >= total) return;
+      var rowIndex = rows.length;
+      var startAt = addSeconds(parseDateTime(run && run.startAt), rowIndex * 5);
+      var status = '执行成功';
+      if (run && run.status === '执行中') status = rowIndex < 3 ? '执行成功' : '执行中';
+      else if (run && run.status === '执行失败' && rowIndex % 7 === 3) status = '执行失败';
+      var seconds = durationSeconds[(rowIndex + ((run && run.index) || 0)) % durationSeconds.length];
+      var row = {
+        id: (run && run.id ? run.id : 'schedule-run') + '-rule-' + rowIndex,
+        runId: run && run.id ? run.id : '',
+        configId: config ? config.id : '',
+        reportId: report ? report.id : '',
+        tableName: report ? report.tableName : '',
+        alias: report ? report.alias : '',
+        ruleCode: 'DQ_RULE_' + String(rowIndex + 1).padStart(3, '0'),
+        ruleTask: getScheduleRuleTaskName(report, ruleIndex),
+        startAt: formatDateTime(startAt),
+        endAt: status === '执行中' ? '-' : formatDateTime(addSeconds(startAt, seconds)),
+        duration: formatDurationText(seconds),
+        status: status,
+        cycle: run && run.cycle ? run.cycle : getCycleText(config && config.cycle),
+        index: rowIndex,
+        batchIndex: run && run.index != null ? run.index : 0
+      };
+      rows.push(applyScheduleRuleOverride(row));
+    }
+    reports.forEach(function (report) {
+      var ruleCount = Math.max(1, Number(report.ruleCount) || 1);
+      for (var i = 0; i < ruleCount && rows.length < total; i++) {
+        appendRuleRow(report, i);
+      }
+    });
+    while (rows.length < total) {
+      var fallbackReport = reports[rows.length % reports.length];
+      var fallbackRuleCount = Math.max(1, Number(fallbackReport && fallbackReport.ruleCount) || 1);
+      appendRuleRow(fallbackReport, rows.length % fallbackRuleCount);
+    }
+    return rows;
+  }
+
+  function getSelectedScheduleRuleRun() {
+    var rows = getScheduleRuleExecutionRows(getSelectedScheduleRecordRun());
+    return rows.filter(function (item) { return item.id === state.selectedScheduleRuleRunId; })[0] || rows[0];
+  }
+
+  function clampScheduleDetailPage(total) {
+    var totalPages = Math.max(1, Math.ceil(total / state.scheduleDetailPageSize));
+    state.scheduleDetailPage = Math.max(1, Math.min(totalPages, state.scheduleDetailPage));
+    return totalPages;
+  }
+
+  function getScheduleDetailRows() {
+    var rows = getScheduleRuleExecutionRows(getSelectedScheduleRecordRun());
+    var taskKeyword = normalize(state.scheduleDetailTaskKeyword);
+    var tableKeyword = normalize(state.scheduleDetailTableKeyword);
+    if (state.scheduleDetailStatus) {
+      rows = rows.filter(function (item) { return item.status === state.scheduleDetailStatus; });
+    }
+    if (taskKeyword) {
+      rows = rows.filter(function (item) {
+        return normalize(item.ruleTask).indexOf(taskKeyword) >= 0 ||
+          normalize(item.ruleCode).indexOf(taskKeyword) >= 0;
+      });
+    }
+    if (tableKeyword) {
+      rows = rows.filter(function (item) {
+        return normalize(item.tableName).indexOf(tableKeyword) >= 0 ||
+          normalize(item.alias).indexOf(tableKeyword) >= 0;
+      });
+    }
+    return rows;
+  }
+
+  function getVisibleScheduleRuleExecutionRows() {
+    var rows = getScheduleDetailRows();
+    clampScheduleDetailPage(rows.length);
+    var start = (state.scheduleDetailPage - 1) * state.scheduleDetailPageSize;
+    return rows.slice(start, start + state.scheduleDetailPageSize);
+  }
+
   function getConfigRows() {
-    var rows = reportConfigs.slice();
+    var rows = isScheduleSection() ? reportConfigs.slice() : getReportConfigRowsForReportList();
     var keyword = state.configKeyword.trim().toLowerCase();
     if (isScheduleSection() && state.configStatus) {
       rows = rows.filter(function (item) { return item.status === state.configStatus; });
     }
     if (isScheduleSection() && state.configExecStatus) {
       rows = rows.filter(function (item) { return getConfigExecutionStatus(item) === state.configExecStatus; });
+    }
+    if (isScheduleSection() && state.configDataRangeStatus) {
+      rows = rows.filter(function (item) {
+        var configured = getConfigDataRangeCount(item) > 0;
+        return state.configDataRangeStatus === 'configured' ? configured : !configured;
+      });
     }
     if (keyword) {
       rows = rows.filter(function (item) {
@@ -1412,7 +1878,8 @@ DP.pages.qualityInspectReport = (function () {
           item.name.toLowerCase().indexOf(keyword) >= 0 ||
           item.desc.toLowerCase().indexOf(keyword) >= 0 ||
           (isScheduleSection() && item.status.toLowerCase().indexOf(keyword) >= 0) ||
-          (isScheduleSection() && getConfigExecutionStatus(item).toLowerCase().indexOf(keyword) >= 0);
+          (isScheduleSection() && getConfigExecutionStatus(item).toLowerCase().indexOf(keyword) >= 0) ||
+          (isScheduleSection() && getConfigDataRangeText(item).toLowerCase().indexOf(keyword) >= 0);
       });
     }
     rows.sort(function (a, b) {
@@ -1463,8 +1930,16 @@ DP.pages.qualityInspectReport = (function () {
     var item = getReportConfigById(id);
     if (!item) return;
     var isStart = actionType === 'start';
+    if (isStart) {
+      state.startScheduleModalOpen = true;
+      state.startScheduleConfigId = getConfigBaseId(item.id);
+      state.templateScheduleModalOpen = false;
+      state.templateScheduleDraft = createTemplateScheduleDraft(item);
+      renderAll();
+      return;
+    }
     var title = isStart ? '确认启动任务调度' : '确认停止任务调度';
-    var okText = isStart ? '启动' : '停止';
+    var okText = isStart ? '启动调度' : '停止调度';
     var nextStatus = isStart ? '已启动' : '未启动';
     var displayName = getScheduleTaskName(item);
     var message = title + ' <b>' + escapeHtml(displayName) + '</b> 吗？' +
@@ -1483,6 +1958,147 @@ DP.pages.qualityInspectReport = (function () {
     } else if (window.confirm(message.replace(/<[^>]+>/g, ''))) {
       applyStatus();
     }
+  }
+
+  function formatDateTime(date) {
+    function pad(value) {
+      return String(value).padStart(2, '0');
+    }
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + ' ' +
+      pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':' + pad(date.getSeconds());
+  }
+
+  function escapeSqlLiteral(value) {
+    return String(value == null ? '' : value).replace(/'/g, "''");
+  }
+
+  function confirmConfigExecuteOnce(id) {
+    var item = getReportConfigById(id);
+    if (!item) return;
+    var displayName = getScheduleTaskName(item);
+    var message = '确认立即执行任务调度 <b>' + escapeHtml(displayName) + '</b> 吗？执行后将提交一次即时稽查，列表状态更新为执行中。';
+    function applyExecute() {
+      item.lastExecutionStatus = '执行中';
+      item.lastGeneratedTime = formatDateTime(new Date());
+      renderAll();
+      showToast('任务调度已提交执行');
+    }
+    if (window.DP && typeof DP.confirm === 'function') {
+      DP.confirm(message, {
+        icon: 'info',
+        okText: '执行',
+        onOk: applyExecute
+      });
+    } else if (window.confirm(message.replace(/<[^>]+>/g, ''))) {
+      applyExecute();
+    }
+  }
+
+  function getScheduleRecordSql(run) {
+    var config = getReportConfigById(run && run.configId) || getSelectedReportConfig() || reportConfigs[0];
+    var reportIds = run && run.reportId ? [run.reportId] : (config && config.reportIds && config.reportIds.length ? config.reportIds : oaQualityReportIds).slice(0, 5);
+    var tableNames = reportIds.map(function (id) {
+      var report = reportRows.filter(function (item) { return item.id === id; })[0];
+      return report ? "'" + escapeSqlLiteral(report.tableName) + "'" : "'" + escapeSqlLiteral(id) + "'";
+    }).join(', ');
+    var ruleFilter = run && run.ruleCode ? "        AND rule_code = '" + escapeSqlLiteral(run.ruleCode) + "'" : '';
+    return [
+      'WITH quality_scope AS (',
+      '    SELECT',
+      '        table_name,',
+      '        rule_code,',
+      '        check_sql,',
+      '        enabled_flag',
+      '    FROM',
+      '        dq_quality_rule_config',
+      '    WHERE',
+      '        table_name IN (' + tableNames + ')',
+      ruleFilter,
+      '        AND enabled_flag = 1',
+      '), run_result AS (',
+      '    SELECT',
+      '        s.table_name,',
+      '        s.rule_code,',
+      '        COUNT(1) AS total_count,',
+      "        SUM(CASE WHEN r.check_status = 'FAILED' THEN 1 ELSE 0 END) AS problem_count",
+      '    FROM',
+      '        quality_scope s',
+      '        LEFT JOIN dq_quality_check_result r',
+      '            ON s.table_name = r.table_name',
+      '            AND s.rule_code = r.rule_code',
+      '    WHERE',
+      "        r.batch_no = 'BATCH_" + String((run && run.batchIndex != null ? run.batchIndex : (run && run.index) || 0)).padStart(4, '0') + "'",
+      '    GROUP BY',
+      '        s.table_name, s.rule_code',
+      ')',
+      'SELECT',
+      '    table_name,',
+      '    rule_code,',
+      '    total_count,',
+      '    problem_count,',
+      '    ROUND((1 - problem_count / NULLIF(total_count, 0)) * 100, 2) AS pass_rate',
+      'FROM',
+      '    run_result',
+      'ORDER BY',
+      '    problem_count DESC;'
+    ].join('\n');
+  }
+
+  function getScheduleExecutionLog(run) {
+    var config = getReportConfigById(run && run.configId) || getSelectedReportConfig() || reportConfigs[0];
+    var endAt = run && run.endAt && run.endAt !== '-' ? run.endAt : formatDateTime(addSeconds(parseDateTime(run && run.startAt), parseDurationSeconds(run && run.duration)));
+    var statusText = run && run.status === '执行失败' ? 'FAILED' : (run && run.status === '执行中' ? 'RUNNING' : 'SUCCESS');
+    var isRuleRun = !!(run && run.ruleTask);
+    var title = isRuleRun ? run.ruleTask : getScheduleTaskName(config);
+    var scopeText = isRuleRun
+      ? 'run rule ' + escapeHtml(run.ruleCode) + ' on ' + escapeHtml(run.tableName)
+      : 'load ' + escapeHtml(config ? config.tableCount : '-') + ' tables and ' + escapeHtml(config ? config.taskCount : '-') + ' quality tasks';
+    var appIndex = run && run.batchIndex != null ? run.batchIndex : ((run && run.index) || 0);
+    return [
+      '[' + escapeHtml(run && run.startAt) + '] INFO  ScheduleEngine - receive quality schedule task ' + escapeHtml(title),
+      '[' + escapeHtml(run && run.startAt) + '] INFO  Scheduler - cycle=' + escapeHtml(getCycleText(config && config.cycle)) + ', trigger=manual_or_timer',
+      '[' + escapeHtml(run && run.startAt) + '] INFO  QualityScope - ' + scopeText,
+      '[' + escapeHtml(run && run.startAt) + '] INFO  SQLPrepare - compile execution SQL and bind datasource catalog',
+      '[' + escapeHtml(run && run.startAt) + '] INFO  ExecuteEngine - submit Spark SQL application app-dq-' + String(1000 + appIndex),
+      '[' + escapeHtml(endAt) + '] INFO  QualityResult - write task result, status=' + statusText,
+      '[' + escapeHtml(endAt) + '] INFO  ScheduleEngine - task cost=' + escapeHtml(run && run.duration)
+    ].join('\n');
+  }
+
+  function formatSqlText(sql) {
+    return String(sql || '')
+      .replace(/\s+(FROM|WHERE|GROUP BY|ORDER BY|HAVING|LEFT JOIN|RIGHT JOIN|INNER JOIN|JOIN)\b/gi, '\n$1')
+      .replace(/\s+(AND|OR)\b/gi, '\n    $1')
+      .replace(/,\s*/g, ',\n        ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  function renderScheduleSqlEditor(sql) {
+    var cfg = state.scheduleSql || { theme: 'dark', font: '14px', searchOpen: false };
+    var isLight = cfg.theme === 'light';
+    return '<div class="dp-sql-editor qir-schedule-sql-editor ' + (isLight ? 'theme-light' : 'theme-dark') + (cfg.searchOpen ? ' search-open' : '') + '" data-qir-schedule-sql-editor style="font-size:' + escapeHtml(cfg.font) + ';">' +
+      '<div class="dp-sql-editor-toolbar">' +
+        '<select class="dp-sql-editor-select" data-qir-schedule-sql-theme><option value="dark"' + (!isLight ? ' selected' : '') + '>暗色 - One Dark</option><option value="light"' + (isLight ? ' selected' : '') + '>亮色 - Light</option></select>' +
+        '<select class="dp-sql-editor-select" data-qir-schedule-sql-font><option' + (cfg.font === '12px' ? ' selected' : '') + '>12px</option><option' + (cfg.font === '13px' ? ' selected' : '') + '>13px</option><option' + (cfg.font === '14px' ? ' selected' : '') + '>14px</option><option' + (cfg.font === '15px' ? ' selected' : '') + '>15px</option><option' + (cfg.font === '16px' ? ' selected' : '') + '>16px</option></select>' +
+        '<button class="dp-sql-editor-btn" type="button" data-qir-action="format-schedule-sql"><i class="bi bi-sliders"></i><span>格式化</span></button>' +
+        '<button class="dp-sql-editor-btn" type="button" data-qir-action="copy-schedule-sql"><i class="bi bi-clipboard"></i><span>复制</span></button>' +
+        '<button class="dp-sql-editor-btn" type="button" data-qir-action="toggle-schedule-sql-search"><i class="bi bi-search"></i><span>搜索</span></button>' +
+      '</div>' +
+      '<div class="dp-sql-editor-searchbar">' +
+        '<input class="dp-sql-editor-input" type="text" placeholder="查找...">' +
+        '<button class="dp-sql-editor-btn" type="button">下一个</button>' +
+        '<button class="dp-sql-editor-btn" type="button">上一个</button>' +
+        '<label class="dp-sql-editor-check"><input type="checkbox"> 区分大小写</label>' +
+        '<input class="dp-sql-editor-input" type="text" placeholder="替换...">' +
+        '<button class="dp-sql-editor-btn" type="button">替换</button>' +
+        '<span class="dp-sql-editor-close" data-qir-action="close-schedule-sql-search"><i class="bi bi-x"></i></span>' +
+      '</div>' +
+      '<div class="dp-sql-editor-wrap">' +
+        '<div class="dp-sql-editor-gutter" data-qir-schedule-sql-gutter>' + lineNumbers(sql) + '</div>' +
+        '<div class="dp-sql-editor-content" data-qir-schedule-sql-content contenteditable="true" spellcheck="false">' + highlightSQL(sql) + '</div>' +
+      '</div>' +
+    '</div>';
   }
 
   function getDescendantKeys(key, nodes) {
@@ -1664,6 +2280,350 @@ DP.pages.qualityInspectReport = (function () {
     clearTemplateScopeSelection();
     renderAll();
     showToast('已添加 ' + ids.length + ' 张表');
+  }
+
+  function getTemplateFilterScopeRows(config) {
+    config = config || getSelectedReportConfig() || reportConfigs[0];
+    var selectedIds = config && config.reportIds ? config.reportIds : [];
+    var rows = reportRows.filter(function (item) {
+      return selectedIds.indexOf(item.id) >= 0;
+    });
+    rows.sort(function (a, b) {
+      var sourceCompare = a.dataSourceLabel.localeCompare(b.dataSourceLabel);
+      return sourceCompare || a.tableName.localeCompare(b.tableName);
+    });
+    return rows;
+  }
+
+  function getTemplateFilterGroups(config) {
+    config = config || getSelectedReportConfig() || reportConfigs[0];
+    if (!config || !config.id) return [];
+    if (!templateFilterGroupsByConfig[config.id]) {
+      templateFilterGroupsByConfig[config.id] = [];
+    }
+    return templateFilterGroupsByConfig[config.id];
+  }
+
+  function getTemplateFilterGroup(config, groupId) {
+    var groups = getTemplateFilterGroups(config);
+    if (!groups.length) return null;
+    return groups.filter(function (item) { return item.id === groupId; })[0] || groups[0];
+  }
+
+  function getTemplateFilterGroupById(groupId) {
+    return getTemplateFilterGroup(getSelectedReportConfig() || reportConfigs[0], groupId);
+  }
+
+  function getTemplateFilterRow(group, rowId) {
+    return (group && group.rows ? group.rows : []).filter(function (item) { return item.id === rowId; })[0] || null;
+  }
+
+  function createTemplateFilterRowFromScope(group, scopeRow) {
+    return {
+      id: 'fr-' + group.id + '-' + scopeRow.id,
+      reportId: scopeRow.id,
+      tableName: scopeRow.tableName,
+      alias: scopeRow.alias,
+      condition: '',
+      desc: '请点击编辑配置过滤条件。'
+    };
+  }
+
+  function syncTemplateFilterGroupRows(config, group) {
+    if (!group) return [];
+    var existingMap = {};
+    (group.rows || []).forEach(function (item) {
+      existingMap[item.reportId] = item;
+    });
+    group.rows = getTemplateFilterScopeRows(config).map(function (scopeRow) {
+      var current = existingMap[scopeRow.id] || createTemplateFilterRowFromScope(group, scopeRow);
+      current.reportId = scopeRow.id;
+      current.tableName = scopeRow.tableName;
+      current.alias = scopeRow.alias;
+      if (!current.desc) current.desc = '请点击编辑配置过滤条件。';
+      return current;
+    });
+    return group.rows;
+  }
+
+  function getTemplateFilterConditionCount(groups) {
+    return (groups || []).reduce(function (total, group) {
+      return total + ((group.rows || []).length);
+    }, 0);
+  }
+
+  function getTemplateFilterPageSize(group) {
+    var groupId = group && group.id ? group.id : '';
+    return Number(state.templateFilterPageSizes[groupId]) || 10;
+  }
+
+  function getTemplateFilterGroupPage(group) {
+    var groupId = group && group.id ? group.id : '';
+    return Number(state.templateFilterPages[groupId]) || 1;
+  }
+
+  function getTemplateFilterFilteredRows(group) {
+    var rows = (group && group.rows ? group.rows : []).slice();
+    var keyword = state.templateFilterKeyword.trim().toLowerCase();
+    if (keyword) {
+      rows = rows.filter(function (item) {
+        return item.tableName.toLowerCase().indexOf(keyword) >= 0 ||
+          item.alias.toLowerCase().indexOf(keyword) >= 0 ||
+          item.condition.toLowerCase().indexOf(keyword) >= 0 ||
+          item.desc.toLowerCase().indexOf(keyword) >= 0;
+      });
+    }
+    return rows;
+  }
+
+  function clampTemplateFilterGroupPage(group, total) {
+    var groupId = group && group.id ? group.id : '';
+    var pageSize = getTemplateFilterPageSize(group);
+    var totalPages = Math.max(1, Math.ceil(total / pageSize));
+    state.templateFilterPages[groupId] = Math.max(1, Math.min(totalPages, getTemplateFilterGroupPage(group)));
+    return totalPages;
+  }
+
+  function getVisibleTemplateFilterRows(group) {
+    var rows = getTemplateFilterFilteredRows(group);
+    var pageSize = getTemplateFilterPageSize(group);
+    clampTemplateFilterGroupPage(group, rows.length);
+    var start = (getTemplateFilterGroupPage(group) - 1) * pageSize;
+    return rows.slice(start, start + pageSize);
+  }
+
+  function createTemplateFilterGroup(config) {
+    config = config || getSelectedReportConfig() || reportConfigs[0];
+    var groups = getTemplateFilterGroups(config);
+    var index = groups.length + 1;
+    var id = 'fg-' + (config && config.id ? config.id : 'template') + '-' + Date.now();
+    var group = {
+      id: id,
+      name: '数据过滤组' + index,
+      desc: '用于配置第 ' + index + ' 组数据过滤条件。',
+      editing: false,
+      editingField: 'name',
+      rows: []
+    };
+    syncTemplateFilterGroupRows(config, group);
+    groups.push(group);
+    state.templateFilterActiveGroupId = id;
+    state.templateFilterPages[id] = 1;
+    state.templateFilterPageSizes[id] = 10;
+    return group;
+  }
+
+  function saveTemplateFilterGroupField(input) {
+    var group = getTemplateFilterGroupById(input.getAttribute('data-group-id') || '');
+    if (!group) return;
+    if (input.matches('[data-qir-template-filter-group-name]')) {
+      group.name = input.value.trim() || '未命名过滤组';
+    } else if (input.matches('[data-qir-template-filter-group-desc]')) {
+      group.desc = input.value.trim() || '暂无描述';
+    }
+  }
+
+  function findReportRowById(id) {
+    return reportRows.filter(function (item) { return item.id === id; })[0] || null;
+  }
+
+  function getTemplateFilterAvailableScopeRow(config, group) {
+    var used = {};
+    (group && group.rows ? group.rows : []).forEach(function (item) {
+      used[item.reportId] = true;
+    });
+    var scopeRows = getTemplateFilterScopeRows(config);
+    return scopeRows.filter(function (item) { return !used[item.id]; })[0] || scopeRows[0] || reportRows[0];
+  }
+
+  function getTemplateFilterFieldOptions() {
+    return [
+      { name: 'is_deleted', label: '逻辑删除标识' },
+      { name: 'status', label: '业务状态' },
+      { name: 'biz_date', label: '业务日期' },
+      { name: 'tenant_id', label: '租户编码' },
+      { name: 'org_code', label: '组织编码' },
+      { name: 'data_status', label: '数据状态' },
+      { name: 'created_time', label: '创建时间' },
+      { name: 'updated_time', label: '更新时间' }
+    ];
+  }
+
+  function guessTemplateFilterField(condition) {
+    var lower = String(condition || '').toLowerCase();
+    var fields = getTemplateFilterFieldOptions();
+    for (var i = 0; i < fields.length; i++) {
+      if (lower.indexOf(fields[i].name.toLowerCase()) >= 0) return fields[i].name;
+    }
+    return fields[0].name;
+  }
+
+  function createTemplateFilterModalDraft(config, group, row) {
+    var table = findReportRowById(row && row.reportId) || getTemplateFilterAvailableScopeRow(config, group);
+    var condition = row && row.condition ? row.condition : 'is_deleted = 0';
+    return {
+      tableId: table ? table.id : '',
+      field: guessTemplateFilterField(condition),
+      operator: '等于',
+      value: row && row.condition ? '' : '0',
+      desc: row && row.desc ? row.desc : '限定有效业务数据。',
+      applyScope: 'current',
+      sql: condition
+    };
+  }
+
+  function openTemplateFilterModal(groupId, rowId) {
+    var config = getSelectedReportConfig() || reportConfigs[0];
+    var group = getTemplateFilterGroup(config, groupId);
+    if (!group) {
+      group = createTemplateFilterGroup(config);
+    }
+    var row = getTemplateFilterRow(group, rowId);
+    state.templateFilterModalOpen = true;
+    state.templateFilterModalGroupId = group.id;
+    state.templateFilterModalRowId = row ? row.id : '';
+    state.templateFilterModalMode = 'visual';
+    state.templateFilterModalDraft = createTemplateFilterModalDraft(config, group, row);
+    state.templateFilterFieldKeyword = '';
+    state.templateFilterSql = { theme: 'dark', font: '14px', searchOpen: false };
+    renderAll();
+  }
+
+  function closeTemplateFilterModal() {
+    state.templateFilterModalOpen = false;
+    state.templateFilterModalGroupId = '';
+    state.templateFilterModalRowId = '';
+    state.templateFilterModalMode = 'visual';
+    state.templateFilterModalDraft = null;
+    state.templateFilterFieldKeyword = '';
+    state.templateFilterSql = { theme: 'dark', font: '14px', searchOpen: false };
+    renderAll();
+  }
+
+  function captureTemplateFilterModalDraft() {
+    var draft = state.templateFilterModalDraft || {};
+    if (!pageEl) return draft;
+    var fieldSelect = pageEl.querySelector('[data-qir-template-filter-field]');
+    var operatorSelect = pageEl.querySelector('[data-qir-template-filter-operator]');
+    var valueInput = pageEl.querySelector('[data-qir-template-filter-value]');
+    var descInput = pageEl.querySelector('[data-qir-template-filter-desc]');
+    var applyScopeInput = pageEl.querySelector('[name="qir-template-filter-apply-scope"]:checked');
+    var sqlContent = pageEl.querySelector('[data-qir-template-filter-sql-content]');
+    if (fieldSelect) draft.field = fieldSelect.value;
+    if (operatorSelect) draft.operator = operatorSelect.value;
+    if (valueInput) draft.value = valueInput.value;
+    if (descInput) draft.desc = descInput.value;
+    if (applyScopeInput) draft.applyScope = applyScopeInput.value === 'all' ? 'all' : 'current';
+    if (sqlContent) draft.sql = sqlContent.textContent || '';
+    state.templateFilterModalDraft = draft;
+    return draft;
+  }
+
+  function formatTemplateFilterValue(value) {
+    var text = String(value == null ? '' : value).trim();
+    if (!text) return "''";
+    if (/^\$\{[^}]+\}$/.test(text) || /^-?\d+(\.\d+)?$/.test(text) || /^(true|false|null)$/i.test(text)) {
+      return text;
+    }
+    return "'" + text.replace(/'/g, "''") + "'";
+  }
+
+  function buildTemplateFilterConditionFromDraft(draft) {
+    draft = draft || {};
+    var field = draft.field || 'is_deleted';
+    var operator = draft.operator || '等于';
+    var value = String(draft.value == null ? '' : draft.value).trim();
+    if (state.templateFilterModalMode === 'sql') {
+      return String(draft.sql || '').trim() || field + ' = 0';
+    }
+    if (operator === '为空') return field + ' IS NULL';
+    if (operator === '不为空') return field + ' IS NOT NULL';
+    if (operator === '包含') return field + ' LIKE ' + formatTemplateFilterValue('%' + value + '%');
+    if (operator === '不包含') return field + ' NOT LIKE ' + formatTemplateFilterValue('%' + value + '%');
+    var symbolMap = {
+      '等于': '=',
+      '不等于': '<>',
+      '大于': '>',
+      '小于': '<',
+      '大于等于': '>=',
+      '小于等于': '<='
+    };
+    return field + ' ' + (symbolMap[operator] || '=') + ' ' + formatTemplateFilterValue(value);
+  }
+
+  function saveTemplateFilterModal() {
+    var config = getSelectedReportConfig() || reportConfigs[0];
+    var group = getTemplateFilterGroup(config, state.templateFilterModalGroupId);
+    if (!group) {
+      showToast('请先新增过滤分组');
+      return;
+    }
+    var draft = captureTemplateFilterModalDraft();
+    syncTemplateFilterGroupRows(config, group);
+    var row = getTemplateFilterRow(group, state.templateFilterModalRowId) || group.rows[0];
+    var table = findReportRowById((row && row.reportId) || draft.tableId) || getTemplateFilterAvailableScopeRow(config, group);
+    if (!table || !row) {
+      showToast('暂无可配置的数据表');
+      return;
+    }
+    var condition = buildTemplateFilterConditionFromDraft(draft);
+    var desc = String(draft.desc || '').trim() || '暂无备注描述';
+    if (draft.applyScope === 'all') {
+      group.rows.forEach(function (item) {
+        item.condition = condition;
+        item.desc = desc;
+      });
+    } else {
+      row.reportId = table.id;
+      row.tableName = table.tableName;
+      row.alias = table.alias;
+      row.condition = condition;
+      row.desc = desc;
+    }
+    state.templateFilterModalOpen = false;
+    state.templateFilterModalGroupId = '';
+    state.templateFilterModalRowId = '';
+    state.templateFilterModalDraft = null;
+    state.templateFilterFieldKeyword = '';
+    renderAll();
+    showToast('过滤条件已保存');
+  }
+
+  function clearTemplateFilterRow(groupId, rowId) {
+    var group = getTemplateFilterGroupById(groupId);
+    var row = getTemplateFilterRow(group, rowId);
+    if (!row) return;
+    row.condition = '';
+    row.desc = '请点击编辑配置过滤条件。';
+    renderAll();
+    showToast('过滤条件已移除');
+  }
+
+  function renderTemplateFilterSqlEditor(sql) {
+    var cfg = state.templateFilterSql || { theme: 'dark', font: '14px', searchOpen: false };
+    var isLight = cfg.theme === 'light';
+    return '<div class="dp-sql-editor qir-filter-sql-editor ' + (isLight ? 'theme-light' : 'theme-dark') + (cfg.searchOpen ? ' search-open' : '') + '" data-qir-template-filter-sql-editor style="font-size:' + escapeHtml(cfg.font) + ';">' +
+      '<div class="dp-sql-editor-toolbar">' +
+        '<select class="dp-sql-editor-select" data-qir-template-filter-sql-theme><option value="dark"' + (!isLight ? ' selected' : '') + '>暗色 - One Dark</option><option value="light"' + (isLight ? ' selected' : '') + '>亮色 - Light</option></select>' +
+        '<select class="dp-sql-editor-select" data-qir-template-filter-sql-font><option' + (cfg.font === '12px' ? ' selected' : '') + '>12px</option><option' + (cfg.font === '13px' ? ' selected' : '') + '>13px</option><option' + (cfg.font === '14px' ? ' selected' : '') + '>14px</option><option' + (cfg.font === '15px' ? ' selected' : '') + '>15px</option><option' + (cfg.font === '16px' ? ' selected' : '') + '>16px</option></select>' +
+        '<button class="dp-sql-editor-btn" type="button" data-qir-action="format-template-filter-sql"><i class="bi bi-sliders"></i><span>格式化</span></button>' +
+        '<button class="dp-sql-editor-btn" type="button" data-qir-action="copy-template-filter-sql"><i class="bi bi-clipboard"></i><span>复制</span></button>' +
+        '<button class="dp-sql-editor-btn" type="button" data-qir-action="toggle-template-filter-sql-search"><i class="bi bi-search"></i><span>搜索</span></button>' +
+      '</div>' +
+      '<div class="dp-sql-editor-searchbar">' +
+        '<input class="dp-sql-editor-input" type="text" placeholder="查找...">' +
+        '<button class="dp-sql-editor-btn" type="button">下一个</button>' +
+        '<button class="dp-sql-editor-btn" type="button">上一个</button>' +
+        '<label class="dp-sql-editor-check"><input type="checkbox"> 区分大小写</label>' +
+        '<input class="dp-sql-editor-input" type="text" placeholder="替换...">' +
+        '<button class="dp-sql-editor-btn" type="button">替换</button>' +
+        '<span class="dp-sql-editor-close" data-qir-action="close-template-filter-sql-search"><i class="bi bi-x"></i></span>' +
+      '</div>' +
+      '<div class="dp-sql-editor-wrap">' +
+        '<div class="dp-sql-editor-gutter" data-qir-template-filter-sql-gutter>' + lineNumbers(sql) + '</div>' +
+        '<div class="dp-sql-editor-content" data-qir-template-filter-sql-content contenteditable="true" spellcheck="false">' + highlightSQL(sql) + '</div>' +
+      '</div>' +
+    '</div>';
   }
 
   function getQualityRules(report) {
@@ -1955,6 +2915,21 @@ DP.pages.qualityInspectReport = (function () {
     '</div>';
   }
 
+  function getConfigDataRangeCount(item) {
+    var groups = templateFilterGroupsByConfig[item && item.id] || [];
+    return groups.length;
+  }
+
+  function getConfigDataRangeText(item) {
+    var count = getConfigDataRangeCount(item);
+    return count ? '已配置（' + count + '）' : '无配置';
+  }
+
+  function renderConfigDataRange(item) {
+    var count = getConfigDataRangeCount(item);
+    return '<span class="qir-data-range ' + (count ? 'configured' : 'none') + '">' + escapeHtml(getConfigDataRangeText(item)) + '</span>';
+  }
+
   function renderConfigStatus(status) {
     var cls = status === '已启动' ? 'started' : 'stopped';
     var icon = 'bi-circle-fill';
@@ -1985,8 +2960,9 @@ DP.pages.qualityInspectReport = (function () {
 
   function renderConfigExecutionStatus(status) {
     var success = status === '执行成功';
-    var cls = success ? 'success' : 'failure';
-    var icon = success ? 'bi-check-circle-fill' : 'bi-x-circle-fill';
+    var running = status === '执行中';
+    var cls = running ? 'running' : (success ? 'success' : 'failure');
+    var icon = running ? 'bi-arrow-repeat' : (success ? 'bi-check-circle-fill' : 'bi-x-circle-fill');
     return '<span class="qir-status ' + cls + '"><i class="bi ' + icon + '"></i><span>' + escapeHtml(status) + '</span></span>';
   }
 
@@ -2071,6 +3047,22 @@ DP.pages.qualityInspectReport = (function () {
     state.templateScheduleDraft = null;
     renderAll();
     showToast('调度周期配置已保存');
+  }
+
+  function applyStartScheduleDraft() {
+    var config = getReportConfigById(state.startScheduleConfigId) || reportConfigs[0];
+    if (!config) return;
+    var draft = captureTemplateScheduleDraft();
+    var nextCycle = { type: draft.type, time: draft.time };
+    if (draft.type === '每周') nextCycle.weekday = draft.weekday || '周一';
+    if (draft.type === '每月') nextCycle.day = draft.day || '1号';
+    config.cycle = nextCycle;
+    config.status = '已启动';
+    state.startScheduleModalOpen = false;
+    state.startScheduleConfigId = '';
+    state.templateScheduleDraft = null;
+    renderAll();
+    showToast('任务调度已启动');
   }
 
   function getTemplateVariableRows() {
@@ -3113,6 +4105,34 @@ DP.pages.qualityInspectReport = (function () {
       '</section>';
   }
 
+  function renderStartScheduleModal() {
+    if (!state.startScheduleModalOpen) return '';
+    var config = getReportConfigById(state.startScheduleConfigId) || reportConfigs[0];
+    state.templateScheduleDraft = normalizeTemplateScheduleDraft(state.templateScheduleDraft || createTemplateScheduleDraft(config));
+    return '<div class="qir-schedule-modal-mask" data-qir-action="close-start-schedule-modal"></div>' +
+      '<section class="qir-schedule-modal qir-start-schedule-modal" role="dialog" aria-modal="true" aria-label="启动调度">' +
+        '<div class="qir-dashboard-modal-head">' +
+          '<div><h3>启动调度</h3><p>启动前可配置或调整调度周期，保存后立即启用任务调度</p></div>' +
+          '<button class="qir-dashboard-modal-close" type="button" data-qir-action="close-start-schedule-modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button>' +
+        '</div>' +
+        '<div class="qir-schedule-modal-body">' +
+          '<div class="qir-schedule-current">' +
+            '<span>当前任务</span><b>' + escapeHtml(getScheduleTaskName(config)) + '</b>' +
+            '<em>当前周期：' + escapeHtml(getCycleText(config ? config.cycle : {})) + '</em>' +
+          '</div>' +
+          '<div class="qir-schedule-form-section">' +
+            '<div class="qir-schedule-label"><span>*</span>调度配置</div>' +
+            '<div class="qir-schedule-main"><div class="qir-schedule-row">' + renderTemplateScheduleControls() + '</div></div>' +
+          '</div>' +
+          '<div class="qir-schedule-note"><i class="bi bi-lightning-charge"></i><span>确认启动后将按当前调度周期自动生成报告，可在编辑页面继续调整。</span></div>' +
+        '</div>' +
+        '<div class="qir-dashboard-modal-foot">' +
+          '<span>调度周期：<b data-qir-template-schedule-summary>' + escapeHtml(getTemplateScheduleHint(state.templateScheduleDraft)) + '</b></span>' +
+          '<div><button class="btn btn-outline" type="button" data-qir-action="close-start-schedule-modal"><i class="bi bi-x-lg"></i><span>取消</span></button><button class="btn btn-primary" type="button" data-qir-action="confirm-start-schedule"><i class="bi bi-play-circle"></i><span>启动调度</span></button></div>' +
+        '</div>' +
+      '</section>';
+  }
+
   function renderTemplateOutline() {
     var collapsed = !!state.templateOutlineCollapsed;
     return '<aside class="qir-template-outline' + (collapsed ? ' collapsed' : '') + '">' +
@@ -3745,7 +4765,8 @@ DP.pages.qualityInspectReport = (function () {
   function renderTemplateManageTabs(activeTab) {
     var tabs = [
       { key: 'template', label: '报告模板', icon: 'bi-file-earmark-richtext' },
-      { key: 'scope', label: '统计范围', icon: 'bi-diagram-3' }
+      { key: 'scope', label: '统计范围', icon: 'bi-diagram-3' },
+      { key: 'filter', label: '数据过滤', icon: 'bi-funnel' }
     ];
     return '<div class="qir-template-config-tabs">' + tabs.map(function (tab) {
       return '<button class="' + (activeTab === tab.key ? 'active' : '') + '" type="button" data-qir-action="template-manage-tab" data-tab="' + escapeHtml(tab.key) + '"><i class="bi ' + escapeHtml(tab.icon) + '"></i><span>' + escapeHtml(tab.label) + '</span></button>';
@@ -3786,7 +4807,7 @@ DP.pages.qualityInspectReport = (function () {
       '<div class="qir-template-scope-head">' +
         '<div><h3>统计范围配置</h3><p>设置查看报告数据详情列表中纳入统计的数据表范围。</p></div>' +
         '<div class="qir-template-scope-actions">' +
-          '<div class="qir-query-box qir-template-scope-query"><span class="qir-query-label">表名称</span><input type="text" data-qir-template-scope-keyword value="' + escapeHtml(state.templateScopeKeyword) + '" placeholder="请输入表名称/数据源/描述" aria-label="统计范围查询"><button class="btn btn-primary" type="button" data-qir-action="query-template-scope"><i class="bi bi-search"></i><span>查询</span></button></div>' +
+          '<div class="qir-query-box qir-template-scope-query"><span class="qir-query-label">表名称</span><input type="text" data-qir-template-scope-keyword value="' + escapeHtml(state.templateScopeKeyword) + '" placeholder="请输入表英文名/中文名/数据源/描述" aria-label="统计范围查询"><button class="btn btn-primary" type="button" data-qir-action="query-template-scope"><i class="bi bi-search"></i><span>查询</span></button></div>' +
           '<button class="btn btn-primary btn-sm" type="button" data-qir-action="template-scope-add"><i class="bi bi-plus-lg"></i><span>添加</span></button>' +
           '<button class="btn btn-outline btn-sm" type="button" data-qir-action="template-scope-remove-selected"' + (selectedCount ? '' : ' disabled') + '><i class="bi bi-dash-circle"></i><span>移除</span></button>' +
           '<button class="btn btn-outline btn-sm" type="button" data-qir-action="template-back-list"><i class="bi bi-arrow-left"></i><span>返回</span></button>' +
@@ -3804,17 +4825,18 @@ DP.pages.qualityInspectReport = (function () {
     var emptyText = state.templateScopeKeyword.trim() ? '暂无匹配统计范围' : '暂无统计范围数据';
     return '<div class="qir-table-wrap qir-template-scope-table-wrap">' +
       '<table class="ds-table qir-table qir-template-scope-table">' +
-        '<thead><tr><th><input type="checkbox" data-qir-template-scope-check-all' + (visibleAllSelected ? ' checked' : '') + ' aria-label="全选当前页"></th><th>表名称</th><th>所属数据源</th><th>备注描述</th><th>规则数</th><th>操作</th></tr></thead>' +
+        '<thead><tr><th><input type="checkbox" data-qir-template-scope-check-all' + (visibleAllSelected ? ' checked' : '') + ' aria-label="全选当前页"></th><th>表英文名</th><th>中文名</th><th>所属数据源</th><th>备注描述</th><th>规则数</th><th>操作</th></tr></thead>' +
         '<tbody>' + (rows.length ? rows.map(function (item) {
           return '<tr>' +
             '<td><input type="checkbox" data-qir-template-scope-check="' + escapeHtml(item.id) + '"' + (state.templateScopeSelected[item.id] ? ' checked' : '') + ' aria-label="选择' + escapeHtml(item.tableName) + '"></td>' +
-            '<td><div class="qir-table-name"><b>' + escapeHtml(item.tableName) + '</b><span>' + escapeHtml(item.alias) + '</span></div></td>' +
+            '<td><b>' + escapeHtml(item.tableName) + '</b></td>' +
+            '<td>' + escapeHtml(item.alias) + '</td>' +
             '<td>' + escapeHtml(item.dataSourceLabel) + '</td>' +
             '<td><div class="qir-template-scope-desc" title="' + escapeHtml(item.desc) + '">' + escapeHtml(item.desc) + '</div></td>' +
             '<td>' + escapeHtml(item.ruleCount) + '</td>' +
             '<td><div class="qir-table-actions"><button class="qir-view-btn qir-danger-link" type="button" data-qir-action="template-scope-remove" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-dash-circle"></i><span>移除</span></button></div></td>' +
           '</tr>';
-        }).join('') : '<tr class="qir-empty-row"><td colspan="6">' + emptyText + '</td></tr>') +
+        }).join('') : '<tr class="qir-empty-row"><td colspan="7">' + emptyText + '</td></tr>') +
         '</tbody>' +
       '</table>' +
     '</div>';
@@ -3851,12 +4873,13 @@ DP.pages.qualityInspectReport = (function () {
   function renderTemplateScopeModalRows() {
     var rows = getTemplateScopeCandidateRows();
     if (!rows.length) {
-      return '<tr class="qir-empty-row"><td colspan="5">' + (state.templateScopeModalKeyword.trim() ? '暂无匹配数据表' : '当前目录下暂无可添加数据表') + '</td></tr>';
+      return '<tr class="qir-empty-row"><td colspan="6">' + (state.templateScopeModalKeyword.trim() ? '暂无匹配数据表' : '当前目录下暂无可添加数据表') + '</td></tr>';
     }
     return rows.map(function (item) {
       return '<tr>' +
         '<td><input type="checkbox" data-qir-template-scope-modal-check="' + escapeHtml(item.id) + '"' + (state.templateScopeModalSelected[item.id] ? ' checked' : '') + ' aria-label="选择' + escapeHtml(item.tableName) + '"></td>' +
-        '<td><div class="qir-table-name"><b>' + escapeHtml(item.tableName) + '</b><span>' + escapeHtml(item.alias) + '</span></div></td>' +
+        '<td><b>' + escapeHtml(item.tableName) + '</b></td>' +
+        '<td>' + escapeHtml(item.alias) + '</td>' +
         '<td>' + escapeHtml(item.dataSourceLabel) + '</td>' +
         '<td><div class="qir-template-scope-desc" title="' + escapeHtml(item.desc) + '">' + escapeHtml(item.desc) + '</div></td>' +
         '<td>' + escapeHtml(item.ruleCount) + '</td>' +
@@ -3883,7 +4906,7 @@ DP.pages.qualityInspectReport = (function () {
           '<section class="qir-scope-modal-right">' +
             '<div class="qir-scope-modal-table-wrap">' +
               '<table class="ds-table qir-table qir-scope-modal-table">' +
-                '<thead><tr><th><input type="checkbox" data-qir-template-scope-modal-check-all' + (allSelected ? ' checked' : '') + ' aria-label="全选可见数据表"></th><th>表名称</th><th>所属数据源</th><th>备注描述</th><th>规则数</th></tr></thead>' +
+                '<thead><tr><th><input type="checkbox" data-qir-template-scope-modal-check-all' + (allSelected ? ' checked' : '') + ' aria-label="全选可见数据表"></th><th>表英文名</th><th>中文名</th><th>所属数据源</th><th>备注描述</th><th>规则数</th></tr></thead>' +
                 '<tbody>' + renderTemplateScopeModalRows() + '</tbody>' +
               '</table>' +
             '</div>' +
@@ -3896,15 +4919,207 @@ DP.pages.qualityInspectReport = (function () {
       '</section>';
   }
 
+  function renderTemplateFilterEmpty(config) {
+    config = config || getSelectedReportConfig() || reportConfigs[0];
+    return '<section class="qir-template-filter-panel">' +
+      '<div class="qir-template-filter-head">' +
+        '<div><h3>数据过滤配置</h3><p>设置报告统计范围内各数据表的过滤条件。</p></div>' +
+        '<div class="qir-template-filter-actions"><button class="btn btn-outline btn-sm" type="button" data-qir-action="template-back-list"><i class="bi bi-arrow-left"></i><span>返回</span></button></div>' +
+      '</div>' +
+      '<div class="qir-template-filter-empty">' +
+        '<i class="bi bi-funnel"></i>' +
+        '<strong>请增加数据过滤条件</strong>' +
+        '<button class="btn btn-primary qir-template-filter-empty-add" type="button" data-qir-action="template-filter-create"><i class="bi bi-plus-lg"></i><span>新增</span></button>' +
+      '</div>' +
+    '</section>';
+  }
+
+  function renderTemplateFilterGroupMeta(group) {
+    var editingField = group.editingField || (group.editing ? 'name' : '');
+    var nameHtml = editingField === 'name'
+      ? '<input class="qir-template-filter-name-input" type="text" data-qir-template-filter-group-name data-group-id="' + escapeHtml(group.id) + '" value="' + escapeHtml(group.name) + '" maxlength="40" aria-label="过滤组名称">'
+      : '<b title="' + escapeHtml(group.name) + '">' + escapeHtml(group.name) + '</b><button type="button" data-qir-action="template-filter-edit-group" data-group-id="' + escapeHtml(group.id) + '" data-field="name" aria-label="编辑名称"><i class="bi bi-pencil-square"></i></button>';
+    var descHtml = editingField === 'desc'
+      ? '<input class="qir-template-filter-desc-input" type="text" data-qir-template-filter-group-desc data-group-id="' + escapeHtml(group.id) + '" value="' + escapeHtml(group.desc) + '" maxlength="80" aria-label="过滤组描述">'
+      : '<em title="' + escapeHtml(group.desc) + '">' + escapeHtml(group.desc) + '</em><button type="button" data-qir-action="template-filter-edit-group" data-group-id="' + escapeHtml(group.id) + '" data-field="desc" aria-label="编辑描述"><i class="bi bi-pencil-square"></i></button>';
+    return '<div class="qir-template-filter-group-meta">' +
+      '<div class="qir-template-filter-group-info">' +
+        '<div class="qir-template-filter-group-name">' + nameHtml + '</div>' +
+        '<div class="qir-template-filter-group-desc">' + descHtml + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderTemplateFilterRows(group) {
+    var rows = getVisibleTemplateFilterRows(group);
+    if (!rows.length) {
+      return '<tr class="qir-empty-row"><td colspan="5">' + (state.templateFilterKeyword.trim() ? '暂无匹配过滤条件' : '暂无过滤条件') + '</td></tr>';
+    }
+    return rows.map(function (item) {
+      return '<tr>' +
+        '<td><b>' + escapeHtml(item.tableName) + '</b></td>' +
+        '<td>' + escapeHtml(item.alias) + '</td>' +
+        '<td><div class="qir-template-filter-condition' + (item.condition ? '' : ' is-empty') + '" title="' + escapeHtml(item.condition || '未配置过滤条件') + '">' + escapeHtml(item.condition || '未配置过滤条件') + '</div></td>' +
+        '<td><div class="qir-template-filter-desc" title="' + escapeHtml(item.desc) + '">' + escapeHtml(item.desc) + '</div></td>' +
+        '<td><div class="qir-table-actions qir-template-filter-row-actions">' +
+          '<button class="qir-view-btn" type="button" data-qir-action="template-filter-edit-row" data-group-id="' + escapeHtml(group.id) + '" data-row-id="' + escapeHtml(item.id) + '"><i class="bi bi-pencil-square"></i><span>编辑</span></button>' +
+          '<button class="qir-view-btn qir-danger-link" type="button" data-qir-action="template-filter-clear-row" data-group-id="' + escapeHtml(group.id) + '" data-row-id="' + escapeHtml(item.id) + '"><i class="bi bi-dash-circle"></i><span>移除</span></button>' +
+        '</div></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function renderTemplateFilterPageNav(totalPages, current, groupId) {
+    var idAttr = ' data-group-id="' + escapeHtml(groupId) + '"';
+    var html = '<button type="button" data-qir-template-filter-page="prev"' + idAttr + (current <= 1 ? ' disabled' : '') + '><i class="bi bi-chevron-left"></i></button>';
+    var maxVisible = Math.min(totalPages, 7);
+    for (var i = 1; i <= maxVisible; i++) {
+      html += '<button type="button" data-qir-template-filter-page="' + i + '"' + idAttr + (current === i ? ' class="active"' : '') + '>' + i + '</button>';
+    }
+    if (totalPages > 7) {
+      html += '<span>...</span><button type="button" data-qir-template-filter-page="' + totalPages + '"' + idAttr + (current === totalPages ? ' class="active"' : '') + '>' + totalPages + '</button>';
+    }
+    html += '<button type="button" data-qir-template-filter-page="next"' + idAttr + (current >= totalPages ? ' disabled' : '') + '><i class="bi bi-chevron-right"></i></button>';
+    return html;
+  }
+
+  function renderTemplateFilterFooter(group) {
+    var rows = getTemplateFilterFilteredRows(group);
+    var total = rows.length;
+    var pageSize = getTemplateFilterPageSize(group);
+    var totalPages = clampTemplateFilterGroupPage(group, total);
+    var currentPage = getTemplateFilterGroupPage(group);
+    var start = total ? (currentPage - 1) * pageSize + 1 : 0;
+    var end = total ? Math.min(total, currentPage * pageSize) : 0;
+    return '<div class="qir-footer qir-template-filter-footer">' +
+      '<div>显示第 ' + start + ' 到第 ' + end + ' 条记录，总共 ' + total + ' 条记录 每页显示 <select data-qir-template-filter-page-size data-group-id="' + escapeHtml(group.id) + '"><option value="10"' + (pageSize === 10 ? ' selected' : '') + '>10</option><option value="20"' + (pageSize === 20 ? ' selected' : '') + '>20</option></select> 条记录</div>' +
+      '<div class="qir-page-nav">' + renderTemplateFilterPageNav(totalPages, currentPage, group.id) + '</div>' +
+    '</div>';
+  }
+
+  function renderTemplateFilterGroup(group, index) {
+    return '<section class="qir-template-filter-group" data-qir-template-filter-group-id="' + escapeHtml(group.id) + '">' +
+      '<div class="qir-template-filter-group-top">' +
+        renderTemplateFilterGroupMeta(group) +
+        '<div class="qir-template-filter-group-actions">' +
+          '<div class="qir-query-box qir-template-filter-query"><input type="text" data-qir-template-filter-keyword value="' + escapeHtml(state.templateFilterKeyword) + '" placeholder="请输入表英文名/中文名/备注描述" aria-label="数据过滤查询"><button class="btn btn-primary" type="button" data-qir-action="query-template-filter"><i class="bi bi-search"></i><span>查询</span></button></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="qir-template-filter-table-wrap">' +
+        '<table class="ds-table qir-table qir-template-filter-table">' +
+          '<thead><tr><th>表英文名</th><th>中文名</th><th>过滤条件</th><th>备注描述</th><th>操作</th></tr></thead>' +
+          '<tbody>' + renderTemplateFilterRows(group) + '</tbody>' +
+        '</table>' +
+      '</div>' +
+      renderTemplateFilterFooter(group) +
+    '</section>';
+  }
+
+  function renderTemplateFilterPanel(config) {
+    config = config || getSelectedReportConfig() || reportConfigs[0];
+    var groups = getTemplateFilterGroups(config);
+    if (!groups.length) return renderTemplateFilterEmpty(config);
+    groups.forEach(function (group) { syncTemplateFilterGroupRows(config, group); });
+    var conditionCount = getTemplateFilterConditionCount(groups);
+    return '<section class="qir-template-filter-panel">' +
+      '<div class="qir-template-filter-head">' +
+        '<div><h3>数据过滤配置</h3><p>配置多组过滤条件，报告生成时按组应用到对应数据表。</p></div>' +
+        '<div class="qir-template-filter-actions">' +
+          '<button class="btn btn-primary btn-sm" type="button" data-qir-action="template-filter-add-group"><i class="bi bi-plus-lg"></i><span>新增分组</span></button>' +
+          '<button class="btn btn-outline btn-sm" type="button" data-qir-action="template-back-list"><i class="bi bi-arrow-left"></i><span>返回</span></button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="qir-template-filter-summary"><span>当前报告</span><b>' + escapeHtml(config.name || '稽查报告') + '</b><em>已配置 ' + groups.length + ' 组过滤条件，共 ' + conditionCount + ' 条</em></div>' +
+      '<div class="qir-template-filter-groups">' + groups.map(renderTemplateFilterGroup).join('') + '</div>' +
+    '</section>';
+  }
+
+  function renderTemplateFilterModalTabs() {
+    var mode = state.templateFilterModalMode === 'sql' ? 'sql' : 'visual';
+    return '<div class="qir-filter-modal-tabs">' +
+      '<button class="' + (mode === 'visual' ? 'active' : '') + '" type="button" data-qir-action="template-filter-modal-tab" data-mode="visual"><i class="bi bi-ui-checks-grid"></i><span>可视化</span></button>' +
+      '<button class="' + (mode === 'sql' ? 'active' : '') + '" type="button" data-qir-action="template-filter-modal-tab" data-mode="sql"><i class="bi bi-code-square"></i><span>SQL语句</span></button>' +
+    '</div>';
+  }
+
+  function renderTemplateFilterVisualPanel(draft) {
+    var fields = getTemplateFilterFieldOptions();
+    var operators = ['等于', '不等于', '大于', '小于', '大于等于', '小于等于', '包含', '不包含', '为空', '不为空'];
+    return '<div class="qir-filter-visual-panel">' +
+      '<label><span>字段</span><select data-qir-template-filter-field>' + fields.map(function (item) {
+        return '<option value="' + escapeHtml(item.name) + '"' + (draft.field === item.name ? ' selected' : '') + '>' + escapeHtml(item.name) + '（' + escapeHtml(item.label) + '）</option>';
+      }).join('') + '</select></label>' +
+      '<label><span>操作符</span><select data-qir-template-filter-operator>' + operators.map(function (item) {
+        return '<option value="' + escapeHtml(item) + '"' + (draft.operator === item ? ' selected' : '') + '>' + escapeHtml(item) + '</option>';
+      }).join('') + '</select></label>' +
+      '<label><span>条件值</span><input type="text" data-qir-template-filter-value value="' + escapeHtml(draft.value) + '" maxlength="80" placeholder="请输入值"></label>' +
+      '<label><span>备注描述</span><input type="text" data-qir-template-filter-desc value="' + escapeHtml(draft.desc) + '" maxlength="100" placeholder="请输入备注描述"></label>' +
+      '<div class="qir-filter-apply-scope"><span>应用范围</span><label><input type="radio" name="qir-template-filter-apply-scope" data-qir-template-filter-apply-scope value="current"' + (draft.applyScope === 'all' ? '' : ' checked') + '> 当前表</label><label><input type="radio" name="qir-template-filter-apply-scope" data-qir-template-filter-apply-scope value="all"' + (draft.applyScope === 'all' ? ' checked' : '') + '> 所有表</label></div>' +
+    '</div>';
+  }
+
+  function renderTemplateFilterSqlFieldList(draft) {
+    var keyword = state.templateFilterFieldKeyword.trim().toLowerCase();
+    var fields = getTemplateFilterFieldOptions().filter(function (item) {
+      if (!keyword) return true;
+      return item.name.toLowerCase().indexOf(keyword) >= 0 || item.label.toLowerCase().indexOf(keyword) >= 0;
+    });
+    if (!fields.length) {
+      return '<div class="qir-filter-sql-field-empty">暂无匹配字段</div>';
+    }
+    return fields.map(function (item) {
+      return '<button class="' + (draft.field === item.name ? 'active' : '') + '" type="button" data-qir-action="template-filter-pick-field" data-field="' + escapeHtml(item.name) + '"><i class="bi bi-circle-fill"></i><span>' + escapeHtml(item.name) + '</span><em>' + escapeHtml(item.label) + '</em></button>';
+    }).join('');
+  }
+
+  function renderTemplateFilterSqlPanel(draft) {
+    return '<div class="qir-filter-sql-panel">' +
+      '<aside class="qir-filter-sql-fields">' +
+        '<div class="qir-filter-sql-field-search"><i class="bi bi-search"></i><input type="text" data-qir-template-filter-field-keyword value="' + escapeHtml(state.templateFilterFieldKeyword) + '" placeholder="请输入字段名"></div>' +
+        '<div class="qir-filter-sql-field-list">' + renderTemplateFilterSqlFieldList(draft) + '</div>' +
+      '</aside>' +
+      '<section class="qir-filter-sql-main">' +
+        '<div class="qir-filter-sql-editor-wrap">' + renderTemplateFilterSqlEditor(draft.sql || 'is_deleted = 0') + '</div>' +
+        '<div class="qir-filter-apply-scope qir-filter-sql-apply-scope"><span>应用范围</span><label><input type="radio" name="qir-template-filter-apply-scope" data-qir-template-filter-apply-scope value="current"' + (draft.applyScope === 'all' ? '' : ' checked') + '> 当前表</label><label><input type="radio" name="qir-template-filter-apply-scope" data-qir-template-filter-apply-scope value="all"' + (draft.applyScope === 'all' ? ' checked' : '') + '> 所有表</label></div>' +
+      '</section>' +
+    '</div>';
+  }
+
+  function renderTemplateFilterModal() {
+    if (!state.templateFilterModalOpen) return '';
+    var config = getSelectedReportConfig() || reportConfigs[0];
+    var group = getTemplateFilterGroup(config, state.templateFilterModalGroupId) || createTemplateFilterGroup(config);
+    var draft = state.templateFilterModalDraft || createTemplateFilterModalDraft(config, group, getTemplateFilterRow(group, state.templateFilterModalRowId));
+    var row = getTemplateFilterRow(group, state.templateFilterModalRowId);
+    var modalSubTitle = group.name || '数据过滤组';
+    if (row) modalSubTitle += ' / ' + row.tableName + '（' + row.alias + '）';
+    return '<div class="qir-filter-modal-mask" data-qir-action="close-template-filter-modal"></div>' +
+      '<section class="qir-filter-modal" role="dialog" aria-modal="true" aria-label="过滤条件">' +
+        '<div class="qir-dashboard-modal-head">' +
+          '<div><h3>过滤条件</h3><p>' + escapeHtml(modalSubTitle) + '</p></div>' +
+          '<button class="qir-dashboard-modal-close" type="button" data-qir-action="close-template-filter-modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button>' +
+        '</div>' +
+        '<div class="qir-filter-modal-body">' +
+          renderTemplateFilterModalTabs() +
+          (state.templateFilterModalMode === 'sql' ? renderTemplateFilterSqlPanel(draft) : renderTemplateFilterVisualPanel(draft)) +
+        '</div>' +
+        '<div class="qir-dashboard-modal-foot qir-filter-modal-foot">' +
+          '<span></span>' +
+          '<div><button class="btn btn-outline" type="button" data-qir-action="close-template-filter-modal"><i class="bi bi-x-lg"></i><span>取消</span></button><button class="btn btn-primary" type="button" data-qir-action="template-filter-modal-save"><i class="bi bi-save"></i><span>保存</span></button></div>' +
+        '</div>' +
+      '</section>';
+  }
+
   function renderTemplateShell() {
     var config = getSelectedReportConfig() || reportConfigs[0];
-    var activeTab = state.templateManageTab === 'scope' ? 'scope' : 'template';
-    var content = activeTab === 'scope' ? renderTemplateScopePlaceholder(config) : renderTemplateReportContent(config);
+    var activeTab = state.templateManageTab === 'scope' || state.templateManageTab === 'filter' ? state.templateManageTab : 'template';
+    var content = activeTab === 'scope' ? renderTemplateScopePlaceholder(config) : (activeTab === 'filter' ? renderTemplateFilterPanel(config) : renderTemplateReportContent(config));
     return '<section class="qir-template-config-shell">' +
       '<div class="qir-template-config-topbar">' + renderTemplateManageTabs(activeTab) + '</div>' +
-      '<div class="qir-template-config-body ' + (activeTab === 'scope' ? 'scope-tab' : 'template-tab') + '">' + content + '</div>' +
+      '<div class="qir-template-config-body ' + activeTab + '-tab">' + content + '</div>' +
     '</section>' +
-    renderTemplateScopeModal();
+    renderTemplateScopeModal() +
+    renderTemplateFilterModal();
   }
 
   function renderHistoryRows() {
@@ -3958,26 +5173,222 @@ DP.pages.qualityInspectReport = (function () {
     '</section>';
   }
 
+  function renderScheduleRecordSummary(config) {
+    return '<div class="qir-schedule-record-summary">' +
+      '<dl><dt>任务名称</dt><dd>' + escapeHtml(getScheduleTaskName(config)) + '</dd></dl>' +
+      '<dl><dt>状态</dt><dd>' + renderConfigStatus(config.status) + '</dd></dl>' +
+      '<dl><dt>调度周期</dt><dd>' + renderConfigCycle(config.cycle) + '</dd></dl>' +
+    '</div>';
+  }
+
+  function renderExecutionStatusOptions(value) {
+    var options = ['执行成功', '执行中', '执行失败'];
+    return '<option value="">全部</option>' + options.map(function (status) {
+      return '<option value="' + escapeHtml(status) + '"' + (value === status ? ' selected' : '') + '>' + escapeHtml(status) + '</option>';
+    }).join('');
+  }
+
+  function renderScheduleRecordRows() {
+    var rows = getVisibleScheduleRecordRows();
+    if (!rows.length) {
+      return '<tr class="qir-empty-row"><td colspan="5">暂无匹配执行记录</td></tr>';
+    }
+    return rows.map(function (item) {
+      return '<tr>' +
+        '<td>' + escapeHtml(item.startAt) + '</td>' +
+        '<td>' + escapeHtml(item.endAt) + '</td>' +
+        '<td>' + escapeHtml(item.duration) + '</td>' +
+        '<td>' + renderConfigExecutionStatus(item.status) + '</td>' +
+        '<td><div class="qir-table-actions qir-schedule-record-actions">' +
+          '<button class="qir-view-btn" type="button" data-qir-action="open-schedule-run-detail" data-run-id="' + escapeHtml(item.id) + '"><i class="bi bi-list-task"></i><span>执行详情</span></button>' +
+          (item.status === '执行中' ? '<button class="qir-view-btn qir-warning-link" type="button" data-qir-action="stop-schedule-run" data-run-id="' + escapeHtml(item.id) + '"><i class="bi bi-stop-circle"></i><span>停止</span></button>' : '') +
+          '<button class="qir-view-btn qir-success-link" type="button" data-qir-action="rerun-schedule-run" data-run-id="' + escapeHtml(item.id) + '"><i class="bi bi-arrow-clockwise"></i><span>重新执行</span></button>' +
+        '</div></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function renderScheduleRecordTable() {
+    return '<div class="qir-table-wrap qir-schedule-record-table-wrap">' +
+      '<table class="ds-table qir-table qir-schedule-record-table">' +
+        '<thead><tr><th>开始时间</th><th>完成时间</th><th>耗时</th><th>状态</th><th>操作</th></tr></thead>' +
+        '<tbody>' + renderScheduleRecordRows() + '</tbody>' +
+      '</table>' +
+    '</div>';
+  }
+
+  function renderScheduleRecordDetailSummary(config, run) {
+    return '<div class="qir-schedule-record-summary qir-schedule-detail-summary">' +
+      '<dl><dt>任务名称</dt><dd>' + escapeHtml(getScheduleTaskName(config)) + '</dd></dl>' +
+      '<dl><dt>执行批次</dt><dd>' + escapeHtml(run ? run.startAt : '-') + '</dd></dl>' +
+      '<dl><dt>状态</dt><dd>' + renderConfigExecutionStatus(run ? run.status : '执行失败') + '</dd></dl>' +
+      '<dl><dt>调度周期</dt><dd>' + renderConfigCycle(config && config.cycle) + '</dd></dl>' +
+    '</div>';
+  }
+
+  function renderScheduleRecordDetailRows() {
+    var rows = getVisibleScheduleRuleExecutionRows();
+    if (!rows.length) {
+      return '<tr class="qir-empty-row"><td colspan="7">暂无规则任务执行记录</td></tr>';
+    }
+    return rows.map(function (item) {
+      return '<tr>' +
+        '<td><div class="qir-rule-task-cell"><b title="' + escapeHtml(item.ruleTask) + '">' + escapeHtml(item.ruleTask) + '</b></div></td>' +
+        '<td><div class="qir-rule-task-cell"><b title="' + escapeHtml(item.tableName) + '">' + escapeHtml(item.tableName) + '</b><span>' + escapeHtml(item.alias || '-') + '</span></div></td>' +
+        '<td>' + escapeHtml(item.startAt) + '</td>' +
+        '<td>' + escapeHtml(item.endAt) + '</td>' +
+        '<td>' + escapeHtml(item.duration) + '</td>' +
+        '<td>' + renderConfigExecutionStatus(item.status) + '</td>' +
+        '<td><div class="qir-table-actions qir-schedule-record-actions">' +
+          '<button class="qir-view-btn" type="button" data-qir-action="open-schedule-sql" data-run-id="' + escapeHtml(item.runId) + '" data-rule-run-id="' + escapeHtml(item.id) + '"><i class="bi bi-code-square"></i><span>执行SQL</span></button>' +
+          '<button class="qir-view-btn" type="button" data-qir-action="open-schedule-log" data-run-id="' + escapeHtml(item.runId) + '" data-rule-run-id="' + escapeHtml(item.id) + '"><i class="bi bi-file-text"></i><span>执行日志</span></button>' +
+          (item.status === '执行中' ? '<button class="qir-view-btn qir-warning-link" type="button" data-qir-action="stop-schedule-rule-run" data-run-id="' + escapeHtml(item.runId) + '" data-rule-run-id="' + escapeHtml(item.id) + '"><i class="bi bi-stop-circle"></i><span>停止</span></button>' : '') +
+        '</div></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function renderScheduleRecordDetailTable() {
+    return '<div class="qir-table-wrap qir-schedule-record-table-wrap">' +
+      '<table class="ds-table qir-table qir-schedule-record-table qir-schedule-detail-table">' +
+        '<thead><tr><th>规则任务</th><th>稽查表</th><th>开始时间</th><th>完成时间</th><th>耗时</th><th>状态</th><th>操作</th></tr></thead>' +
+        '<tbody>' + renderScheduleRecordDetailRows() + '</tbody>' +
+      '</table>' +
+    '</div>';
+  }
+
+  function renderScheduleRecordDetailFooter() {
+    var rows = getScheduleDetailRows();
+    var total = rows.length;
+    var totalPages = clampScheduleDetailPage(total);
+    var start = total ? (state.scheduleDetailPage - 1) * state.scheduleDetailPageSize + 1 : 0;
+    var end = total ? Math.min(total, state.scheduleDetailPage * state.scheduleDetailPageSize) : 0;
+    return '<div class="qir-footer qir-schedule-record-footer qir-schedule-detail-footer">' +
+      '<div>显示第 ' + start + ' 到第 ' + end + ' 条记录，总共 ' + total + ' 条记录 每页显示 <select data-qir-schedule-detail-page-size><option value="10"' + (state.scheduleDetailPageSize === 10 ? ' selected' : '') + '>10</option><option value="20"' + (state.scheduleDetailPageSize === 20 ? ' selected' : '') + '>20</option></select> 条记录</div>' +
+      '<div class="qir-page-nav">' + renderPageNav(totalPages, state.scheduleDetailPage, 'data-qir-schedule-detail-page') + '</div>' +
+    '</div>';
+  }
+
+  function renderScheduleRecordFooter() {
+    var rows = getScheduleRecordRows();
+    var total = rows.length;
+    var totalPages = clampScheduleRecordPage(total);
+    var start = total ? (state.scheduleRecordPage - 1) * state.scheduleRecordPageSize + 1 : 0;
+    var end = total ? Math.min(total, state.scheduleRecordPage * state.scheduleRecordPageSize) : 0;
+    return '<div class="qir-footer qir-schedule-record-footer">' +
+      '<div>显示第 ' + start + ' 到第 ' + end + ' 条记录，总共 ' + total + ' 条记录 每页显示 <select data-qir-schedule-record-page-size><option value="10"' + (state.scheduleRecordPageSize === 10 ? ' selected' : '') + '>10</option><option value="20"' + (state.scheduleRecordPageSize === 20 ? ' selected' : '') + '>20</option></select> 条记录</div>' +
+      '<div class="qir-page-nav">' + renderPageNav(totalPages, state.scheduleRecordPage, 'data-qir-schedule-record-page') + '</div>' +
+    '</div>';
+  }
+
+  function renderScheduleSqlModal() {
+    if (!state.scheduleSqlModalOpen) return '';
+    var run = state.selectedScheduleRuleRunId ? getSelectedScheduleRuleRun() : getSelectedScheduleRecordRun();
+    return '<div class="qir-sql-modal-mask" data-qir-action="close-schedule-sql"></div>' +
+      '<section class="qir-sql-modal" role="dialog" aria-modal="true" aria-label="执行SQL">' +
+        '<div class="qir-sql-modal-head"><strong>执行SQL</strong><button type="button" data-qir-action="close-schedule-sql" aria-label="关闭"><i class="bi bi-x-lg"></i></button></div>' +
+        '<div class="qir-sql-modal-body">' + renderScheduleSqlEditor(getScheduleRecordSql(run)) + '</div>' +
+        '<div class="qir-sql-modal-foot"><button class="btn btn-primary" type="button" data-qir-action="close-schedule-sql"><i class="bi bi-x-lg"></i><span>关闭</span></button></div>' +
+      '</section>';
+  }
+
+  function renderScheduleRecordDetailShell() {
+    var config = getSelectedReportConfig() || reportConfigs[0];
+    var run = getSelectedScheduleRecordRun();
+    return '<section class="qir-main-panel qir-main-panel-full qir-schedule-record-panel qir-schedule-detail-panel">' +
+      '<div class="qir-schedule-record-head">' +
+        '<div><h3>执行详情</h3><p>查看本次调度下每个规则任务的执行记录</p></div>' +
+        '<button class="btn btn-outline btn-sm" type="button" data-qir-action="back-schedule-records"><i class="bi bi-arrow-left"></i><span>返回执行记录</span></button>' +
+      '</div>' +
+      renderScheduleRecordDetailSummary(config, run) +
+      '<div class="qir-toolbar qir-schedule-record-toolbar">' +
+        '<div class="qir-toolbar-title">规则任务执行记录</div>' +
+        '<div class="qir-query-box qir-schedule-record-query qir-schedule-detail-query">' +
+          '<span class="qir-query-label">执行状态</span>' +
+          '<select class="qir-query-select" data-qir-schedule-detail-status aria-label="执行状态">' + renderExecutionStatusOptions(state.scheduleDetailStatus) + '</select>' +
+          '<span class="qir-query-label qir-query-label-gap">稽查任务</span>' +
+          '<input type="text" data-qir-schedule-detail-task value="' + escapeHtml(state.scheduleDetailTaskKeyword) + '" placeholder="请输入稽查任务" aria-label="稽查任务">' +
+          '<span class="qir-query-label qir-query-label-gap">稽查表</span>' +
+          '<input type="text" data-qir-schedule-detail-table value="' + escapeHtml(state.scheduleDetailTableKeyword) + '" placeholder="请输入稽查表" aria-label="稽查表">' +
+          '<button class="btn btn-primary" type="button" data-qir-action="query-schedule-detail"><i class="bi bi-search"></i><span>查询</span></button>' +
+        '</div>' +
+      '</div>' +
+      renderScheduleRecordDetailTable() +
+      renderScheduleRecordDetailFooter() +
+    '</section>' +
+    renderScheduleSqlModal();
+  }
+
+  function renderScheduleRecordShell() {
+    var config = getSelectedReportConfig() || reportConfigs[0];
+    return '<section class="qir-main-panel qir-main-panel-full qir-schedule-record-panel">' +
+      '<div class="qir-schedule-record-head">' +
+        '<div><h3>执行记录</h3><p>查看任务调度每次触发后的执行明细</p></div>' +
+        '<button class="btn btn-outline btn-sm" type="button" data-qir-action="back-summary"><i class="bi bi-arrow-left"></i><span>返回列表</span></button>' +
+      '</div>' +
+      renderScheduleRecordSummary(config) +
+      '<div class="qir-toolbar qir-schedule-record-toolbar">' +
+        '<div class="qir-toolbar-title">执行记录列表</div>' +
+        '<div class="qir-query-box qir-schedule-record-query">' +
+          '<span class="qir-query-label">执行状态</span>' +
+          '<select class="qir-query-select" data-qir-schedule-record-status aria-label="执行状态">' + renderExecutionStatusOptions(state.scheduleRecordStatus) + '</select>' +
+          '<span class="qir-query-label qir-query-label-gap">开始时间</span>' +
+          '<input class="qir-schedule-date-input" type="date" data-qir-schedule-start-date value="' + escapeHtml(state.scheduleRecordStartDate) + '" aria-label="开始日期">' +
+          '<span class="qir-date-separator">至</span>' +
+          '<input class="qir-schedule-date-input" type="date" data-qir-schedule-end-date value="' + escapeHtml(state.scheduleRecordEndDate) + '" aria-label="结束日期">' +
+          '<button class="btn btn-primary" type="button" data-qir-action="query-schedule-records"><i class="bi bi-search"></i><span>查询</span></button>' +
+        '</div>' +
+      '</div>' +
+      renderScheduleRecordTable() +
+      renderScheduleRecordFooter() +
+    '</section>' +
+    renderScheduleSqlModal();
+  }
+
+  function renderScheduleLogShell() {
+    var config = getSelectedReportConfig() || reportConfigs[0];
+    var run = state.selectedScheduleRuleRunId ? getSelectedScheduleRuleRun() : getSelectedScheduleRecordRun();
+    var isRuleRun = !!(run && run.ruleTask);
+    var backAction = state.scheduleLogBackView === 'schedule-record-detail' ? 'back-schedule-record-detail' : 'back-schedule-records';
+    var backText = state.scheduleLogBackView === 'schedule-record-detail' ? '返回执行详情' : '返回执行记录';
+    var title = isRuleRun ? run.ruleTask : getScheduleTaskName(config);
+    return '<section class="qir-main-panel qir-main-panel-full qir-schedule-log-panel">' +
+      '<div class="qir-schedule-record-head">' +
+        '<div><h3>执行日志</h3><p>' + escapeHtml(title) + ' / ' + escapeHtml(run.startAt) + '</p></div>' +
+        '<button class="btn btn-outline btn-sm" type="button" data-qir-action="' + backAction + '"><i class="bi bi-arrow-left"></i><span>' + backText + '</span></button>' +
+      '</div>' +
+      '<div class="qir-schedule-log-view">' +
+        '<div class="qir-schedule-log-header">' +
+          '<div><h3>任务处理日志</h3><p>开始时间：' + escapeHtml(run.startAt) + '　完成时间：' + escapeHtml(run.endAt) + '</p></div>' +
+          '<dl><dt>执行状态</dt><dd>' + renderConfigExecutionStatus(run.status) + '</dd><dt>调度周期</dt><dd>' + escapeHtml(run.cycle || getCycleText(config.cycle)) + '</dd><dt>耗时</dt><dd>' + escapeHtml(run.duration) + '</dd></dl>' +
+        '</div>' +
+        '<pre class="qir-schedule-tech-log">' + escapeHtml(getScheduleExecutionLog(run)) + '</pre>' +
+      '</div>' +
+    '</section>';
+  }
+
   function renderConfigRows() {
     var rows = getVisibleConfigRows();
     var scheduleMode = isScheduleSection();
     if (!rows.length) {
-      return '<tr class="qir-empty-row"><td colspan="' + (scheduleMode ? '8' : '6') + '">' + (scheduleMode ? '暂无匹配任务调度' : '暂无匹配稽查报告') + '</td></tr>';
+      return '<tr class="qir-empty-row"><td colspan="' + (scheduleMode ? '9' : '6') + '">' + (scheduleMode ? '暂无匹配任务调度' : '暂无匹配稽查报告') + '</td></tr>';
     }
     return rows.map(function (item) {
       var configName = scheduleMode ? getScheduleTaskName(item) : item.name;
       var actionHtml = scheduleMode
-        ? '<button class="qir-view-btn" type="button"><i class="bi bi-clock-history"></i><span>执行记录</span></button>' +
+        ? '<button class="qir-view-btn qir-run-link" type="button" data-qir-action="execute-config-once" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-play-fill"></i><span>执行一次</span></button>' +
+          '<button class="qir-view-btn" type="button" data-qir-action="open-schedule-records" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-clock-history"></i><span>执行记录</span></button>' +
           '<button class="qir-view-btn" type="button" data-qir-action="template-placeholder" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-pencil-square"></i><span>编辑</span></button>' +
           (item.status === '已启动'
-          ? '<button class="qir-view-btn qir-warning-link" type="button" data-qir-action="stop-config" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-pause-circle"></i><span>停止</span></button>'
-          : '<button class="qir-view-btn qir-success-link" type="button" data-qir-action="start-config" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-play-circle"></i><span>启动</span></button>') +
+          ? '<button class="qir-view-btn qir-warning-link" type="button" data-qir-action="stop-config" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-pause-circle"></i><span>停止调度</span></button>'
+          : '<button class="qir-view-btn qir-success-link" type="button" data-qir-action="start-config" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-play-circle"></i><span>启动调度</span></button>') +
           '<button class="qir-view-btn qir-danger-link" type="button" data-qir-action="delete-config" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-trash3"></i><span>删除</span></button>'
         : '<button class="qir-view-btn" type="button" data-qir-action="open-report-view" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-file-earmark-text"></i><span>查看报告</span></button>' +
           '<button class="qir-view-btn" type="button" data-qir-action="open-history-list" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-clock-history"></i><span>历史报告</span></button>';
       return '<tr>' +
         '<td><div class="qir-config-name"><b>' + escapeHtml(configName) + '</b></div></td>' +
         '<td>' + renderConfigScope(item) + '</td>' +
+        (scheduleMode ? '<td>' + renderConfigDataRange(item) + '</td>' : '') +
         (scheduleMode ? '<td>' + renderConfigStatus(item.status) + '</td>' : '') +
         '<td><div class="qir-config-desc" title="' + escapeHtml(item.desc) + '">' + escapeHtml(item.desc) + '</div></td>' +
         '<td>' + renderConfigCycle(item.cycle) + '</td>' +
@@ -3990,7 +5401,7 @@ DP.pages.qualityInspectReport = (function () {
 
   function renderConfigTable() {
     var headHtml = isScheduleSection()
-      ? '<tr><th>名称</th><th>统计范围</th><th>状态</th><th>报告描述</th><th>调度周期</th><th>最后执行状态</th><th>最后执行时间</th><th>操作</th></tr>'
+      ? '<tr><th>名称</th><th>统计范围</th><th>数据范围</th><th>状态</th><th>报告描述</th><th>调度周期</th><th>最后执行状态</th><th>最后执行时间</th><th>操作</th></tr>'
       : '<tr><th>名称</th><th>统计范围</th><th>报告描述</th><th>生成周期</th><th>最后生成时间</th><th>操作</th></tr>';
     return '<div class="qir-table-wrap qir-config-table-wrap">' +
       '<table class="ds-table qir-table qir-config-table ' + (isScheduleSection() ? 'qir-config-table-schedule' : 'qir-config-table-report') + '">' +
@@ -4068,13 +5479,15 @@ DP.pages.qualityInspectReport = (function () {
       : '<div class="qir-toolbar-title">稽查报告列表</div>';
     var scheduleQueryPrefix = scheduleMode
       ? '<span class="qir-query-label">状态</span><select class="qir-query-select" data-qir-config-status aria-label="状态查询"><option value="">全部</option><option value="已启动"' + (state.configStatus === '已启动' ? ' selected' : '') + '>已启动</option><option value="未启动"' + (state.configStatus === '未启动' ? ' selected' : '') + '>未启动</option></select>' +
-        '<span class="qir-query-label qir-query-label-gap">最后执行状态</span><select class="qir-query-select qir-query-select-wide" data-qir-config-exec-status aria-label="最后执行状态查询"><option value="">全部</option><option value="执行成功"' + (state.configExecStatus === '执行成功' ? ' selected' : '') + '>执行成功</option><option value="执行失败"' + (state.configExecStatus === '执行失败' ? ' selected' : '') + '>执行失败</option></select>'
+        '<span class="qir-query-label qir-query-label-gap">最后执行状态</span><select class="qir-query-select qir-query-select-wide" data-qir-config-exec-status aria-label="最后执行状态查询"><option value="">全部</option><option value="执行成功"' + (state.configExecStatus === '执行成功' ? ' selected' : '') + '>执行成功</option><option value="执行中"' + (state.configExecStatus === '执行中' ? ' selected' : '') + '>执行中</option><option value="执行失败"' + (state.configExecStatus === '执行失败' ? ' selected' : '') + '>执行失败</option></select>' +
+        '<span class="qir-query-label qir-query-label-gap">数据范围</span><select class="qir-query-select" data-qir-config-data-range-status aria-label="数据范围查询"><option value="">全部</option><option value="none"' + (state.configDataRangeStatus === 'none' ? ' selected' : '') + '>无配置</option><option value="configured"' + (state.configDataRangeStatus === 'configured' ? ' selected' : '') + '>已配置</option></select>'
       : '';
     return '<section class="qir-main-panel qir-main-panel-full">' +
       '<div class="qir-toolbar">' + leadingContent + '<div class="qir-query-box">' + scheduleQueryPrefix + '<span class="qir-query-label' + (scheduleMode ? ' qir-query-label-gap' : '') + '">名称</span><input type="text" data-qir-config-keyword value="' + escapeHtml(state.configKeyword) + '" placeholder="请输入名称/描述" aria-label="名称或描述查询"><button class="btn btn-primary" type="button" data-qir-action="query-config"><i class="bi bi-search"></i><span>查询</span></button></div></div>' +
       renderConfigTable() +
       renderConfigFooter() +
-    '</section>';
+    '</section>' +
+    (scheduleMode ? renderStartScheduleModal() : '');
   }
 
   function renderReportListShell() {
@@ -4263,12 +5676,21 @@ DP.pages.qualityInspectReport = (function () {
     pageEl.classList.toggle('template-mode', state.view === 'template');
     pageEl.classList.toggle('report-view-mode', state.view === 'report-view');
     pageEl.classList.toggle('history-mode', state.view === 'history-list');
+    pageEl.classList.toggle('schedule-record-mode', state.view === 'schedule-records');
+    pageEl.classList.toggle('schedule-record-detail-mode', state.view === 'schedule-record-detail');
+    pageEl.classList.toggle('schedule-log-mode', state.view === 'schedule-log');
     if (state.view === 'detail') {
       pageEl.innerHTML = renderDetailShell();
     } else if (state.view === 'report-view') {
       pageEl.innerHTML = renderReportViewShell();
     } else if (state.view === 'history-list') {
       pageEl.innerHTML = renderHistoryListShell();
+    } else if (state.view === 'schedule-records') {
+      pageEl.innerHTML = renderScheduleRecordShell();
+    } else if (state.view === 'schedule-record-detail') {
+      pageEl.innerHTML = renderScheduleRecordDetailShell();
+    } else if (state.view === 'schedule-log') {
+      pageEl.innerHTML = renderScheduleLogShell();
     } else if (state.view === 'report-list') {
       pageEl.innerHTML = renderReportListShell();
     } else if (state.view === 'template') {
@@ -4278,6 +5700,84 @@ DP.pages.qualityInspectReport = (function () {
     }
     initTemplatePieCharts(pageEl);
     restoreTemplateDashboardInsertPosition();
+  }
+
+  function applyConfigQueryFromDom(keywordValue) {
+    var configInput = pageEl.querySelector('[data-qir-config-keyword]');
+    var configStatus = pageEl.querySelector('[data-qir-config-status]');
+    var configExecStatus = pageEl.querySelector('[data-qir-config-exec-status]');
+    var configDataRangeStatus = pageEl.querySelector('[data-qir-config-data-range-status]');
+    state.configKeyword = keywordValue != null ? String(keywordValue).trim() : (configInput ? configInput.value.trim() : '');
+    state.configStatus = configStatus ? configStatus.value : '';
+    state.configExecStatus = configExecStatus ? configExecStatus.value : '';
+    state.configDataRangeStatus = configDataRangeStatus ? configDataRangeStatus.value : '';
+    state.configPage = 1;
+    renderAll();
+  }
+
+  function applyScheduleRecordQueryFromDom() {
+    var statusInput = pageEl.querySelector('[data-qir-schedule-record-status]');
+    var startDateInput = pageEl.querySelector('[data-qir-schedule-start-date]');
+    var endDateInput = pageEl.querySelector('[data-qir-schedule-end-date]');
+    state.scheduleRecordStatus = statusInput ? statusInput.value : '';
+    state.scheduleRecordStartDate = startDateInput ? startDateInput.value : '';
+    state.scheduleRecordEndDate = endDateInput ? endDateInput.value : '';
+    state.scheduleRecordPage = 1;
+    state.scheduleDetailPage = 1;
+    state.selectedScheduleRunId = '';
+    state.selectedScheduleRuleRunId = '';
+    state.scheduleLogBackView = 'schedule-records';
+    state.scheduleSqlModalOpen = false;
+    renderAll();
+  }
+
+  function applyScheduleDetailQueryFromDom() {
+    var statusInput = pageEl.querySelector('[data-qir-schedule-detail-status]');
+    var taskInput = pageEl.querySelector('[data-qir-schedule-detail-task]');
+    var tableInput = pageEl.querySelector('[data-qir-schedule-detail-table]');
+    state.scheduleDetailStatus = statusInput ? statusInput.value : '';
+    state.scheduleDetailTaskKeyword = taskInput ? taskInput.value.trim() : '';
+    state.scheduleDetailTableKeyword = tableInput ? tableInput.value.trim() : '';
+    state.scheduleDetailPage = 1;
+    state.selectedScheduleRuleRunId = '';
+    state.scheduleSqlModalOpen = false;
+    renderAll();
+  }
+
+  function updateScheduleRunStatus(actionEl, status) {
+    var runId = actionEl.getAttribute('data-run-id') || '';
+    var run = getAllScheduleRecordRows().filter(function (item) { return item.id === runId; })[0];
+    if (!run) return;
+    var nowText = formatDateTime(new Date());
+    var override = {
+      status: status,
+      endAt: status === '执行中' ? '-' : nowText,
+      duration: status === '执行中' ? '0秒' : run.duration
+    };
+    if (status === '执行中') {
+      override.startAt = nowText;
+    }
+    state.scheduleRunOverrides[getScheduleRunOverrideKey(run.configId, run.id)] = override;
+    state.selectedScheduleRunId = run.id;
+    state.selectedScheduleRuleRunId = '';
+    state.scheduleDetailPage = 1;
+    renderAll();
+    showToast(status === '执行中' ? '执行记录已重新提交' : '执行记录已停止');
+  }
+
+  function stopScheduleRuleRun(actionEl) {
+    var runId = actionEl.getAttribute('data-run-id') || '';
+    var ruleRunId = actionEl.getAttribute('data-rule-run-id') || '';
+    var run = getAllScheduleRecordRows().filter(function (item) { return item.id === runId; })[0] || getSelectedScheduleRecordRun();
+    if (!ruleRunId || !run) return;
+    state.scheduleRuleOverrides[getScheduleRuleOverrideKey(run.configId, ruleRunId)] = {
+      status: '执行失败',
+      endAt: formatDateTime(new Date())
+    };
+    state.selectedScheduleRunId = run.id;
+    state.selectedScheduleRuleRunId = '';
+    renderAll();
+    showToast('规则任务已停止');
   }
 
   function bindEvents() {
@@ -4316,14 +5816,11 @@ DP.pages.qualityInspectReport = (function () {
           state.page = 1;
           renderAll();
         } else if (action === 'query-config') {
-          var configInput = pageEl.querySelector('[data-qir-config-keyword]');
-          var configStatus = pageEl.querySelector('[data-qir-config-status]');
-          var configExecStatus = pageEl.querySelector('[data-qir-config-exec-status]');
-          state.configKeyword = configInput ? configInput.value.trim() : '';
-          state.configStatus = configStatus ? configStatus.value : '';
-          state.configExecStatus = configExecStatus ? configExecStatus.value : '';
-          state.configPage = 1;
-          renderAll();
+          applyConfigQueryFromDom();
+        } else if (action === 'query-schedule-records') {
+          applyScheduleRecordQueryFromDom();
+        } else if (action === 'query-schedule-detail') {
+          applyScheduleDetailQueryFromDom();
         } else if (action === 'query') {
           var input = pageEl.querySelector('[data-qir-keyword]');
           state.keyword = input ? input.value.trim() : '';
@@ -4354,6 +5851,23 @@ DP.pages.qualityInspectReport = (function () {
           state.historyPage = 1;
           state.view = 'history-list';
           renderAll();
+        } else if (action === 'open-schedule-records') {
+          state.selectedConfigId = actionEl.getAttribute('data-id') || '';
+          state.selectedScheduleRunId = '';
+          state.selectedScheduleRuleRunId = '';
+          state.scheduleLogBackView = 'schedule-records';
+          state.scheduleRecordStartDate = '';
+          state.scheduleRecordEndDate = '';
+          state.scheduleRecordStatus = '';
+          state.scheduleDetailStatus = '';
+          state.scheduleDetailTaskKeyword = '';
+          state.scheduleDetailTableKeyword = '';
+          state.scheduleRecordPage = 1;
+          state.scheduleDetailPage = 1;
+          state.scheduleSqlModalOpen = false;
+          state.scheduleSql = { theme: 'dark', font: '14px', searchOpen: false };
+          state.view = 'schedule-records';
+          renderAll();
         } else if (action === 'open-history-report') {
           openHistoryReportView(actionEl.getAttribute('data-id') || '');
         } else if (action === 'report-view-tab') {
@@ -4361,11 +5875,14 @@ DP.pages.qualityInspectReport = (function () {
           renderAll();
         } else if (action === 'template-manage-tab') {
           saveTemplateEditorContent();
-          state.templateManageTab = actionEl.getAttribute('data-tab') === 'scope' ? 'scope' : 'template';
+          var targetManageTab = actionEl.getAttribute('data-tab') || 'template';
+          state.templateManageTab = targetManageTab === 'scope' || targetManageTab === 'filter' ? targetManageTab : 'template';
           state.templateDashboardModalOpen = false;
           state.templateScheduleModalOpen = false;
           state.templateScheduleDraft = null;
           state.templateScopeModalOpen = false;
+          state.templateFilterModalOpen = false;
+          state.templateFilterModalDraft = null;
           renderAll();
         } else if (action === 'template-placeholder') {
           var templateId = actionEl.getAttribute('data-id') || '';
@@ -4387,6 +5904,17 @@ DP.pages.qualityInspectReport = (function () {
           state.templateScopeModalKeyword = '';
           state.templateScopeModalTreeKey = 'all';
           state.templateScopeModalSelected = {};
+          state.templateFilterKeyword = '';
+          state.templateFilterActiveGroupId = '';
+          state.templateFilterModalOpen = false;
+          state.templateFilterModalGroupId = '';
+          state.templateFilterModalRowId = '';
+          state.templateFilterModalMode = 'visual';
+          state.templateFilterModalDraft = null;
+          state.templateFilterFieldKeyword = '';
+          state.templateFilterSql = { theme: 'dark', font: '14px', searchOpen: false };
+          state.templateFilterPages = {};
+          state.templateFilterPageSizes = {};
           state.templateVariableCollapsed = false;
           state.templateOutlineCollapsed = false;
           state.templateScheduleModalOpen = false;
@@ -4435,6 +5963,8 @@ DP.pages.qualityInspectReport = (function () {
         } else if (action === 'open-template-schedule-modal') {
           saveTemplateEditorContent();
           state.templateDashboardModalOpen = false;
+          state.startScheduleModalOpen = false;
+          state.startScheduleConfigId = '';
           state.templateScheduleModalOpen = true;
           state.templateScheduleDraft = createTemplateScheduleDraft(getSelectedReportConfig() || reportConfigs[0]);
           renderAll();
@@ -4444,6 +5974,13 @@ DP.pages.qualityInspectReport = (function () {
           renderAll();
         } else if (action === 'template-schedule-save') {
           applyTemplateScheduleDraft();
+        } else if (action === 'close-start-schedule-modal') {
+          state.startScheduleModalOpen = false;
+          state.startScheduleConfigId = '';
+          state.templateScheduleDraft = null;
+          renderAll();
+        } else if (action === 'confirm-start-schedule') {
+          applyStartScheduleDraft();
         } else if (action === 'template-preview') {
           openTemplatePreview();
         } else if (action === 'template-back-list') {
@@ -4454,9 +5991,13 @@ DP.pages.qualityInspectReport = (function () {
           state.templateNameEditing = false;
           state.templateDashboardModalOpen = false;
           state.templateScheduleModalOpen = false;
+          state.startScheduleModalOpen = false;
+          state.startScheduleConfigId = '';
           state.templateScheduleDraft = null;
           state.templateScopeModalOpen = false;
           state.templateScopeModalSelected = {};
+          state.templateFilterModalOpen = false;
+          state.templateFilterModalDraft = null;
           renderAll();
         } else if (action === 'template-save') {
           saveTemplateConfig();
@@ -4541,6 +6082,89 @@ DP.pages.qualityInspectReport = (function () {
             return !!state.templateScopeSelected[id];
           });
           if (selectedIds.length) removeTemplateScopeRows(selectedIds);
+        } else if (action === 'template-filter-create' || action === 'template-filter-add-group') {
+          var createdFilterGroup = createTemplateFilterGroup(getSelectedReportConfig() || reportConfigs[0]);
+          renderAll();
+          window.setTimeout(function () {
+            var createdGroupEl = pageEl ? pageEl.querySelector('[data-qir-template-filter-group-id="' + createdFilterGroup.id + '"]') : null;
+            if (createdGroupEl) {
+              createdGroupEl.scrollIntoView({ behavior: 'smooth', block: 'end', inline: 'nearest' });
+            }
+          }, 0);
+        } else if (action === 'template-filter-edit-group') {
+          var editGroup = getTemplateFilterGroupById(actionEl.getAttribute('data-group-id') || '');
+          if (editGroup) {
+            var editField = actionEl.getAttribute('data-field') === 'desc' ? 'desc' : 'name';
+            editGroup.editing = false;
+            editGroup.editingField = editField;
+            renderAll();
+            window.setTimeout(function () {
+              var editSelector = editField === 'desc' ? '[data-qir-template-filter-group-desc]' : '[data-qir-template-filter-group-name]';
+              var editGroupInput = pageEl ? pageEl.querySelector('[data-group-id="' + editGroup.id + '"]' + editSelector) : null;
+              if (editGroupInput) {
+                editGroupInput.focus();
+                editGroupInput.select();
+              }
+            }, 0);
+          }
+        } else if (action === 'query-template-filter') {
+          var filterGroupEl = actionEl.closest('.qir-template-filter-group');
+          var filterInput = filterGroupEl ? filterGroupEl.querySelector('[data-qir-template-filter-keyword]') : pageEl.querySelector('[data-qir-template-filter-keyword]');
+          state.templateFilterKeyword = filterInput ? filterInput.value.trim() : '';
+          Object.keys(state.templateFilterPages || {}).forEach(function (groupId) {
+            state.templateFilterPages[groupId] = 1;
+          });
+          renderAll();
+        } else if (action === 'template-filter-edit-row') {
+          openTemplateFilterModal(actionEl.getAttribute('data-group-id') || '', actionEl.getAttribute('data-row-id') || '');
+        } else if (action === 'template-filter-clear-row') {
+          clearTemplateFilterRow(actionEl.getAttribute('data-group-id') || '', actionEl.getAttribute('data-row-id') || '');
+        } else if (action === 'close-template-filter-modal') {
+          closeTemplateFilterModal();
+        } else if (action === 'template-filter-modal-tab') {
+          var nextFilterModalMode = actionEl.getAttribute('data-mode') === 'sql' ? 'sql' : 'visual';
+          var nextFilterDraft = captureTemplateFilterModalDraft();
+          if (nextFilterModalMode === 'sql' && state.templateFilterModalMode !== 'sql') {
+            nextFilterDraft.sql = buildTemplateFilterConditionFromDraft(nextFilterDraft);
+            state.templateFilterModalDraft = nextFilterDraft;
+          }
+          state.templateFilterModalMode = nextFilterModalMode;
+          renderAll();
+        } else if (action === 'template-filter-modal-save') {
+          saveTemplateFilterModal();
+        } else if (action === 'template-filter-pick-field') {
+          var pickedField = actionEl.getAttribute('data-field') || '';
+          var pickedDraft = captureTemplateFilterModalDraft();
+          if (pickedField) {
+            pickedDraft.field = pickedField;
+            pickedDraft.sql = pickedField + ' = ';
+            state.templateFilterModalDraft = pickedDraft;
+            renderAll();
+          }
+        } else if (action === 'format-template-filter-sql') {
+          var filterSqlContent = pageEl.querySelector('[data-qir-template-filter-sql-content]');
+          var filterSqlGutter = pageEl.querySelector('[data-qir-template-filter-sql-gutter]');
+          if (filterSqlContent) {
+            var formattedFilterSql = formatSqlText(filterSqlContent.textContent || '');
+            filterSqlContent.innerHTML = highlightSQL(formattedFilterSql);
+            if (filterSqlGutter) filterSqlGutter.innerHTML = lineNumbers(formattedFilterSql);
+            captureTemplateFilterModalDraft();
+            showToast('SQL 已格式化');
+          }
+        } else if (action === 'copy-template-filter-sql') {
+          var filterCopyContent = pageEl.querySelector('[data-qir-template-filter-sql-content]');
+          var filterCopyText = filterCopyContent ? filterCopyContent.textContent : '';
+          function filterCopied() { showToast('SQL 已复制'); }
+          if (navigator.clipboard && filterCopyText) navigator.clipboard.writeText(filterCopyText).then(filterCopied).catch(function () { showToast('复制失败'); });
+          else showToast(filterCopyText ? '请手动复制SQL' : '暂无可复制SQL');
+        } else if (action === 'toggle-template-filter-sql-search') {
+          captureTemplateFilterModalDraft();
+          state.templateFilterSql.searchOpen = !state.templateFilterSql.searchOpen;
+          renderAll();
+        } else if (action === 'close-template-filter-sql-search') {
+          captureTemplateFilterModalDraft();
+          state.templateFilterSql.searchOpen = false;
+          renderAll();
         } else if (action === 'open-detail') {
           state.selectedReportId = actionEl.getAttribute('data-id') || '';
           state.view = 'detail';
@@ -4551,13 +6175,36 @@ DP.pages.qualityInspectReport = (function () {
           if (state.selectedConfigId) state.reportViewTab = 'data';
           state.rulePages = {};
           renderAll();
+        } else if (action === 'back-schedule-records') {
+          state.view = 'schedule-records';
+          state.selectedScheduleRuleRunId = '';
+          state.scheduleLogBackView = 'schedule-records';
+          state.scheduleSqlModalOpen = false;
+          renderAll();
+        } else if (action === 'back-schedule-record-detail') {
+          state.view = 'schedule-record-detail';
+          state.scheduleLogBackView = 'schedule-record-detail';
+          state.scheduleSqlModalOpen = false;
+          renderAll();
         } else if (action === 'back-summary') {
           state.view = 'list';
           state.selectedConfigId = '';
           state.selectedReportId = '';
+          state.selectedScheduleRunId = '';
+          state.selectedScheduleRuleRunId = '';
+          state.scheduleLogBackView = 'schedule-records';
           state.keyword = '';
           state.page = 1;
           state.historyPage = 1;
+          state.scheduleRecordPage = 1;
+          state.scheduleDetailPage = 1;
+          state.scheduleRecordStartDate = '';
+          state.scheduleRecordEndDate = '';
+          state.scheduleRecordStatus = '';
+          state.scheduleDetailStatus = '';
+          state.scheduleDetailTaskKeyword = '';
+          state.scheduleDetailTableKeyword = '';
+          state.scheduleSqlModalOpen = false;
           state.reportViewTab = 'overview';
           renderAll();
         } else if (action === 'export-report') {
@@ -4568,8 +6215,65 @@ DP.pages.qualityInspectReport = (function () {
           exportReportWord();
         } else if (action === 'export-detail-all') {
           exportAllDetailReports(actionEl);
+        } else if (action === 'open-schedule-run-detail') {
+          state.selectedScheduleRunId = actionEl.getAttribute('data-run-id') || '';
+          state.selectedScheduleRuleRunId = '';
+          state.scheduleDetailStatus = '';
+          state.scheduleDetailTaskKeyword = '';
+          state.scheduleDetailTableKeyword = '';
+          state.scheduleDetailPage = 1;
+          state.scheduleLogBackView = 'schedule-record-detail';
+          state.scheduleSqlModalOpen = false;
+          state.view = 'schedule-record-detail';
+          renderAll();
+        } else if (action === 'stop-schedule-run') {
+          updateScheduleRunStatus(actionEl, '执行失败');
+        } else if (action === 'rerun-schedule-run') {
+          updateScheduleRunStatus(actionEl, '执行中');
+        } else if (action === 'stop-schedule-rule-run') {
+          stopScheduleRuleRun(actionEl);
         } else if (action === 'delete-config') {
           deleteReportConfig(actionEl.getAttribute('data-id') || '');
+        } else if (action === 'open-schedule-sql') {
+          state.selectedScheduleRunId = actionEl.getAttribute('data-run-id') || '';
+          state.selectedScheduleRuleRunId = actionEl.getAttribute('data-rule-run-id') || '';
+          state.scheduleLogBackView = state.selectedScheduleRuleRunId ? 'schedule-record-detail' : 'schedule-records';
+          state.scheduleSqlModalOpen = true;
+          state.scheduleSql.theme = state.scheduleSql.theme || 'dark';
+          renderAll();
+        } else if (action === 'close-schedule-sql') {
+          state.scheduleSqlModalOpen = false;
+          renderAll();
+        } else if (action === 'open-schedule-log') {
+          state.selectedScheduleRunId = actionEl.getAttribute('data-run-id') || '';
+          state.selectedScheduleRuleRunId = actionEl.getAttribute('data-rule-run-id') || '';
+          state.scheduleLogBackView = state.selectedScheduleRuleRunId ? 'schedule-record-detail' : 'schedule-records';
+          state.scheduleSqlModalOpen = false;
+          state.view = 'schedule-log';
+          renderAll();
+        } else if (action === 'format-schedule-sql') {
+          var sqlContent = pageEl.querySelector('[data-qir-schedule-sql-content]');
+          var sqlGutter = pageEl.querySelector('[data-qir-schedule-sql-gutter]');
+          if (sqlContent) {
+            var formattedSql = formatSqlText(sqlContent.textContent || '');
+            sqlContent.innerHTML = highlightSQL(formattedSql);
+            if (sqlGutter) sqlGutter.innerHTML = lineNumbers(formattedSql);
+            showToast('SQL 已格式化');
+          }
+        } else if (action === 'copy-schedule-sql') {
+          var copyContent = pageEl.querySelector('[data-qir-schedule-sql-content]');
+          var copyText = copyContent ? copyContent.textContent : '';
+          function copied() { showToast('SQL 已复制'); }
+          if (navigator.clipboard && copyText) navigator.clipboard.writeText(copyText).then(copied).catch(function () { showToast('复制失败'); });
+          else showToast(copyText ? '请手动复制SQL' : '暂无可复制SQL');
+        } else if (action === 'toggle-schedule-sql-search') {
+          state.scheduleSql.searchOpen = !state.scheduleSql.searchOpen;
+          renderAll();
+        } else if (action === 'close-schedule-sql-search') {
+          state.scheduleSql.searchOpen = false;
+          renderAll();
+        } else if (action === 'execute-config-once') {
+          confirmConfigExecuteOnce(actionEl.getAttribute('data-id') || '');
         } else if (action === 'start-config') {
           confirmConfigScheduleAction(actionEl.getAttribute('data-id') || '', 'start');
         } else if (action === 'stop-config') {
@@ -4615,6 +6319,28 @@ DP.pages.qualityInspectReport = (function () {
         return;
       }
 
+      var scheduleRecordPageBtn = e.target.closest('[data-qir-schedule-record-page]');
+      if (scheduleRecordPageBtn && pageEl.contains(scheduleRecordPageBtn) && !scheduleRecordPageBtn.disabled) {
+        var totalScheduleRecordPages = Math.max(1, Math.ceil(getScheduleRecordRows().length / state.scheduleRecordPageSize));
+        var scheduleRecordTarget = scheduleRecordPageBtn.getAttribute('data-qir-schedule-record-page');
+        if (scheduleRecordTarget === 'prev') state.scheduleRecordPage = Math.max(1, state.scheduleRecordPage - 1);
+        else if (scheduleRecordTarget === 'next') state.scheduleRecordPage = Math.min(totalScheduleRecordPages, state.scheduleRecordPage + 1);
+        else state.scheduleRecordPage = Number(scheduleRecordTarget) || 1;
+        renderAll();
+        return;
+      }
+
+      var scheduleDetailPageBtn = e.target.closest('[data-qir-schedule-detail-page]');
+      if (scheduleDetailPageBtn && pageEl.contains(scheduleDetailPageBtn) && !scheduleDetailPageBtn.disabled) {
+        var totalScheduleDetailPages = Math.max(1, Math.ceil(getScheduleRuleExecutionRows(getSelectedScheduleRecordRun()).length / state.scheduleDetailPageSize));
+        var scheduleDetailTarget = scheduleDetailPageBtn.getAttribute('data-qir-schedule-detail-page');
+        if (scheduleDetailTarget === 'prev') state.scheduleDetailPage = Math.max(1, state.scheduleDetailPage - 1);
+        else if (scheduleDetailTarget === 'next') state.scheduleDetailPage = Math.min(totalScheduleDetailPages, state.scheduleDetailPage + 1);
+        else state.scheduleDetailPage = Number(scheduleDetailTarget) || 1;
+        renderAll();
+        return;
+      }
+
       var pageBtn = e.target.closest('[data-qir-page]');
       if (pageBtn && pageEl.contains(pageBtn) && !pageBtn.disabled) {
         var totalPages = Math.max(1, Math.ceil(getReportRows().length / state.pageSize));
@@ -4634,6 +6360,22 @@ DP.pages.qualityInspectReport = (function () {
         else if (scopeTarget === 'next') state.templateScopePage = Math.min(scopeTotalPages, state.templateScopePage + 1);
         else state.templateScopePage = Number(scopeTarget) || 1;
         renderAll();
+        return;
+      }
+
+      var filterPageBtn = e.target.closest('[data-qir-template-filter-page]');
+      if (filterPageBtn && pageEl.contains(filterPageBtn) && !filterPageBtn.disabled) {
+        var filterGroupId = filterPageBtn.getAttribute('data-group-id') || '';
+        var filterGroup = getTemplateFilterGroupById(filterGroupId);
+        if (filterGroup) {
+          var filterTotalPages = Math.max(1, Math.ceil(getTemplateFilterFilteredRows(filterGroup).length / getTemplateFilterPageSize(filterGroup)));
+          var filterTarget = filterPageBtn.getAttribute('data-qir-template-filter-page');
+          var filterCurrentPage = getTemplateFilterGroupPage(filterGroup);
+          if (filterTarget === 'prev') state.templateFilterPages[filterGroup.id] = Math.max(1, filterCurrentPage - 1);
+          else if (filterTarget === 'next') state.templateFilterPages[filterGroup.id] = Math.min(filterTotalPages, filterCurrentPage + 1);
+          else state.templateFilterPages[filterGroup.id] = Number(filterTarget) || 1;
+          renderAll();
+        }
         return;
       }
 
@@ -4718,6 +6460,16 @@ DP.pages.qualityInspectReport = (function () {
         draft[e.target.getAttribute('data-qir-template-schedule-field')] = e.target.value;
         state.templateScheduleDraft = draft;
         updateTemplateScheduleHintDom();
+      } else if (e.target.matches('[data-qir-template-filter-field-keyword]')) {
+        state.templateFilterFieldKeyword = e.target.value;
+        renderAll();
+        var filterFieldSearch = pageEl.querySelector('[data-qir-template-filter-field-keyword]');
+        if (filterFieldSearch) {
+          filterFieldSearch.focus();
+          filterFieldSearch.setSelectionRange(filterFieldSearch.value.length, filterFieldSearch.value.length);
+        }
+      } else if (e.target.matches('[data-qir-template-filter-value], [data-qir-template-filter-desc]') || e.target.closest('[data-qir-template-filter-sql-content]')) {
+        captureTemplateFilterModalDraft();
       } else if (e.target.closest('[data-qir-template-editor]')) {
         saveTemplateEditorContent();
         saveTemplateEditorSelection();
@@ -4740,6 +6492,18 @@ DP.pages.qualityInspectReport = (function () {
       if (e.target.matches('[data-qir-template-name-input]')) {
         saveTemplateNameFromInput(e.target, { render: false });
         window.setTimeout(renderAll, 0);
+      } else if (e.target.matches('[data-qir-template-filter-group-name], [data-qir-template-filter-group-desc]')) {
+        saveTemplateFilterGroupField(e.target);
+        var filterMeta = e.target.closest('.qir-template-filter-group-meta');
+        var nextFocus = e.relatedTarget;
+        if (!filterMeta || !nextFocus || !filterMeta.contains(nextFocus)) {
+          var savedFilterGroup = getTemplateFilterGroupById(e.target.getAttribute('data-group-id') || '');
+          if (savedFilterGroup) {
+            savedFilterGroup.editing = false;
+            savedFilterGroup.editingField = '';
+          }
+          window.setTimeout(renderAll, 0);
+        }
       }
     });
 
@@ -4755,13 +6519,63 @@ DP.pages.qualityInspectReport = (function () {
         state.historyPageSize = Number(e.target.value) || 10;
         state.historyPage = 1;
         renderAll();
+      } else if (e.target.matches('[data-qir-schedule-record-page-size]')) {
+        state.scheduleRecordPageSize = Number(e.target.value) || 10;
+        state.scheduleRecordPage = 1;
+        state.scheduleDetailPage = 1;
+        state.selectedScheduleRunId = '';
+        state.selectedScheduleRuleRunId = '';
+        state.scheduleLogBackView = 'schedule-records';
+        state.scheduleSqlModalOpen = false;
+        renderAll();
+      } else if (e.target.matches('[data-qir-schedule-detail-page-size]')) {
+        state.scheduleDetailPageSize = Number(e.target.value) || 10;
+        state.scheduleDetailPage = 1;
+        renderAll();
       } else if (e.target.matches('[data-qir-page-size]')) {
         state.pageSize = Number(e.target.value) || 10;
         state.page = 1;
         renderAll();
+      } else if (e.target.matches('[data-qir-config-status], [data-qir-config-exec-status], [data-qir-config-data-range-status]')) {
+        applyConfigQueryFromDom();
+      } else if (e.target.matches('[data-qir-schedule-record-status], [data-qir-schedule-start-date], [data-qir-schedule-end-date]')) {
+        applyScheduleRecordQueryFromDom();
+      } else if (e.target.matches('[data-qir-schedule-detail-status]')) {
+        applyScheduleDetailQueryFromDom();
+      } else if (e.target.matches('[data-qir-schedule-sql-theme]')) {
+        state.scheduleSql.theme = e.target.value === 'light' ? 'light' : 'dark';
+        var scheduleSqlEditor = pageEl.querySelector('[data-qir-schedule-sql-editor]');
+        if (scheduleSqlEditor) {
+          scheduleSqlEditor.classList.toggle('theme-light', state.scheduleSql.theme === 'light');
+          scheduleSqlEditor.classList.toggle('theme-dark', state.scheduleSql.theme !== 'light');
+        }
+      } else if (e.target.matches('[data-qir-schedule-sql-font]')) {
+        state.scheduleSql.font = e.target.value || '14px';
+        var scheduleFontEditor = pageEl.querySelector('[data-qir-schedule-sql-editor]');
+        if (scheduleFontEditor) scheduleFontEditor.style.fontSize = state.scheduleSql.font;
+      } else if (e.target.matches('[data-qir-template-filter-sql-theme]')) {
+        state.templateFilterSql.theme = e.target.value === 'light' ? 'light' : 'dark';
+        var filterSqlEditor = pageEl.querySelector('[data-qir-template-filter-sql-editor]');
+        if (filterSqlEditor) {
+          filterSqlEditor.classList.toggle('theme-light', state.templateFilterSql.theme === 'light');
+          filterSqlEditor.classList.toggle('theme-dark', state.templateFilterSql.theme !== 'light');
+        }
+      } else if (e.target.matches('[data-qir-template-filter-sql-font]')) {
+        state.templateFilterSql.font = e.target.value || '14px';
+        var filterFontEditor = pageEl.querySelector('[data-qir-template-filter-sql-editor]');
+        if (filterFontEditor) filterFontEditor.style.fontSize = state.templateFilterSql.font;
+      } else if (e.target.matches('[data-qir-template-filter-field], [data-qir-template-filter-operator], [data-qir-template-filter-apply-scope]')) {
+        captureTemplateFilterModalDraft();
       } else if (e.target.matches('[data-qir-template-scope-page-size]')) {
         state.templateScopePageSize = Number(e.target.value) || 10;
         state.templateScopePage = 1;
+        renderAll();
+      } else if (e.target.matches('[data-qir-template-filter-page-size]')) {
+        var filterPageSizeGroupId = e.target.getAttribute('data-group-id') || '';
+        if (filterPageSizeGroupId) {
+          state.templateFilterPageSizes[filterPageSizeGroupId] = Number(e.target.value) || 10;
+          state.templateFilterPages[filterPageSizeGroupId] = 1;
+        }
         renderAll();
       } else if (e.target.matches('[data-qir-template-scope-check-all]')) {
         getVisibleTemplateScopeRows().forEach(function (item) {
@@ -4792,7 +6606,9 @@ DP.pages.qualityInspectReport = (function () {
       if (removeSelectedTemplateVariable(e) || removeSelectedTemplateDashboard(e)) {
         return;
       }
-      if (e.key === 'Escape' && state.templateScopeModalOpen) {
+      if (e.key === 'Escape' && state.templateFilterModalOpen) {
+        closeTemplateFilterModal();
+      } else if (e.key === 'Escape' && state.templateScopeModalOpen) {
         closeTemplateScopeModal();
       } else if (e.key === 'Escape' && state.templateDashboardModalOpen) {
         removeTemplateDashboardInsertMarker();
@@ -4802,17 +6618,23 @@ DP.pages.qualityInspectReport = (function () {
         state.templateScheduleModalOpen = false;
         state.templateScheduleDraft = null;
         renderAll();
+      } else if (e.key === 'Escape' && state.startScheduleModalOpen) {
+        state.startScheduleModalOpen = false;
+        state.startScheduleConfigId = '';
+        state.templateScheduleDraft = null;
+        renderAll();
+      } else if (e.key === 'Escape' && state.scheduleSqlModalOpen) {
+        state.scheduleSqlModalOpen = false;
+        renderAll();
       } else if (e.key === 'Enter' && e.target.matches('[data-qir-template-name-input]')) {
         e.preventDefault();
         saveTemplateNameFromInput(e.target);
       } else if (e.key === 'Enter' && e.target.matches('[data-qir-config-keyword]')) {
-        var configStatus = pageEl.querySelector('[data-qir-config-status]');
-        var configExecStatus = pageEl.querySelector('[data-qir-config-exec-status]');
-        state.configKeyword = e.target.value.trim();
-        state.configStatus = configStatus ? configStatus.value : '';
-        state.configExecStatus = configExecStatus ? configExecStatus.value : '';
-        state.configPage = 1;
-        renderAll();
+        applyConfigQueryFromDom(e.target.value);
+      } else if (e.key === 'Enter' && (e.target.matches('[data-qir-schedule-start-date]') || e.target.matches('[data-qir-schedule-end-date]'))) {
+        applyScheduleRecordQueryFromDom();
+      } else if (e.key === 'Enter' && (e.target.matches('[data-qir-schedule-detail-task]') || e.target.matches('[data-qir-schedule-detail-table]'))) {
+        applyScheduleDetailQueryFromDom();
       } else if (e.key === 'Enter' && e.target.matches('[data-qir-keyword]')) {
         state.keyword = e.target.value.trim();
         state.page = 1;
@@ -4821,6 +6643,9 @@ DP.pages.qualityInspectReport = (function () {
         state.templateScopeKeyword = e.target.value.trim();
         state.templateScopePage = 1;
         clearTemplateScopeSelection();
+        renderAll();
+      } else if (e.key === 'Enter' && e.target.matches('[data-qir-template-filter-keyword]')) {
+        state.templateFilterKeyword = e.target.value.trim();
         renderAll();
       } else if (e.key === 'Enter' && e.target.matches('[data-qir-template-scope-modal-keyword]')) {
         state.templateScopeModalKeyword = e.target.value.trim();
@@ -4836,6 +6661,7 @@ DP.pages.qualityInspectReport = (function () {
     state.configKeyword = '';
     state.configStatus = '';
     state.configExecStatus = '';
+    state.configDataRangeStatus = '';
     state.configPage = 1;
     state.configPageSize = 10;
     state.selectedConfigId = '';
@@ -4846,6 +6672,22 @@ DP.pages.qualityInspectReport = (function () {
     state.pageSize = 10;
     state.historyPage = 1;
     state.historyPageSize = 10;
+    state.scheduleRecordPage = 1;
+    state.scheduleRecordPageSize = 10;
+    state.scheduleDetailPage = 1;
+    state.scheduleDetailPageSize = 10;
+    state.scheduleRecordStatus = '';
+    state.scheduleRecordStartDate = '';
+    state.scheduleRecordEndDate = '';
+    state.scheduleDetailStatus = '';
+    state.scheduleDetailTaskKeyword = '';
+    state.scheduleDetailTableKeyword = '';
+    state.scheduleRunOverrides = {};
+    state.selectedScheduleRunId = '';
+    state.selectedScheduleRuleRunId = '';
+    state.scheduleLogBackView = 'schedule-records';
+    state.scheduleSqlModalOpen = false;
+    state.scheduleSql = { theme: 'dark', font: '14px', searchOpen: false };
     state.selectedReportId = '';
     state.reportViewTab = 'overview';
     state.rulePages = {};
@@ -4863,6 +6705,17 @@ DP.pages.qualityInspectReport = (function () {
     state.templateScopeModalTreeKey = 'all';
     state.templateScopeModalKeyword = '';
     state.templateScopeModalSelected = {};
+    state.templateFilterKeyword = '';
+    state.templateFilterActiveGroupId = '';
+    state.templateFilterModalOpen = false;
+    state.templateFilterModalGroupId = '';
+    state.templateFilterModalRowId = '';
+    state.templateFilterModalMode = 'visual';
+    state.templateFilterModalDraft = null;
+    state.templateFilterFieldKeyword = '';
+    state.templateFilterSql = { theme: 'dark', font: '14px', searchOpen: false };
+    state.templateFilterPages = {};
+    state.templateFilterPageSizes = {};
     state.templateVariableKeyword = '';
     state.templateVariableCollapsed = false;
     state.templateOutlineCollapsed = false;
@@ -4872,6 +6725,8 @@ DP.pages.qualityInspectReport = (function () {
     state.templateDashboardPage = 1;
     state.templateDashboardSelected = {};
     state.templateScheduleModalOpen = false;
+    state.startScheduleModalOpen = false;
+    state.startScheduleConfigId = '';
     state.templateScheduleDraft = null;
     state.treeOpen = {
       all: true,
