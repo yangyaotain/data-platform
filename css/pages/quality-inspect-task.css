@@ -360,7 +360,7 @@
 }
 
 .dqit-table {
-  min-width: 1480px;
+  min-width: 1360px;
   table-layout: fixed;
   border: 1px solid #dfe5ec;
 }
@@ -389,13 +389,12 @@
 }
 
 .dqit-w-check { width: 38px; }
-.dqit-w-name { width: 17%; }
+.dqit-w-name { width: 18%; }
 .dqit-w-target { width: 13%; }
+.dqit-w-source { width: 14%; }
 .dqit-w-type { width: 10%; }
 .dqit-w-frequency { width: 11%; }
 .dqit-w-status { width: 9%; }
-.dqit-w-creator { width: 9%; }
-.dqit-w-created { width: 13%; }
 .dqit-w-last { width: 13%; }
 .dqit-w-action { width: 250px; }
 
@@ -444,6 +443,15 @@
 .dqit-task-target span {
   color: #7b8fa8;
   font-size: 12px;
+}
+
+.dqit-data-source {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #26384d;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dqit-status {

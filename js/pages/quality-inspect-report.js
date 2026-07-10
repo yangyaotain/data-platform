@@ -18,6 +18,10 @@ DP.pages.qualityInspectReport = (function () {
     configStatus: '',
     configExecStatus: '',
     configDataRangeStatus: '',
+    relatedTaskFilter: '',
+    relatedTaskDropdownOpen: false,
+    relatedTaskKeyword: '',
+    editingConfigNameId: '',
     configPage: 1,
     configPageSize: 10,
     selectedConfigId: '',
@@ -53,7 +57,10 @@ DP.pages.qualityInspectReport = (function () {
     templateZoom: 100,
     reportPreviewZoom: 100,
     templateNameEditing: false,
+    templateDescEditing: false,
     templateManageTab: 'template',
+    templateEditTarget: 'common',
+    templateEditGroupId: '',
     templateScopeKeyword: '',
     templateScopePage: 1,
     templateScopePageSize: 10,
@@ -77,6 +84,8 @@ DP.pages.qualityInspectReport = (function () {
     templateVariableCollapsed: false,
     templateOutlineCollapsed: false,
     templateDashboardModalOpen: false,
+    templateCopyModalOpen: false,
+    templateCopyTargetGroupId: '',
     templateDashboardKeyword: '',
     templateDashboardFilter: 'all',
     templateDashboardPage: 1,
@@ -234,6 +243,15 @@ DP.pages.qualityInspectReport = (function () {
     'cfg-master-data': '执行失败',
     'cfg-business-system': '执行成功',
     'cfg-test-env': '执行失败'
+  };
+
+  var configTaskNameMap = {
+    'cfg-core-trade': 'OA基础数据月度检核任务',
+    'cfg-warehouse-layer': '数仓分层质量每日稽查任务',
+    'cfg-customer-service': '客户运营数据质量周检任务',
+    'cfg-master-data': '主数据标准映射月度稽查任务',
+    'cfg-business-system': 'OA业务系统月度稽查任务',
+    'cfg-test-env': '测试环境质量周检任务'
   };
 
   var reportConfigs = [
@@ -395,7 +413,6 @@ DP.pages.qualityInspectReport = (function () {
     { name: '该表稽查字段数', desc: '单表参与检核的字段数量', sample: '16' },
     { name: '该表字段数', desc: '单表参与检核的数据量，按万条展示', sample: '2.45' },
     { name: '该表稽查问题总记录数', desc: '单表检核发现的问题记录数', sample: '12' },
-    { name: '调度周期', desc: '报告模板的定时调度周期', sample: '每月 / 1号 / 10:05:02' },
     { name: '最后生成时间', desc: '报告最近一次生成时间', sample: '2026-06-30 10:05:02' },
     { name: '年份', desc: '报告生成时的当前年份', sample: '2026年' },
     { name: '月份', desc: '报告生成时的当前月份', sample: '2026年7月' },
@@ -1423,8 +1440,8 @@ DP.pages.qualityInspectReport = (function () {
       config.reportIds = oaQualityReportIds.slice();
     }
     if (config.id === 'cfg-core-trade') {
-      config.name = 'OA系统数据质量检核报告';
-      config.desc = '按月汇总 OA 系统组织、员工、岗位、角色、流程、考勤、资产等基础表的数据质量检核结果。';
+      if (!config.nameEdited) config.name = 'OA系统数据质量检核报告';
+      if (!config.descEdited) config.desc = '按月汇总 OA 系统组织、员工、岗位、角色、流程、考勤、资产等基础表的数据质量检核结果。';
       if (!config.cycle || !config.cycle.type) config.cycle = { type: '每月', day: '1号', time: '10:05:02' };
       config.lastGeneratedTime = '2026-06-30 10:05:02';
     }
@@ -1487,6 +1504,11 @@ DP.pages.qualityInspectReport = (function () {
 
   function getSelectedReportConfig() {
     return getReportConfigById(state.selectedConfigId);
+  }
+
+  function getEditableReportConfigById(id) {
+    var baseId = getConfigBaseId(id);
+    return reportConfigs.filter(function (item) { return item.id === baseId; })[0] || null;
   }
 
   function createNewTemplateConfig() {
@@ -1859,6 +1881,9 @@ DP.pages.qualityInspectReport = (function () {
   function getConfigRows() {
     var rows = isScheduleSection() ? reportConfigs.slice() : getReportConfigRowsForReportList();
     var keyword = state.configKeyword.trim().toLowerCase();
+    if (!isScheduleSection() && state.relatedTaskFilter) {
+      rows = rows.filter(function (item) { return getScheduleTaskName(item) === state.relatedTaskFilter; });
+    }
     if (isScheduleSection() && state.configStatus) {
       rows = rows.filter(function (item) { return item.status === state.configStatus; });
     }
@@ -1874,8 +1899,10 @@ DP.pages.qualityInspectReport = (function () {
     if (keyword) {
       rows = rows.filter(function (item) {
         var displayName = isScheduleSection() ? getScheduleTaskName(item) : item.name;
+        var taskName = getScheduleTaskName(item);
         return displayName.toLowerCase().indexOf(keyword) >= 0 ||
           item.name.toLowerCase().indexOf(keyword) >= 0 ||
+          taskName.toLowerCase().indexOf(keyword) >= 0 ||
           item.desc.toLowerCase().indexOf(keyword) >= 0 ||
           (isScheduleSection() && item.status.toLowerCase().indexOf(keyword) >= 0) ||
           (isScheduleSection() && getConfigExecutionStatus(item).toLowerCase().indexOf(keyword) >= 0) ||
@@ -2312,6 +2339,105 @@ DP.pages.qualityInspectReport = (function () {
 
   function getTemplateFilterGroupById(groupId) {
     return getTemplateFilterGroup(getSelectedReportConfig() || reportConfigs[0], groupId);
+  }
+
+  function getTemplateApplyMode(config) {
+    return config && config.templateApplyMode === 'group' ? 'group' : 'common';
+  }
+
+  function setTemplateApplyMode(config, mode) {
+    if (!config) return;
+    config.templateApplyMode = mode === 'group' ? 'group' : 'common';
+    if (config.templateApplyMode === 'common') {
+      state.templateEditTarget = 'common';
+      state.templateEditGroupId = '';
+    }
+  }
+
+  function getTemplateGroupById(config, groupId) {
+    return getTemplateFilterGroups(config).filter(function (item) { return item.id === groupId; })[0] || null;
+  }
+
+  function getTemplateCommonHtml(config) {
+    return (config && config.templateCommonHtml) || '';
+  }
+
+  function getTemplateGroupHtml(group) {
+    return (group && group.templateHtml) || '';
+  }
+
+  function getTemplateEditorStorageHtml(config, target, groupId) {
+    if (target === 'group') {
+      return getTemplateGroupHtml(getTemplateGroupById(config, groupId));
+    }
+    return getTemplateCommonHtml(config);
+  }
+
+  function getTemplateEditorFallbackHtml(config) {
+    return getTemplateCommonHtml(config) || renderTemplateEditorDefaultContent();
+  }
+
+  function persistTemplateEditorContent() {
+    var config = getSelectedReportConfig() || reportConfigs[0];
+    if (!config) return;
+    if (state.templateEditTarget === 'group' && state.templateEditGroupId) {
+      var group = getTemplateGroupById(config, state.templateEditGroupId);
+      if (group) {
+        group.templateHtml = state.templateEditorHtml || getTemplateEditorFallbackHtml(config);
+        group.templateUpdatedAt = formatDateTime(new Date());
+      }
+      return;
+    }
+    config.templateCommonHtml = state.templateEditorHtml || renderTemplateEditorDefaultContent();
+    config.templateCommonUpdatedAt = formatDateTime(new Date());
+  }
+
+  function loadTemplateEditorContent(config, target, groupId, options) {
+    config = config || getSelectedReportConfig() || reportConfigs[0];
+    target = target === 'group' ? 'group' : 'common';
+    var group = target === 'group' ? getTemplateGroupById(config, groupId) : null;
+    state.templateEditTarget = group ? 'group' : 'common';
+    state.templateEditGroupId = group ? group.id : '';
+    state.templateEditorHtml = getTemplateEditorStorageHtml(config, state.templateEditTarget, state.templateEditGroupId);
+    if (options && options.copyCommon && group) {
+      group.templateHtml = getTemplateEditorFallbackHtml(config);
+      group.templateUpdatedAt = formatDateTime(new Date());
+      state.templateEditorHtml = group.templateHtml;
+    } else if (options && options.useCommonFallback && group && !state.templateEditorHtml) {
+      state.templateEditorHtml = getTemplateEditorFallbackHtml(config);
+    }
+  }
+
+  function loadFirstTemplateGroupEditor(config) {
+    config = config || getSelectedReportConfig() || reportConfigs[0];
+    var groups = getTemplateFilterGroups(config);
+    if (!groups.length) {
+      loadTemplateEditorContent(config, 'common');
+      return;
+    }
+    var group = getTemplateGroupById(config, state.templateEditGroupId) || groups[0];
+    loadTemplateEditorContent(config, 'group', group.id, { useCommonFallback: true });
+  }
+
+  function getTemplateEditLabel(config) {
+    if (state.templateEditTarget === 'group' && state.templateEditGroupId) {
+      var group = getTemplateGroupById(config, state.templateEditGroupId);
+      return group ? group.name + '模板' : '分组模板';
+    }
+    return '通用模板';
+  }
+
+  function ensureTemplateEditorTarget(config) {
+    config = config || getSelectedReportConfig() || reportConfigs[0];
+    if (getTemplateApplyMode(config) !== 'group') {
+      if (state.templateEditTarget !== 'common') {
+        loadTemplateEditorContent(config, 'common');
+      }
+      return;
+    }
+    if (state.templateEditTarget !== 'group' || !getTemplateGroupById(config, state.templateEditGroupId)) {
+      loadFirstTemplateGroupEditor(config);
+    }
   }
 
   function getTemplateFilterRow(group, rowId) {
@@ -2942,6 +3068,9 @@ DP.pages.qualityInspectReport = (function () {
   }
 
   function getScheduleTaskName(item) {
+    if (item && item.taskName) return String(item.taskName).trim();
+    var configId = item && item.id ? getConfigBaseId(item.id) : '';
+    if (configId && configTaskNameMap[configId]) return configTaskNameMap[configId];
     var name = String(item && item.name ? item.name : '未命名').trim();
     var baseName = name
       .replace(/稽查报告模板$/, '')
@@ -2956,6 +3085,71 @@ DP.pages.qualityInspectReport = (function () {
       .trim();
     if (!baseName) baseName = '未命名';
     return /的任务$/.test(baseName) ? baseName : baseName + '的任务';
+  }
+
+  function getRelatedTaskOptions() {
+    var seen = {};
+    var options = [];
+    getReportConfigRowsForReportList().forEach(function (item) {
+      var taskName = getScheduleTaskName(item);
+      if (taskName && !seen[taskName]) {
+        seen[taskName] = true;
+        options.push(taskName);
+      }
+    });
+    return options;
+  }
+
+  function getFilteredRelatedTaskOptions() {
+    var keyword = normalize(state.relatedTaskKeyword);
+    return getRelatedTaskOptions().filter(function (item) {
+      return !keyword || normalize(item).indexOf(keyword) >= 0;
+    });
+  }
+
+  function renderRelatedTaskFilter() {
+    var selected = state.relatedTaskFilter;
+    var isOpen = !!state.relatedTaskDropdownOpen;
+    var options = getFilteredRelatedTaskOptions();
+    return '<span class="qir-query-label qir-query-label-gap">关联任务</span>' +
+      '<div class="qir-search-select' + (isOpen ? ' open' : '') + '" data-qir-related-task-select>' +
+        '<button class="qir-search-select-value' + (selected ? '' : ' placeholder') + '" type="button" data-qir-action="toggle-related-task-filter" aria-label="关联任务筛选">' +
+          '<span>' + escapeHtml(selected || '全部任务') + '</span><i class="bi bi-chevron-down"></i>' +
+        '</button>' +
+        (isOpen ? '<div class="qir-search-select-menu">' +
+          '<div class="qir-search-select-input"><i class="bi bi-search"></i><input type="text" data-qir-related-task-search value="' + escapeHtml(state.relatedTaskKeyword) + '" placeholder="搜索关联任务"></div>' +
+          '<div class="qir-search-select-list">' +
+            '<button type="button" data-qir-action="choose-related-task-filter" data-value=""' + (!selected ? ' class="active"' : '') + '><span>全部任务</span></button>' +
+            (options.length ? options.map(function (item) {
+              return '<button type="button" data-qir-action="choose-related-task-filter" data-value="' + escapeHtml(item) + '"' + (item === selected ? ' class="active"' : '') + '><span>' + escapeHtml(item) + '</span></button>';
+            }).join('') : '<div class="qir-search-select-empty">暂无匹配任务</div>') +
+          '</div>' +
+        '</div>' : '') +
+      '</div>';
+  }
+
+  function renderRelatedScheduleTaskLink(item) {
+    var taskName = getScheduleTaskName(item);
+    return '<button class="qir-related-task-link" type="button" data-qir-action="open-related-schedule" data-id="' + escapeHtml(item.id) + '" title="跳转任务调度：' + escapeHtml(taskName) + '">' +
+      '<i class="bi bi-diagram-3"></i><span>' + escapeHtml(taskName) + '</span>' +
+    '</button>';
+  }
+
+  function renderConfigNameCell(item, configName, scheduleMode) {
+    if (scheduleMode) {
+      return '<div class="qir-config-name"><b>' + escapeHtml(configName) + '</b></div>';
+    }
+    if (state.editingConfigNameId === item.id) {
+      var editableConfig = getEditableReportConfigById(item.id) || item;
+      var suffix = item.dataRangeGroupName ? '<span class="qir-config-name-edit-suffix">-' + escapeHtml(item.dataRangeGroupName) + '</span>' : '';
+      return '<div class="qir-config-name editing"><input class="qir-config-name-input" type="text" data-qir-config-name-input data-id="' + escapeHtml(item.id) + '" value="' + escapeHtml(editableConfig.name || configName) + '" aria-label="编辑报告名称">' + suffix + '</div>';
+    }
+    return '<div class="qir-config-name">' +
+      '<div class="qir-config-title-row">' +
+        '<b title="' + escapeHtml(configName) + '">' + escapeHtml(configName) + '</b>' +
+        '<button class="qir-config-name-edit" type="button" data-qir-action="edit-config-name" data-id="' + escapeHtml(item.id) + '" title="编辑报告名称" aria-label="编辑报告名称"><i class="bi bi-pencil-square"></i></button>' +
+      '</div>' +
+    '</div>';
   }
 
   function renderConfigExecutionStatus(status) {
@@ -3089,19 +3283,23 @@ DP.pages.qualityInspectReport = (function () {
     }).join('');
   }
 
-  function renderTemplateResourcePanel() {
+  function renderTemplateResourcePanel(config) {
+    config = config || getSelectedReportConfig() || reportConfigs[0];
     var collapsed = !!state.templateVariableCollapsed;
-    return '<aside class="qir-template-left' + (collapsed ? ' collapsed' : '') + '">' +
-      '<div class="qir-template-side-head">' +
-        '<div class="qir-template-head-main"><h3>指标变量</h3><p>变量占位展示：${变量名}</p></div>' +
-        '<button class="qir-template-panel-toggle" type="button" data-qir-action="toggle-template-variable-panel" title="' + (collapsed ? '展开指标变量' : '收起指标变量') + '" aria-label="' + (collapsed ? '展开指标变量' : '收起指标变量') + '"><i class="bi ' + (collapsed ? 'bi-chevron-right' : 'bi-chevron-left') + '"></i></button>' +
-      '</div>' +
-      '<div class="qir-template-collapsed-label"><i class="bi bi-braces"></i><span>指标变量</span></div>' +
-      (collapsed ? '' : '<div class="qir-template-side-scroll">' +
-        '<label class="qir-template-variable-search"><i class="bi bi-search"></i><input type="text" data-qir-template-variable-search value="' + escapeHtml(state.templateVariableKeyword) + '" placeholder="搜索变量名称、说明或示例"></label>' +
-        '<div class="qir-template-variable-list">' + renderTemplateVariableList() + '</div>' +
-      '</div>') +
-    '</aside>';
+    return '<div class="qir-template-left-stack' + (collapsed ? ' collapsed' : '') + '">' +
+      renderTemplateStrategyPanel(config) +
+      '<aside class="qir-template-left' + (collapsed ? ' collapsed' : '') + '">' +
+        '<div class="qir-template-side-head">' +
+          '<div class="qir-template-head-main"><h3>指标变量</h3><p>变量占位展示：${变量名}</p></div>' +
+          '<button class="qir-template-panel-toggle" type="button" data-qir-action="toggle-template-variable-panel" title="' + (collapsed ? '展开指标变量' : '收起指标变量') + '" aria-label="' + (collapsed ? '展开指标变量' : '收起指标变量') + '"><i class="bi ' + (collapsed ? 'bi-chevron-right' : 'bi-chevron-left') + '"></i></button>' +
+        '</div>' +
+        '<div class="qir-template-collapsed-label"><i class="bi bi-braces"></i><span>指标变量</span></div>' +
+        (collapsed ? '' : '<div class="qir-template-side-scroll">' +
+          '<label class="qir-template-variable-search"><i class="bi bi-search"></i><input type="text" data-qir-template-variable-search value="' + escapeHtml(state.templateVariableKeyword) + '" placeholder="搜索变量名称、说明或示例"></label>' +
+          '<div class="qir-template-variable-list">' + renderTemplateVariableList() + '</div>' +
+        '</div>') +
+      '</aside>' +
+    '</div>';
   }
 
   function getTemplateDashboardRows() {
@@ -3192,6 +3390,7 @@ DP.pages.qualityInspectReport = (function () {
     var editor = getTemplateEditorEl();
     if (editor) {
       state.templateEditorHtml = getTemplateEditorSerializableHtml(editor);
+      persistTemplateEditorContent();
     }
   }
 
@@ -3302,7 +3501,8 @@ DP.pages.qualityInspectReport = (function () {
       return;
     }
     state.templateEditorHtml = getTemplateEditorSerializableHtml(editor);
-    showToast('保存成功：报告模板已保存');
+    persistTemplateEditorContent();
+    showToast('保存成功：' + getTemplateEditLabel(getSelectedReportConfig() || reportConfigs[0]) + '已保存');
   }
 
   function saveTemplateNameFromInput(input, options) {
@@ -3310,8 +3510,22 @@ DP.pages.qualityInspectReport = (function () {
     var config = getSelectedReportConfig() || reportConfigs[0];
     if (!config || !input) return;
     config.name = input.value.trim() || '未命名任务调度';
+    config.nameEdited = true;
     state.templateNameEditing = false;
     showToast('名称已保存');
+    if (!options || options.render !== false) {
+      renderAll();
+    }
+  }
+
+  function saveTemplateDescFromInput(input, options) {
+    if (!state.templateDescEditing) return;
+    var config = getSelectedReportConfig() || reportConfigs[0];
+    if (!config || !input) return;
+    config.desc = input.value.trim() || '暂无报告描述';
+    config.descEdited = true;
+    state.templateDescEditing = false;
+    showToast('描述已保存');
     if (!options || options.render !== false) {
       renderAll();
     }
@@ -4775,29 +4989,172 @@ DP.pages.qualityInspectReport = (function () {
 
   function renderTemplateNameControl(config) {
     config = config || getSelectedReportConfig() || reportConfigs[0];
-    if (state.templateNameEditing) {
-      return '<div class="qir-template-name is-editing"><span>名称：</span><input type="text" data-qir-template-name-input value="' + escapeHtml(config.name) + '" maxlength="50" aria-label="名称"></div>';
+    var desc = config.desc || '暂无报告描述';
+    var nameHtml = state.templateNameEditing
+      ? '<input type="text" data-qir-template-name-input value="' + escapeHtml(config.name) + '" maxlength="50" aria-label="报告名称">'
+      : '<b title="' + escapeHtml(config.name) + '">' + escapeHtml(config.name) + '</b><button class="qir-template-meta-edit" type="button" data-qir-action="edit-template-name" title="编辑报告名称" aria-label="编辑报告名称"><i class="bi bi-pencil-square"></i></button>';
+    var descHtml = state.templateDescEditing
+      ? '<input type="text" data-qir-template-desc-input value="' + escapeHtml(desc) + '" maxlength="120" aria-label="报告描述">'
+      : '<em title="' + escapeHtml(desc) + '">' + escapeHtml(desc) + '</em><button class="qir-template-meta-edit" type="button" data-qir-action="edit-template-desc" title="编辑报告描述" aria-label="编辑报告描述"><i class="bi bi-pencil-square"></i></button>';
+    return '<div class="qir-template-meta">' +
+      '<div class="qir-template-name' + (state.templateNameEditing ? ' is-editing' : '') + '"><span>名称：</span>' + nameHtml + '</div>' +
+      '<div class="qir-template-desc' + (state.templateDescEditing ? ' is-editing' : '') + '"><span>描述：</span>' + descHtml + '</div>' +
+    '</div>';
+  }
+
+  function renderTemplateModeButtons(config) {
+    var mode = getTemplateApplyMode(config);
+    var groups = getTemplateFilterGroups(config);
+    var groupDisabled = !groups.length;
+    return '<div class="qir-template-mode" role="radiogroup" aria-label="模板应用方式">' +
+      '<label class="qir-template-radio' + (mode === 'common' ? ' active' : '') + '"><input type="radio" name="qir-template-apply-mode" data-qir-template-apply-mode value="common"' + (mode === 'common' ? ' checked' : '') + '><span>通用模板</span></label>' +
+      '<label class="qir-template-radio' + (mode === 'group' ? ' active' : '') + (groupDisabled ? ' disabled' : '') + '"><input type="radio" name="qir-template-apply-mode" data-qir-template-apply-mode value="group"' + (mode === 'group' ? ' checked' : '') + (groupDisabled ? ' disabled' : '') + '><span>分组模板</span></label>' +
+    '</div>';
+  }
+
+  function renderTemplateTargetOptions(config) {
+    var groups = getTemplateFilterGroups(config);
+    var currentValue = state.templateEditTarget === 'group' && state.templateEditGroupId ? 'group:' + state.templateEditGroupId : 'common';
+    return groups.map(function (group) {
+      var value = 'group:' + group.id;
+      return '<option value="' + escapeHtml(value) + '"' + (currentValue === value ? ' selected' : '') + '>' + escapeHtml(group.name) + '</option>';
+    }).join('');
+  }
+
+  function renderTemplateCurrentEditorControl(config) {
+    if (getTemplateApplyMode(config) !== 'group') {
+      return '<input class="qir-template-current-input" type="text" value="通用模板" disabled aria-label="当前编辑模板">';
     }
-    return '<div class="qir-template-name"><span>名称：</span><b title="' + escapeHtml(config.name) + '">' + escapeHtml(config.name) + '</b><button class="btn btn-outline btn-sm" type="button" data-qir-action="edit-template-name"><i class="bi bi-pencil-square"></i><span>编辑</span></button></div>';
+    var groups = getTemplateFilterGroups(config);
+    if (!groups.length) {
+      return '<input class="qir-template-current-input" type="text" value="暂无数据过滤分组" disabled aria-label="当前编辑模板">';
+    }
+    return '<select class="qir-template-current-select" data-qir-template-edit-target aria-label="当前编辑模板">' + renderTemplateTargetOptions(config) + '</select>';
+  }
+
+  function renderTemplateStrategyPanel(config) {
+    return '<section class="qir-template-strategy">' +
+      '<div class="qir-template-strategy-row">' +
+        '<span class="qir-template-strategy-label">应用模式：</span>' +
+        renderTemplateModeButtons(config) +
+      '</div>' +
+      '<div class="qir-template-strategy-row">' +
+        '<span class="qir-template-strategy-label">当前编辑：</span>' +
+        renderTemplateCurrentEditorControl(config) +
+      '</div>' +
+    '</section>';
+  }
+
+  function getDefaultTemplateCopyTargetGroupId(config) {
+    var groups = getTemplateFilterGroups(config);
+    if (!groups.length) return '';
+    if (state.templateCopyTargetGroupId && getTemplateGroupById(config, state.templateCopyTargetGroupId)) {
+      return state.templateCopyTargetGroupId;
+    }
+    if (state.templateEditTarget === 'group' && state.templateEditGroupId && groups.length > 1) {
+      var nextGroup = groups.filter(function (group) { return group.id !== state.templateEditGroupId; })[0];
+      if (nextGroup) return nextGroup.id;
+    }
+    return groups[0].id;
+  }
+
+  function renderTemplateCopyTargetOptions(config) {
+    var targetGroupId = getDefaultTemplateCopyTargetGroupId(config);
+    return getTemplateFilterGroups(config).map(function (group) {
+      return '<option value="' + escapeHtml(group.id) + '"' + (group.id === targetGroupId ? ' selected' : '') + '>' + escapeHtml(group.name) + '</option>';
+    }).join('');
+  }
+
+  function openTemplateCopyModal() {
+    saveTemplateEditorContent();
+    var config = getSelectedReportConfig() || reportConfigs[0];
+    if (getTemplateApplyMode(config) !== 'group') {
+      showToast('分组模板模式下才支持复制');
+      return;
+    }
+    var groups = getTemplateFilterGroups(config);
+    if (!groups.length) {
+      showToast('请先在数据过滤中新增分组');
+      return;
+    }
+    state.templateCopyTargetGroupId = getDefaultTemplateCopyTargetGroupId(config);
+    state.templateCopyModalOpen = true;
+    state.templateDashboardModalOpen = false;
+    state.templateScheduleModalOpen = false;
+    renderAll();
+  }
+
+  function confirmTemplateCopy() {
+    saveTemplateEditorContent();
+    var config = getSelectedReportConfig() || reportConfigs[0];
+    if (getTemplateApplyMode(config) !== 'group') {
+      state.templateCopyModalOpen = false;
+      state.templateCopyTargetGroupId = '';
+      renderAll();
+      showToast('分组模板模式下才支持复制');
+      return;
+    }
+    var targetGroupId = state.templateCopyTargetGroupId || getDefaultTemplateCopyTargetGroupId(config);
+    var targetGroup = getTemplateGroupById(config, targetGroupId);
+    if (!targetGroup) {
+      showToast('请选择目标分组');
+      return;
+    }
+    targetGroup.templateHtml = state.templateEditorHtml || getTemplateEditorFallbackHtml(config);
+    targetGroup.templateUpdatedAt = formatDateTime(new Date());
+    state.templateCopyModalOpen = false;
+    state.templateCopyTargetGroupId = '';
+    renderAll();
+    showToast('已复制到：' + targetGroup.name);
+  }
+
+  function renderTemplateCopyModal(config) {
+    if (!state.templateCopyModalOpen) return '';
+    config = config || getSelectedReportConfig() || reportConfigs[0];
+    if (getTemplateApplyMode(config) !== 'group') return '';
+    var targetGroupId = getDefaultTemplateCopyTargetGroupId(config);
+    state.templateCopyTargetGroupId = targetGroupId;
+    var sourceLabel = getTemplateEditLabel(config);
+    return '<div class="qir-dashboard-modal-mask" data-qir-action="close-template-copy-modal"></div>' +
+      '<section class="qir-copy-modal" role="dialog" aria-modal="true" aria-label="复制模板内容">' +
+        '<div class="qir-dashboard-modal-head">' +
+          '<div><h3>复制模板内容</h3><p>将当前正在编辑的模板内容复制到指定数据过滤分组。</p></div>' +
+          '<button class="qir-dashboard-modal-close" type="button" data-qir-action="close-template-copy-modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button>' +
+        '</div>' +
+        '<div class="qir-copy-modal-body">' +
+          '<div class="qir-copy-current"><span>当前模板</span><b>' + escapeHtml(sourceLabel) + '</b></div>' +
+          '<label class="qir-copy-field"><span>目标分组</span><select data-qir-template-copy-target aria-label="目标分组">' + renderTemplateCopyTargetOptions(config) + '</select></label>' +
+          '<div class="qir-copy-note"><i class="bi bi-info-circle"></i><span>确认后将覆盖目标分组已有模板内容，当前编辑模板不切换。</span></div>' +
+        '</div>' +
+        '<div class="qir-dashboard-modal-foot">' +
+          '<span>复制目标：<b>' + escapeHtml((getTemplateGroupById(config, targetGroupId) || {}).name || '-') + '</b></span>' +
+          '<div><button class="btn btn-outline" type="button" data-qir-action="close-template-copy-modal"><i class="bi bi-x-lg"></i><span>取消</span></button><button class="btn btn-primary" type="button" data-qir-action="confirm-template-copy"><i class="bi bi-check-lg"></i><span>确认复制</span></button></div>' +
+        '</div>' +
+      '</section>';
   }
 
   function renderTemplateReportContent(config) {
     config = config || getSelectedReportConfig() || reportConfigs[0];
-    return renderTemplateResourcePanel() +
+    ensureTemplateEditorTarget(config);
+    var copyAction = getTemplateApplyMode(config) === 'group'
+      ? '<button class="btn btn-outline" type="button" data-qir-action="open-template-copy-modal"><i class="bi bi-copy"></i><span>复制</span></button>'
+      : '';
+    return renderTemplateResourcePanel(config) +
       '<section class="qir-template-main">' +
         '<div class="qir-template-topbar">' +
-          '<div class="qir-template-topbar-left">' + renderTemplateNameControl(config) + '<div class="qir-template-cycle"><span>调度周期：</span><b>' + escapeHtml(getCycleText(config.cycle)) + '</b><button class="btn btn-outline btn-sm" type="button" data-qir-action="open-template-schedule-modal"><i class="bi bi-gear"></i><span>配置</span></button></div></div>' +
+          '<div class="qir-template-topbar-left">' + renderTemplateNameControl(config) + '</div>' +
           '<div class="qir-template-actions">' +
+            copyAction +
             '<button class="btn btn-outline" type="button" data-qir-action="template-preview"><i class="bi bi-eye"></i><span>预览</span></button>' +
-            '<button class="btn btn-outline" type="button" data-qir-action="template-back-list"><i class="bi bi-arrow-left"></i><span>返回</span></button>' +
             '<button class="btn btn-outline" type="button" data-qir-action="template-action-placeholder"><i class="bi bi-file-earmark-word"></i><span>导入Word模板</span></button>' +
             '<button class="btn btn-primary" type="button" data-qir-action="template-save"><i class="bi bi-save"></i><span>保存</span></button>' +
+            '<button class="btn btn-outline" type="button" data-qir-action="template-back-list"><i class="bi bi-arrow-left"></i><span>返回</span></button>' +
           '</div>' +
         '</div>' +
         '<div class="qir-template-workspace' + (state.templateOutlineCollapsed ? ' outline-collapsed' : '') + '">' + renderTemplateOutline() + renderTemplateEditor(config) + '</div>' +
       '</section>' +
       renderTemplateDashboardModal() +
-      renderTemplateScheduleModal();
+      renderTemplateCopyModal(config);
   }
 
   function renderTemplateScopePlaceholder(config) {
@@ -4813,7 +5170,7 @@ DP.pages.qualityInspectReport = (function () {
           '<button class="btn btn-outline btn-sm" type="button" data-qir-action="template-back-list"><i class="bi bi-arrow-left"></i><span>返回</span></button>' +
         '</div>' +
       '</div>' +
-      '<div class="qir-template-scope-summary"><span>当前报告</span><b>' + escapeHtml(config.name || '稽查报告') + '</b><em>已配置 ' + getTemplateScopeRows().length + ' 张表，选中 ' + selectedCount + ' 条</em></div>' +
+      '<div class="qir-template-scope-summary"><em>已配置 ' + getTemplateScopeRows().length + ' 张表，选中 ' + selectedCount + ' 条</em></div>' +
       renderTemplateScopeTable() +
       renderTemplateScopeFooter() +
     '</section>';
@@ -5029,7 +5386,7 @@ DP.pages.qualityInspectReport = (function () {
           '<button class="btn btn-outline btn-sm" type="button" data-qir-action="template-back-list"><i class="bi bi-arrow-left"></i><span>返回</span></button>' +
         '</div>' +
       '</div>' +
-      '<div class="qir-template-filter-summary"><span>当前报告</span><b>' + escapeHtml(config.name || '稽查报告') + '</b><em>已配置 ' + groups.length + ' 组过滤条件，共 ' + conditionCount + ' 条</em></div>' +
+      '<div class="qir-template-filter-summary"><em>已配置 ' + groups.length + ' 组过滤条件，共 ' + conditionCount + ' 条</em></div>' +
       '<div class="qir-template-filter-groups">' + groups.map(renderTemplateFilterGroup).join('') + '</div>' +
     '</section>';
   }
@@ -5371,7 +5728,7 @@ DP.pages.qualityInspectReport = (function () {
     var rows = getVisibleConfigRows();
     var scheduleMode = isScheduleSection();
     if (!rows.length) {
-      return '<tr class="qir-empty-row"><td colspan="' + (scheduleMode ? '9' : '6') + '">' + (scheduleMode ? '暂无匹配任务调度' : '暂无匹配稽查报告') + '</td></tr>';
+      return '<tr class="qir-empty-row"><td colspan="' + (scheduleMode ? '8' : '7') + '">' + (scheduleMode ? '暂无匹配任务调度' : '暂无匹配稽查报告') + '</td></tr>';
     }
     return rows.map(function (item) {
       var configName = scheduleMode ? getScheduleTaskName(item) : item.name;
@@ -5386,11 +5743,12 @@ DP.pages.qualityInspectReport = (function () {
         : '<button class="qir-view-btn" type="button" data-qir-action="open-report-view" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-file-earmark-text"></i><span>查看报告</span></button>' +
           '<button class="qir-view-btn" type="button" data-qir-action="open-history-list" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-clock-history"></i><span>历史报告</span></button>';
       return '<tr>' +
-        '<td><div class="qir-config-name"><b>' + escapeHtml(configName) + '</b></div></td>' +
+        '<td>' + renderConfigNameCell(item, configName, scheduleMode) + '</td>' +
         '<td>' + renderConfigScope(item) + '</td>' +
         (scheduleMode ? '<td>' + renderConfigDataRange(item) + '</td>' : '') +
         (scheduleMode ? '<td>' + renderConfigStatus(item.status) + '</td>' : '') +
-        '<td><div class="qir-config-desc" title="' + escapeHtml(item.desc) + '">' + escapeHtml(item.desc) + '</div></td>' +
+        (!scheduleMode ? '<td><div class="qir-config-desc" title="' + escapeHtml(item.desc) + '">' + escapeHtml(item.desc) + '</div></td>' : '') +
+        (!scheduleMode ? '<td>' + renderRelatedScheduleTaskLink(item) + '</td>' : '') +
         '<td>' + renderConfigCycle(item.cycle) + '</td>' +
         (scheduleMode ? '<td>' + renderConfigExecutionStatus(getConfigExecutionStatus(item)) + '</td>' : '') +
         '<td>' + escapeHtml(item.lastGeneratedTime) + '</td>' +
@@ -5401,8 +5759,8 @@ DP.pages.qualityInspectReport = (function () {
 
   function renderConfigTable() {
     var headHtml = isScheduleSection()
-      ? '<tr><th>名称</th><th>统计范围</th><th>数据范围</th><th>状态</th><th>报告描述</th><th>调度周期</th><th>最后执行状态</th><th>最后执行时间</th><th>操作</th></tr>'
-      : '<tr><th>名称</th><th>统计范围</th><th>报告描述</th><th>生成周期</th><th>最后生成时间</th><th>操作</th></tr>';
+      ? '<tr><th>名称</th><th>统计范围</th><th>数据范围</th><th>状态</th><th>调度周期</th><th>最后执行状态</th><th>最后执行时间</th><th>操作</th></tr>'
+      : '<tr><th>名称</th><th>统计范围</th><th>报告描述</th><th>关联任务</th><th>生成周期</th><th>最后生成时间</th><th>操作</th></tr>';
     return '<div class="qir-table-wrap qir-config-table-wrap">' +
       '<table class="ds-table qir-table qir-config-table ' + (isScheduleSection() ? 'qir-config-table-schedule' : 'qir-config-table-report') + '">' +
         '<thead>' + headHtml + '</thead>' +
@@ -5482,8 +5840,10 @@ DP.pages.qualityInspectReport = (function () {
         '<span class="qir-query-label qir-query-label-gap">最后执行状态</span><select class="qir-query-select qir-query-select-wide" data-qir-config-exec-status aria-label="最后执行状态查询"><option value="">全部</option><option value="执行成功"' + (state.configExecStatus === '执行成功' ? ' selected' : '') + '>执行成功</option><option value="执行中"' + (state.configExecStatus === '执行中' ? ' selected' : '') + '>执行中</option><option value="执行失败"' + (state.configExecStatus === '执行失败' ? ' selected' : '') + '>执行失败</option></select>' +
         '<span class="qir-query-label qir-query-label-gap">数据范围</span><select class="qir-query-select" data-qir-config-data-range-status aria-label="数据范围查询"><option value="">全部</option><option value="none"' + (state.configDataRangeStatus === 'none' ? ' selected' : '') + '>无配置</option><option value="configured"' + (state.configDataRangeStatus === 'configured' ? ' selected' : '') + '>已配置</option></select>'
       : '';
+    var reportQueryPrefix = scheduleMode ? '' : renderRelatedTaskFilter();
+    var queryPrefix = scheduleQueryPrefix + reportQueryPrefix;
     return '<section class="qir-main-panel qir-main-panel-full">' +
-      '<div class="qir-toolbar">' + leadingContent + '<div class="qir-query-box">' + scheduleQueryPrefix + '<span class="qir-query-label' + (scheduleMode ? ' qir-query-label-gap' : '') + '">名称</span><input type="text" data-qir-config-keyword value="' + escapeHtml(state.configKeyword) + '" placeholder="请输入名称/描述" aria-label="名称或描述查询"><button class="btn btn-primary" type="button" data-qir-action="query-config"><i class="bi bi-search"></i><span>查询</span></button></div></div>' +
+      '<div class="qir-toolbar">' + leadingContent + '<div class="qir-query-box">' + queryPrefix + '<span class="qir-query-label' + (queryPrefix ? ' qir-query-label-gap' : '') + '">名称</span><input type="text" data-qir-config-keyword value="' + escapeHtml(state.configKeyword) + '" placeholder="请输入名称/描述" aria-label="名称或描述查询"><button class="btn btn-primary" type="button" data-qir-action="query-config"><i class="bi bi-search"></i><span>查询</span></button></div></div>' +
       renderConfigTable() +
       renderConfigFooter() +
     '</section>' +
@@ -5711,7 +6071,68 @@ DP.pages.qualityInspectReport = (function () {
     state.configStatus = configStatus ? configStatus.value : '';
     state.configExecStatus = configExecStatus ? configExecStatus.value : '';
     state.configDataRangeStatus = configDataRangeStatus ? configDataRangeStatus.value : '';
+    state.relatedTaskDropdownOpen = false;
+    state.relatedTaskKeyword = '';
+    state.editingConfigNameId = '';
     state.configPage = 1;
+    renderAll();
+  }
+
+  function focusConfigNameInput() {
+    window.setTimeout(function () {
+      var input = pageEl ? pageEl.querySelector('[data-qir-config-name-input]') : null;
+      if (!input) return;
+      input.focus();
+      input.select();
+    }, 0);
+  }
+
+  function saveConfigNameFromInput(input, options) {
+    if (!input) return;
+    var rowId = input.getAttribute('data-id') || '';
+    var config = getEditableReportConfigById(rowId);
+    if (!config) {
+      state.editingConfigNameId = '';
+      return;
+    }
+    var nextName = input.value.trim() || config.name || '未命名稽查报告';
+    var changed = nextName !== config.name;
+    config.name = nextName;
+    config.nameEdited = true;
+    state.editingConfigNameId = '';
+    if (!options || options.render !== false) renderAll();
+    if (changed) showToast('报告名称已保存');
+  }
+
+  function activateScheduleMenu() {
+    var scheduleLink = document.querySelector('[data-menu="quality-inspect-schedule"]');
+    if (!scheduleLink) return;
+    var parent = scheduleLink.closest('.menu-item.has-sub');
+    if (parent) parent.classList.add('open');
+    if (window.DP && typeof DP.setActiveMenu === 'function') {
+      DP.setActiveMenu(scheduleLink);
+    } else {
+      scheduleLink.classList.add('active');
+    }
+  }
+
+  function openRelatedSchedule(id) {
+    var config = getReportConfigById(id);
+    if (!config) return;
+    var taskName = getScheduleTaskName(config);
+    if (window.DP && typeof DP.showPage === 'function') {
+      activateScheduleMenu();
+      DP.showPage('quality-inspect-schedule', { configKeyword: taskName });
+      showToast('已跳转任务调度并按关联任务过滤');
+      return;
+    }
+    state.section = 'schedule';
+    state.configKeyword = taskName;
+    state.configStatus = '';
+    state.configExecStatus = '';
+    state.configDataRangeStatus = '';
+    state.configPage = 1;
+    state.view = 'list';
     renderAll();
   }
 
@@ -5804,6 +6225,7 @@ DP.pages.qualityInspectReport = (function () {
     });
 
     pageEl.addEventListener('click', function (e) {
+      var clickedRelatedTaskSelect = !!e.target.closest('[data-qir-related-task-select]');
       var actionEl = e.target.closest('[data-qir-action]');
       if (actionEl && pageEl.contains(actionEl)) {
         var action = actionEl.getAttribute('data-qir-action');
@@ -5817,6 +6239,28 @@ DP.pages.qualityInspectReport = (function () {
           renderAll();
         } else if (action === 'query-config') {
           applyConfigQueryFromDom();
+        } else if (action === 'edit-config-name') {
+          state.editingConfigNameId = actionEl.getAttribute('data-id') || '';
+          state.relatedTaskDropdownOpen = false;
+          state.relatedTaskKeyword = '';
+          renderAll();
+          focusConfigNameInput();
+        } else if (action === 'open-related-schedule') {
+          openRelatedSchedule(actionEl.getAttribute('data-id') || '');
+        } else if (action === 'toggle-related-task-filter') {
+          state.relatedTaskDropdownOpen = !state.relatedTaskDropdownOpen;
+          state.relatedTaskKeyword = '';
+          renderAll();
+          var relatedSearch = pageEl.querySelector('[data-qir-related-task-search]');
+          if (relatedSearch) relatedSearch.focus();
+          return;
+        } else if (action === 'choose-related-task-filter') {
+          state.relatedTaskFilter = actionEl.getAttribute('data-value') || '';
+          state.relatedTaskDropdownOpen = false;
+          state.relatedTaskKeyword = '';
+          state.configPage = 1;
+          renderAll();
+          return;
         } else if (action === 'query-schedule-records') {
           applyScheduleRecordQueryFromDom();
         } else if (action === 'query-schedule-detail') {
@@ -5878,6 +6322,8 @@ DP.pages.qualityInspectReport = (function () {
           var targetManageTab = actionEl.getAttribute('data-tab') || 'template';
           state.templateManageTab = targetManageTab === 'scope' || targetManageTab === 'filter' ? targetManageTab : 'template';
           state.templateDashboardModalOpen = false;
+          state.templateCopyModalOpen = false;
+          state.templateCopyTargetGroupId = '';
           state.templateScheduleModalOpen = false;
           state.templateScheduleDraft = null;
           state.templateScopeModalOpen = false;
@@ -5892,11 +6338,15 @@ DP.pages.qualityInspectReport = (function () {
             state.configPage = 1;
           }
           state.selectedConfigId = templateId;
-          state.templateEditorHtml = '';
           state.templateZoom = 100;
           state.templateNameEditing = !actionEl.getAttribute('data-id');
+          state.templateDescEditing = false;
           state.templateVariableKeyword = '';
           state.templateManageTab = 'template';
+          state.templateEditTarget = 'common';
+          state.templateEditGroupId = '';
+          state.templateCopyModalOpen = false;
+          state.templateCopyTargetGroupId = '';
           state.templateScopeKeyword = '';
           state.templateScopePage = 1;
           state.templateScopeSelected = {};
@@ -5920,6 +6370,7 @@ DP.pages.qualityInspectReport = (function () {
           state.templateScheduleModalOpen = false;
           state.templateScheduleDraft = null;
           state.view = 'template';
+          loadTemplateEditorContent(getSelectedReportConfig() || reportConfigs[0], 'common');
           renderAll();
           if (state.templateNameEditing) {
             window.setTimeout(function () {
@@ -5932,6 +6383,7 @@ DP.pages.qualityInspectReport = (function () {
           }
         } else if (action === 'edit-template-name') {
           state.templateNameEditing = true;
+          state.templateDescEditing = false;
           renderAll();
           window.setTimeout(function () {
             var editNameInput = pageEl ? pageEl.querySelector('[data-qir-template-name-input]') : null;
@@ -5940,6 +6392,35 @@ DP.pages.qualityInspectReport = (function () {
               editNameInput.select();
             }
           }, 0);
+        } else if (action === 'edit-template-desc') {
+          state.templateDescEditing = true;
+          state.templateNameEditing = false;
+          renderAll();
+          window.setTimeout(function () {
+            var editDescInput = pageEl ? pageEl.querySelector('[data-qir-template-desc-input]') : null;
+            if (editDescInput) {
+              editDescInput.focus();
+              editDescInput.select();
+            }
+          }, 0);
+        } else if (action === 'set-template-mode') {
+          saveTemplateEditorContent();
+          var mode = actionEl.getAttribute('data-mode') || 'common';
+          var modeConfig = getSelectedReportConfig() || reportConfigs[0];
+          if (mode === 'group' && !getTemplateFilterGroups(modeConfig).length) {
+            showToast('请先在数据过滤中新增分组');
+          } else {
+            setTemplateApplyMode(modeConfig, mode);
+            if (mode === 'group') {
+              loadFirstTemplateGroupEditor(modeConfig);
+            } else {
+              loadTemplateEditorContent(modeConfig, 'common');
+              state.templateCopyModalOpen = false;
+              state.templateCopyTargetGroupId = '';
+            }
+            renderAll();
+            showToast(mode === 'group' ? '已启用按数据过滤分组配置模板' : '已切换为通用模板');
+          }
         } else if (action === 'template-zoom-out') {
           setTemplateZoom(getTemplateZoomValue() - templateZoomStep);
         } else if (action === 'template-zoom-in') {
@@ -5963,6 +6444,7 @@ DP.pages.qualityInspectReport = (function () {
         } else if (action === 'open-template-schedule-modal') {
           saveTemplateEditorContent();
           state.templateDashboardModalOpen = false;
+          state.templateCopyModalOpen = false;
           state.startScheduleModalOpen = false;
           state.startScheduleConfigId = '';
           state.templateScheduleModalOpen = true;
@@ -5981,6 +6463,14 @@ DP.pages.qualityInspectReport = (function () {
           renderAll();
         } else if (action === 'confirm-start-schedule') {
           applyStartScheduleDraft();
+        } else if (action === 'open-template-copy-modal') {
+          openTemplateCopyModal();
+        } else if (action === 'close-template-copy-modal') {
+          state.templateCopyModalOpen = false;
+          state.templateCopyTargetGroupId = '';
+          renderAll();
+        } else if (action === 'confirm-template-copy') {
+          confirmTemplateCopy();
         } else if (action === 'template-preview') {
           openTemplatePreview();
         } else if (action === 'template-back-list') {
@@ -5989,7 +6479,12 @@ DP.pages.qualityInspectReport = (function () {
           state.selectedConfigId = '';
           state.selectedReportId = '';
           state.templateNameEditing = false;
+          state.templateDescEditing = false;
+          state.templateEditTarget = 'common';
+          state.templateEditGroupId = '';
           state.templateDashboardModalOpen = false;
+          state.templateCopyModalOpen = false;
+          state.templateCopyTargetGroupId = '';
           state.templateScheduleModalOpen = false;
           state.startScheduleModalOpen = false;
           state.startScheduleConfigId = '';
@@ -6006,6 +6501,7 @@ DP.pages.qualityInspectReport = (function () {
             placeTemplateDashboardInsertMarker();
           }
           state.templateDashboardModalOpen = true;
+          state.templateCopyModalOpen = false;
           state.templateDashboardKeyword = '';
           state.templateDashboardFilter = 'all';
           state.templateDashboardPage = 1;
@@ -6426,12 +6922,26 @@ DP.pages.qualityInspectReport = (function () {
         else state.rulePages[ruleKey] = Number(ruleTarget) || 1;
         renderAll();
       }
+
+      if (!clickedRelatedTaskSelect && state.relatedTaskDropdownOpen) {
+        state.relatedTaskDropdownOpen = false;
+        state.relatedTaskKeyword = '';
+        renderAll();
+      }
     });
 
     pageEl.addEventListener('input', function (e) {
       if (e.target.matches('[data-qir-tree-search]')) {
         state.treeKeyword = e.target.value;
         renderAll();
+      } else if (e.target.matches('[data-qir-related-task-search]')) {
+        state.relatedTaskKeyword = e.target.value;
+        renderAll();
+        var relatedSearch = pageEl.querySelector('[data-qir-related-task-search]');
+        if (relatedSearch) {
+          relatedSearch.focus();
+          relatedSearch.setSelectionRange(relatedSearch.value.length, relatedSearch.value.length);
+        }
       } else if (e.target.matches('[data-qir-dashboard-search]')) {
         saveTemplateEditorContent();
         state.templateDashboardKeyword = e.target.value;
@@ -6492,6 +7002,12 @@ DP.pages.qualityInspectReport = (function () {
       if (e.target.matches('[data-qir-template-name-input]')) {
         saveTemplateNameFromInput(e.target, { render: false });
         window.setTimeout(renderAll, 0);
+      } else if (e.target.matches('[data-qir-template-desc-input]')) {
+        saveTemplateDescFromInput(e.target, { render: false });
+        window.setTimeout(renderAll, 0);
+      } else if (e.target.matches('[data-qir-config-name-input]')) {
+        saveConfigNameFromInput(e.target, { render: false });
+        window.setTimeout(renderAll, 0);
       } else if (e.target.matches('[data-qir-template-filter-group-name], [data-qir-template-filter-group-desc]')) {
         saveTemplateFilterGroupField(e.target);
         var filterMeta = e.target.closest('.qir-template-filter-group-meta');
@@ -6510,6 +7026,41 @@ DP.pages.qualityInspectReport = (function () {
     pageEl.addEventListener('change', function (e) {
       if (e.target.matches('[data-qir-template-schedule-field]')) {
         captureTemplateScheduleDraft();
+        renderAll();
+      } else if (e.target.matches('[data-qir-template-apply-mode]')) {
+        saveTemplateEditorContent();
+        var applyModeConfig = getSelectedReportConfig() || reportConfigs[0];
+        var applyMode = e.target.value === 'group' ? 'group' : 'common';
+        if (applyMode === 'group' && !getTemplateFilterGroups(applyModeConfig).length) {
+          showToast('请先在数据过滤中新增分组');
+        } else {
+          setTemplateApplyMode(applyModeConfig, applyMode);
+          if (applyMode === 'group') {
+            loadFirstTemplateGroupEditor(applyModeConfig);
+          } else {
+            loadTemplateEditorContent(applyModeConfig, 'common');
+            state.templateCopyModalOpen = false;
+            state.templateCopyTargetGroupId = '';
+          }
+          renderAll();
+        }
+      } else if (e.target.matches('[data-qir-template-edit-target]')) {
+        saveTemplateEditorContent();
+        var editTargetConfig = getSelectedReportConfig() || reportConfigs[0];
+        var editTargetValue = e.target.value || 'common';
+        if (editTargetValue.indexOf('group:') === 0) {
+          var editTargetGroupId = editTargetValue.replace('group:', '');
+          var editTargetGroup = getTemplateGroupById(editTargetConfig, editTargetGroupId);
+          if (editTargetGroup) {
+            setTemplateApplyMode(editTargetConfig, 'group');
+            loadTemplateEditorContent(editTargetConfig, 'group', editTargetGroupId, { useCommonFallback: true });
+          }
+        } else {
+          loadTemplateEditorContent(editTargetConfig, 'common');
+        }
+        renderAll();
+      } else if (e.target.matches('[data-qir-template-copy-target]')) {
+        state.templateCopyTargetGroupId = e.target.value || '';
         renderAll();
       } else if (e.target.matches('[data-qir-config-page-size]')) {
         state.configPageSize = Number(e.target.value) || 10;
@@ -6614,6 +7165,10 @@ DP.pages.qualityInspectReport = (function () {
         removeTemplateDashboardInsertMarker();
         state.templateDashboardModalOpen = false;
         renderAll();
+      } else if (e.key === 'Escape' && state.templateCopyModalOpen) {
+        state.templateCopyModalOpen = false;
+        state.templateCopyTargetGroupId = '';
+        renderAll();
       } else if (e.key === 'Escape' && state.templateScheduleModalOpen) {
         state.templateScheduleModalOpen = false;
         state.templateScheduleDraft = null;
@@ -6626,11 +7181,28 @@ DP.pages.qualityInspectReport = (function () {
       } else if (e.key === 'Escape' && state.scheduleSqlModalOpen) {
         state.scheduleSqlModalOpen = false;
         renderAll();
+      } else if (e.key === 'Escape' && state.relatedTaskDropdownOpen) {
+        state.relatedTaskDropdownOpen = false;
+        state.relatedTaskKeyword = '';
+        renderAll();
       } else if (e.key === 'Enter' && e.target.matches('[data-qir-template-name-input]')) {
         e.preventDefault();
         saveTemplateNameFromInput(e.target);
       } else if (e.key === 'Enter' && e.target.matches('[data-qir-config-keyword]')) {
         applyConfigQueryFromDom(e.target.value);
+      } else if (e.key === 'Enter' && e.target.matches('[data-qir-config-name-input]')) {
+        e.preventDefault();
+        saveConfigNameFromInput(e.target);
+      } else if (e.key === 'Enter' && e.target.matches('[data-qir-related-task-search]')) {
+        e.preventDefault();
+        var firstRelatedTask = getFilteredRelatedTaskOptions()[0] || '';
+        if (firstRelatedTask) {
+          state.relatedTaskFilter = firstRelatedTask;
+          state.relatedTaskDropdownOpen = false;
+          state.relatedTaskKeyword = '';
+          state.configPage = 1;
+          renderAll();
+        }
       } else if (e.key === 'Enter' && (e.target.matches('[data-qir-schedule-start-date]') || e.target.matches('[data-qir-schedule-end-date]'))) {
         applyScheduleRecordQueryFromDom();
       } else if (e.key === 'Enter' && (e.target.matches('[data-qir-schedule-detail-task]') || e.target.matches('[data-qir-schedule-detail-table]'))) {
@@ -6639,6 +7211,12 @@ DP.pages.qualityInspectReport = (function () {
         state.keyword = e.target.value.trim();
         state.page = 1;
         renderAll();
+      } else if (e.key === 'Enter' && e.target.matches('[data-qir-template-name-input]')) {
+        e.preventDefault();
+        saveTemplateNameFromInput(e.target);
+      } else if (e.key === 'Enter' && e.target.matches('[data-qir-template-desc-input]')) {
+        e.preventDefault();
+        saveTemplateDescFromInput(e.target);
       } else if (e.key === 'Enter' && e.target.matches('[data-qir-template-scope-keyword]')) {
         state.templateScopeKeyword = e.target.value.trim();
         state.templateScopePage = 1;
@@ -6655,13 +7233,19 @@ DP.pages.qualityInspectReport = (function () {
     });
   }
 
-  function resetState(section) {
+  function resetState(opts) {
+    var section = opts && typeof opts === 'object' ? (opts.section || opts.mode) : opts;
+    var configKeyword = opts && typeof opts === 'object' && opts.configKeyword != null ? String(opts.configKeyword).trim() : '';
     state.view = 'list';
     state.section = normalizeSection(section);
-    state.configKeyword = '';
+    state.configKeyword = configKeyword;
     state.configStatus = '';
     state.configExecStatus = '';
     state.configDataRangeStatus = '';
+    state.relatedTaskFilter = '';
+    state.relatedTaskDropdownOpen = false;
+    state.relatedTaskKeyword = '';
+    state.editingConfigNameId = '';
     state.configPage = 1;
     state.configPageSize = 10;
     state.selectedConfigId = '';
@@ -6696,7 +7280,10 @@ DP.pages.qualityInspectReport = (function () {
     state.templateZoom = 100;
     state.reportPreviewZoom = 100;
     state.templateNameEditing = false;
+    state.templateDescEditing = false;
     state.templateManageTab = 'template';
+    state.templateEditTarget = 'common';
+    state.templateEditGroupId = '';
     state.templateScopeKeyword = '';
     state.templateScopePage = 1;
     state.templateScopePageSize = 10;
@@ -6720,6 +7307,8 @@ DP.pages.qualityInspectReport = (function () {
     state.templateVariableCollapsed = false;
     state.templateOutlineCollapsed = false;
     state.templateDashboardModalOpen = false;
+    state.templateCopyModalOpen = false;
+    state.templateCopyTargetGroupId = '';
     state.templateDashboardKeyword = '';
     state.templateDashboardFilter = 'all';
     state.templateDashboardPage = 1;
@@ -6742,7 +7331,7 @@ DP.pages.qualityInspectReport = (function () {
     init: function (opts) {
       pageEl = document.querySelector('.page-quality-inspect-report');
       if (!pageEl) return;
-      resetState(opts && (opts.section || opts.mode));
+      resetState(opts || {});
       normalizeOaQualityReportConfigs();
       bindEvents();
       renderAll();

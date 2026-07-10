@@ -76,10 +76,16 @@ DP.showPage = function (menuKey, opts) {
     DP.pages.dataQualityRule.init();
   } else if (menuKey === 'quality-inspect-report' || menuKey === '稽查报告') {
     c.innerHTML = DP.pages.qualityInspectReport.html;
-    DP.pages.qualityInspectReport.init({ section: 'report' });
+    DP.pages.qualityInspectReport.init({
+      section: 'report',
+      configKeyword: opts && opts.configKeyword
+    });
   } else if (menuKey === 'quality-inspect-schedule' || menuKey === '任务调度') {
     c.innerHTML = DP.pages.qualityInspectReport.html;
-    DP.pages.qualityInspectReport.init({ section: 'schedule' });
+    DP.pages.qualityInspectReport.init({
+      section: 'schedule',
+      configKeyword: opts && opts.configKeyword
+    });
   } else if (menuKey === 'quality-inspect-task' || menuKey === '任务配置' || menuKey === '稽查任务') {
     c.innerHTML = DP.pages.qualityInspectTask.html;
     DP.pages.qualityInspectTask.init();
