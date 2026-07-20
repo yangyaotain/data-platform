@@ -1125,6 +1125,31 @@
   font-weight: 650;
 }
 
+.qir-rule-task-link {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--primary);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.qir-rule-task-cell .qir-rule-task-link span {
+  color: inherit;
+  font-size: 13px;
+}
+
+.qir-rule-task-link i {
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
+.qir-rule-task-link:hover {
+  color: #0958d9;
+  text-decoration: underline;
+}
+
 .qir-rule-task-cell span {
   color: #7b8fa8;
   font-size: 12px;
@@ -3666,6 +3691,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.qir-inserted-dashboard-summary {
+  margin: -2px 0 10px;
+  color: #526579;
+  font-size: 13px;
+  line-height: 1.6;
+  text-indent: 0;
 }
 
 .qir-inserted-dashboard-head em,

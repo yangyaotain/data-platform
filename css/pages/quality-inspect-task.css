@@ -2374,9 +2374,35 @@
 .dqit-result-head-right {
   display: inline-flex;
   align-items: center;
-  gap: 18px;
+  gap: 12px;
+  flex-shrink: 0;
   color: #26384d;
   font-size: 13px;
+  white-space: nowrap;
+}
+
+.dqit-result-head {
+  gap: 16px;
+}
+
+.dqit-result-head .dqit-form-title {
+  min-width: 0;
+  flex: 1;
+}
+
+.dqit-result-head .dqit-form-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dqit-result-frequency {
+  flex: 0 0 auto;
+  margin-left: 16px;
+  color: #526579;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 400;
 }
 
 .dqit-result-scroll,
@@ -2442,6 +2468,46 @@
 .dqit-result-log-header dd {
   margin: 0 8px 0 0;
   color: #26384d;
+}
+
+.dqit-result-inline-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dqit-result-inline-filter > span {
+  color: #526579;
+  font-size: 13px;
+}
+
+.dqit-result-inline-filter select {
+  width: 140px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #d9dfe6;
+  border-radius: 3px;
+  background: #fff;
+  color: #26384d;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.dqit-result-inline-filter select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.08);
+}
+
+.dqit-result-inline-filter .btn {
+  height: 34px;
+  min-width: 70px;
+  padding: 0 13px;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  box-shadow: none;
 }
 
 .dqit-result-table-wrap {

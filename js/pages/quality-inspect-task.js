@@ -48,6 +48,7 @@ DP.pages.qualityInspectTask = (function () {
     reportRunIndex: 0,
     resultPage: 1,
     resultPageSize: 10,
+    resultExecutionMode: '',
     openPicker: '',
     pickerKeyword: '',
     openParamSelect: '',
@@ -699,19 +700,30 @@ DP.pages.qualityInspectTask = (function () {
       startAt: formatDateTime(startDate),
       endAt: formatDateTime(completeDate),
       frequency: getReportFrequency(item),
+      executionMode: index % 3 === 0 ? '任务调度' : '自身调度',
       duration: '1分钟',
       status: '执行成功'
     };
   }
 
+  function getFilteredReportRunIndexes() {
+    var indexes = [];
+    for (var i = 0; i < getResultTotal(); i++) {
+      if (state.resultExecutionMode && getReportRun(i).executionMode !== state.resultExecutionMode) continue;
+      indexes.push(i);
+    }
+    return indexes;
+  }
+
   function getVisibleReportRuns() {
-    var total = getResultTotal();
+    var indexes = getFilteredReportRunIndexes();
+    var total = indexes.length;
     var totalPages = Math.max(1, Math.ceil(total / state.resultPageSize));
     state.resultPage = Math.max(1, Math.min(totalPages, state.resultPage));
     var start = (state.resultPage - 1) * state.resultPageSize;
     var count = Math.min(state.resultPageSize, total - start);
     var rows = [];
-    for (var i = 0; i < count; i++) rows.push(getReportRun(start + i));
+    for (var i = 0; i < count; i++) rows.push(getReportRun(indexes[start + i]));
     return rows;
   }
 
@@ -898,8 +910,20 @@ DP.pages.qualityInspectTask = (function () {
     return html;
   }
 
+  function renderResultFilter() {
+    return '<div class="dqit-result-inline-filter">' +
+      '<span>执行方式</span>' +
+      '<select id="dqitResultExecutionMode" aria-label="执行方式">' +
+        '<option value=""' + (!state.resultExecutionMode ? ' selected' : '') + '>全部</option>' +
+        '<option value="自身调度"' + (state.resultExecutionMode === '自身调度' ? ' selected' : '') + '>自身调度</option>' +
+        '<option value="任务调度"' + (state.resultExecutionMode === '任务调度' ? ' selected' : '') + '>任务调度</option>' +
+      '</select>' +
+      '<button class="btn btn-primary" type="button" data-dqit-action="query-result-runs"><i class="bi bi-search"></i><span>查询</span></button>' +
+    '</div>';
+  }
+
   function renderResultFooter() {
-    var total = getResultTotal();
+    var total = getFilteredReportRunIndexes().length;
     var totalPages = Math.max(1, Math.ceil(total / state.resultPageSize));
     var start = total ? (state.resultPage - 1) * state.resultPageSize + 1 : 0;
     var end = total ? Math.min(total, state.resultPage * state.resultPageSize) : 0;
@@ -911,12 +935,17 @@ DP.pages.qualityInspectTask = (function () {
   }
 
   function renderResultRows() {
-    return getVisibleReportRuns().map(function (run) {
+    var rows = getVisibleReportRuns();
+    if (!rows.length) {
+      return '<tr class="dqit-empty-row"><td colspan="8">暂无匹配执行记录</td></tr>';
+    }
+    return rows.map(function (run) {
       return '<tr>' +
         '<td>' + escapeHtml(run.reportName) + '</td>' +
         '<td>' + escapeHtml(run.startAt) + '</td>' +
         '<td>' + escapeHtml(run.endAt) + '</td>' +
         '<td>' + escapeHtml(run.frequency) + '</td>' +
+        '<td>' + escapeHtml(run.executionMode) + '</td>' +
         '<td>' + escapeHtml(run.duration) + '</td>' +
         '<td>' + escapeHtml(run.status) + '</td>' +
         '<td><div class="dqit-result-actions">' +
@@ -933,13 +962,16 @@ DP.pages.qualityInspectTask = (function () {
     var title = getReportName(item);
     return '<section class="dqit-form-shell dqit-result-shell">' +
       '<div class="dqit-form-head dqit-result-head">' +
-        '<div class="dqit-form-title"><i class="bi bi-list"></i><span>' + escapeHtml(title) + '</span></div>' +
-        '<div class="dqit-result-head-right"><span>频次：' + escapeHtml(getReportFrequency(item)) + '</span><button class="btn btn-primary" type="button" data-dqit-action="back-list"><i class="bi bi-arrow-left"></i><span>返回</span></button></div>' +
+        '<div class="dqit-form-title"><i class="bi bi-list"></i><span>' + escapeHtml(title) + '</span><em class="dqit-result-frequency">频次：' + escapeHtml(getReportFrequency(item)) + '</em></div>' +
+        '<div class="dqit-result-head-right">' +
+          renderResultFilter() +
+          '<button class="btn btn-primary" type="button" data-dqit-action="back-list"><i class="bi bi-arrow-left"></i><span>返回</span></button>' +
+        '</div>' +
       '</div>' +
       '<div class="dqit-result-scroll">' +
         '<div class="dqit-result-table-wrap">' +
           '<table class="ds-table dqit-result-table">' +
-            '<thead><tr><th>报告名称</th><th>开始时间</th><th>完成时间</th><th>执行频次</th><th>耗时</th><th>状态</th><th>操作</th></tr></thead>' +
+            '<thead><tr><th>报告名称</th><th>开始时间</th><th>完成时间</th><th>执行频次</th><th>执行方式</th><th>耗时</th><th>状态</th><th>操作</th></tr></thead>' +
             '<tbody>' + renderResultRows() + '</tbody>' +
           '</table>' +
         '</div>' +
@@ -2397,7 +2429,30 @@ DP.pages.qualityInspectTask = (function () {
     window.setTimeout(function () { if (toast && toast.parentNode) toast.remove(); }, 1800);
   }
 
-  function openForm(kind, mode, id) {
+  function ensureRouteTask(opts) {
+    if (!opts || opts.view !== 'edit' || !opts.taskId) return null;
+    var item = getTaskById(opts.taskId);
+    if (item || !opts.taskName) return item;
+    var taskType = taskTypes.indexOf(opts.taskType) >= 0 ? opts.taskType : '自定义稽查';
+    item = task(
+      opts.taskId,
+      opts.taskName,
+      opts.taskFrequency || '每天 10:05:02',
+      '运行中',
+      '任务调度',
+      '2026-06-30 10:05:02',
+      '2026-06-30 10:05:02',
+      'demo',
+      taskType,
+      opts.taskTarget || 'employee_info',
+      1,
+      '由任务调度执行详情跳转的规则任务。'
+    );
+    taskRows.unshift(item);
+    return item;
+  }
+
+  function openForm(kind, mode, id, options) {
     if (kind !== 'custom' && kind !== 'standard' && kind !== 'basic') {
       id = mode;
       mode = kind;
@@ -2427,7 +2482,7 @@ DP.pages.qualityInspectTask = (function () {
       basicCustom: { theme: 'dark', font: '14px', searchOpen: false },
       reportSql: { theme: 'dark', font: '14px', searchOpen: false }
     };
-    renderAllKeepFormScroll();
+    if (!options || !options.silent) renderAllKeepFormScroll();
   }
 
   function backToList() {
@@ -2439,6 +2494,7 @@ DP.pages.qualityInspectTask = (function () {
     state.viewTaskId = '';
     state.reportRunIndex = 0;
     state.resultPage = 1;
+    state.resultExecutionMode = '';
     state.ruleModal = null;
     state.standardModal = null;
     state.basicFieldModal = null;
@@ -2450,6 +2506,9 @@ DP.pages.qualityInspectTask = (function () {
     state.basicRuleKeyword = '';
     state.schedulePopup = '';
     state.basicTimePopup = '';
+    if (typeof DP.rememberRoute === 'function') {
+      DP.rememberRoute('quality-inspect-task', 'governance');
+    }
     renderAllKeepFormScroll();
   }
 
@@ -2984,6 +3043,7 @@ DP.pages.qualityInspectTask = (function () {
     state.view = 'result';
     state.viewTaskId = item ? item.id : '';
     state.resultPage = 1;
+    state.resultExecutionMode = '';
     state.reportRunIndex = 0;
     state.reportSqlModal = null;
     state.reportLogModal = null;
@@ -3029,6 +3089,11 @@ DP.pages.qualityInspectTask = (function () {
       state.page = 1;
       state.selectedIds = {};
       renderAllKeepFormScroll();
+    } else if (action === 'query-result-runs') {
+      var executionModeSelect = pageEl.querySelector('#dqitResultExecutionMode');
+      state.resultExecutionMode = executionModeSelect ? executionModeSelect.value : '';
+      state.resultPage = 1;
+      renderAll();
     } else if (action === 'entry-custom') {
       openForm('custom', 'create');
     } else if (action === 'entry-standard') {
@@ -3323,7 +3388,7 @@ DP.pages.qualityInspectTask = (function () {
 
       var resultPageBtn = e.target.closest('[data-dqit-result-page]');
       if (resultPageBtn && pageEl.contains(resultPageBtn) && !resultPageBtn.disabled) {
-        var resultTotalPages = Math.max(1, Math.ceil(getResultTotal() / state.resultPageSize));
+        var resultTotalPages = Math.max(1, Math.ceil(getFilteredReportRunIndexes().length / state.resultPageSize));
         var resultTarget = resultPageBtn.getAttribute('data-dqit-result-page');
         if (resultTarget === 'prev') state.resultPage = Math.max(1, state.resultPage - 1);
         else if (resultTarget === 'next') state.resultPage = Math.min(resultTotalPages, state.resultPage + 1);
@@ -3579,6 +3644,11 @@ DP.pages.qualityInspectTask = (function () {
     state.basicFieldModal = null;
     state.basicParamModal = null;
     state.testSqlModal = null;
+    state.viewTaskId = '';
+    state.reportRunIndex = 0;
+    state.resultPage = 1;
+    state.resultPageSize = 10;
+    state.resultExecutionMode = '';
     state.openPicker = '';
     state.pickerKeyword = '';
     state.openParamSelect = '';
@@ -3598,10 +3668,15 @@ DP.pages.qualityInspectTask = (function () {
 
   return {
     html: '<div class="page-quality-inspect-task"></div>',
-    init: function () {
+    init: function (opts) {
       pageEl = document.querySelector('.page-quality-inspect-task');
       if (!pageEl) return;
       resetState();
+      var routeTask = ensureRouteTask(opts || {});
+      if (routeTask) {
+        var routeKind = routeTask.type === '标准稽查' ? 'standard' : (routeTask.type === '基础稽查' ? 'basic' : 'custom');
+        openForm(routeKind, 'edit', routeTask.id, { silent: true });
+      }
       bindEvents();
       renderAll();
     }

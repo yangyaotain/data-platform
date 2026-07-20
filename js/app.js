@@ -51,7 +51,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (!page) return null;
-    return { nav: nav || '', page: page };
+    var opts = { skipRoute: true };
+    if (hash.indexOf('=') >= 0) {
+      params.forEach(function (value, key) {
+        if (key !== 'nav' && key !== 'page') opts[key] = value;
+      });
+    }
+    return { nav: nav || '', page: page, opts: opts };
   }
 
   function normalizeRoutePage(route) {
@@ -144,9 +150,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (link) {
       activateMenuLink(link);
-      DP.showPage(getRenderableMenuKey(link, pageKey));
+      DP.showPage(getRenderableMenuKey(link, pageKey), route.opts);
     } else {
-      DP.showPage(pageKey);
+      DP.showPage(pageKey, route.opts);
     }
 
     return true;

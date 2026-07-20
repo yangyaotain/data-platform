@@ -88,7 +88,7 @@ DP.showPage = function (menuKey, opts) {
     });
   } else if (menuKey === 'quality-inspect-task' || menuKey === '任务配置' || menuKey === '稽查任务') {
     c.innerHTML = DP.pages.qualityInspectTask.html;
-    DP.pages.qualityInspectTask.init();
+    DP.pages.qualityInspectTask.init(opts || {});
   } else if (menuKey === 'svc-api-dev' || menuKey === '接口开发') {
     c.innerHTML = DP.pages.serviceApiDev.html;
     DP.pages.serviceApiDev.init();

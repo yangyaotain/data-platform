@@ -410,9 +410,6 @@ DP.pages.qualityInspectReport = (function () {
     { name: '有效性合规比例', desc: '有效性规则检核合规比例', sample: '99.82%' },
     { name: '准确性合规比例', desc: '准确性规则检核合规比例', sample: '99.73%' },
     { name: '及时性合规比例', desc: '及时性规则检核合规比例', sample: '99.88%' },
-    { name: '该表稽查字段数', desc: '单表参与检核的字段数量', sample: '16' },
-    { name: '该表字段数', desc: '单表参与检核的数据量，按万条展示', sample: '2.45' },
-    { name: '该表稽查问题总记录数', desc: '单表检核发现的问题记录数', sample: '12' },
     { name: '最后生成时间', desc: '报告最近一次生成时间', sample: '2026-06-30 10:05:02' },
     { name: '年份', desc: '报告生成时的当前年份', sample: '2026年' },
     { name: '月份', desc: '报告生成时的当前月份', sample: '2026年7月' },
@@ -672,6 +669,7 @@ DP.pages.qualityInspectReport = (function () {
       icon: 'bi-table',
       scope: item.tableName + '（' + item.alias + '）',
       desc: '展示' + item.alias + '字段对象、评测内容、评测标准和评估结论。',
+      summary: getTemplateFieldDashboardSummary(item),
       metrics: '4列 / 6行',
       updateTime: '2026-06-29 10:05:02'
     };
@@ -1218,100 +1216,386 @@ DP.pages.qualityInspectReport = (function () {
     });
   }
 
-  function buildReportWordTocHtml(tocHtml) {
-    var wrap = document.createElement('div');
-    wrap.innerHTML = tocHtml || '';
-    var links = wrap.querySelectorAll('.qir-preview-toc-item');
-    if (!links.length) {
-      return '<section class="qir-word-toc"><h2>报告目录</h2><p>暂无目录</p></section>';
-    }
-    var items = Array.prototype.map.call(links, function (link) {
-      var textNode = link.querySelector('b') || link;
-      var level = link.classList.contains('level-h1') ? 'level-h1' : (link.classList.contains('level-h4') ? 'level-h4' : (link.classList.contains('level-h3') ? 'level-h3' : 'level-h2'));
-      return '<p class="' + level + '">' + escapeHtml(textNode.textContent || '') + '</p>';
-    }).join('');
-    return '<section class="qir-word-toc"><h2>报告目录</h2>' + items + '</section>';
-  }
-
   function getReportWordStyles() {
     return [
       '@page Section1{size:21cm 29.7cm;margin:2.54cm 3.17cm;}',
       'div.Section1{page:Section1;}',
-      'body,body *{color:#000!important;}',
-      'body{margin:0;color:#000;font-family:SimSun,"宋体",serif;font-size:12pt;}',
-      'p.MsoNormal{margin-top:6pt;margin-right:0;margin-bottom:6pt;margin-left:0;mso-para-margin-top:.5gd;mso-para-margin-bottom:.5gd;text-align:justify;text-justify:inter-ideograph;text-indent:24pt;mso-char-indent-count:2.0;line-height:150%;mso-pagination:widow-orphan;font-family:SimSun,"宋体",serif;font-size:12pt;color:#000;}',
-      '.qir-word-toc{margin:0 0 20pt;padding:0 0 14pt;border-bottom:1pt solid #dfe5ec;}',
-      '.qir-word-toc h2{margin:0 0 10pt;color:#000;font-size:16pt;line-height:1.4;}',
-      '.qir-word-toc p{margin:4pt 0;color:#000;font-size:10.5pt;line-height:1.6;}',
-      '.qir-word-toc p.level-h2{margin-left:18pt;color:#000;}',
-      '.qir-word-toc p.level-h3{margin-left:32pt;color:#000;}',
-      '.qir-word-toc p.level-h4{margin-left:46pt;color:#000;}',
+      'body{margin:0;background:#fff;color:#000;font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif;font-size:10.5pt;}',
+      'p.MsoNormal{margin-top:0;margin-right:0;margin-bottom:0;margin-left:0;mso-para-margin-top:0;mso-para-margin-bottom:0;text-align:justify;text-justify:inter-ideograph;text-indent:24pt;mso-char-indent-count:2.0;line-height:150%;mso-line-height-rule:auto;mso-pagination:widow-orphan;font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif;font-size:10.5pt;color:#000;}',
       '.qir-word-page{width:100%;}',
-      '.qir-template-doc-page{width:100%;min-height:23.5cm;page-break-after:always;break-after:page;box-sizing:border-box;}',
+      '.qir-word-page-break{height:0;margin:0;padding:0;font-size:1pt;line-height:1pt;page-break-before:always;mso-special-character:line-break;}',
+      '.qir-template-doc-page{width:100%;min-height:23.5cm;page-break-inside:avoid;box-sizing:border-box;color:#26384d;}',
       '.qir-template-doc-page:last-child{page-break-after:auto;break-after:auto;}',
-      '.qir-template-cover-page{height:22cm;text-align:center;}',
+      '.qir-template-cover-page{height:23.5cm;text-align:center;page-break-inside:avoid;}',
       '.qir-template-cover-content{height:21cm;text-align:center;}',
-      '.qir-template-page h1{margin:0 0 12pt;color:#000;font-size:22pt;line-height:1.35;text-align:center;}',
-      '.qir-template-page h2{margin:20pt 0 8pt;color:#000;font-size:15pt;line-height:1.45;}',
-      '.qir-template-page h3{margin:14pt 0 7pt;color:#000;font-size:12.5pt;line-height:1.45;font-weight:650;}',
-      '.qir-template-page h4{margin:12pt 0 6pt;color:#000;font-size:12pt;line-height:1.45;font-weight:650;}',
-      '.qir-template-page p{margin-top:6pt;margin-bottom:6pt;mso-para-margin-top:.5gd;mso-para-margin-bottom:.5gd;color:#000;font-family:SimSun,"宋体",serif;font-size:12pt;line-height:150%;mso-line-height-rule:auto;text-indent:24pt;mso-char-indent-count:2.0;}',
+      '.qir-template-page h1{margin:0 0 12pt;color:#1f2d3d;font-size:22pt;line-height:1.35;text-align:center;font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif;}',
+      '.qir-template-page h2{margin:20pt 0 8pt;color:#1f2d3d;font-size:15pt;line-height:1.45;font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif;}',
+      '.qir-template-page h3{margin:14pt 0 7pt;color:#26384d;font-size:12.5pt;line-height:1.45;font-weight:650;font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif;}',
+      '.qir-template-page h4{margin:12pt 0 6pt;color:#26384d;font-size:11.5pt;line-height:1.45;font-weight:650;font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif;}',
+      '.qir-template-page p{margin-top:0;margin-bottom:0;mso-para-margin-top:0;mso-para-margin-bottom:0;color:#000;font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif;font-size:10.5pt;line-height:150%;mso-line-height-rule:auto;text-indent:24pt;mso-char-indent-count:2.0;text-align:justify;text-justify:inter-ideograph;}',
       '.qir-template-doc-system{display:block;margin:0 0 4pt;color:inherit;font-size:inherit;font-weight:inherit;}',
-      '.qir-template-meta{padding-bottom:8pt;border-bottom:1pt solid #edf1f6;color:#000!important;}',
-      '.qir-template-report-date{margin-top:11cm!important;text-align:center!important;text-indent:0!important;mso-char-indent-count:0!important;color:#000!important;}',
-      '.qir-template-doc-toc{margin:16pt 0 20pt;padding:0 0 12pt;border-bottom:1pt solid #dfe5ec;}',
-      '.qir-template-doc-toc h2{margin:0 0 10pt;color:#000;font-size:15pt;text-align:center;}',
-      '.qir-template-doc-toc-row{display:block;margin:4pt 0;color:#000;font-size:10.5pt;line-height:1.5;text-indent:0!important;}',
-      '.qir-template-doc-toc-row.level-2{margin-left:18pt;}',
-      '.qir-template-doc-toc-row.level-3{margin-left:34pt;}',
-      '.qir-template-doc-toc-row em{float:right;font-style:normal;}',
-      '.qir-template-detail-title{font-weight:650;text-indent:0!important;}',
-      '.qir-template-doc-table{width:100%;border-collapse:collapse;margin:8pt 0 12pt;color:#000;font-family:SimSun,"宋体",serif;font-size:9.5pt;}',
-      '.qir-template-doc-table th,.qir-template-doc-table td{height:24pt;padding:0 6pt;border:1pt solid #d9dfe6;text-align:left;vertical-align:middle;}',
-      '.qir-template-doc-table th{background:#f3f6fa;color:#000;font-weight:650;}',
-      '.qir-template-doc-table tr.is-total td{background:#fafafa;color:#000;font-weight:650;}',
+      '.qir-template-meta{padding-bottom:8pt;border-bottom:1pt solid #edf1f6;color:#7b8fa8!important;}',
+      '.qir-template-report-date{margin-top:11cm!important;text-align:center!important;text-indent:0!important;mso-char-indent-count:0!important;color:#526579!important;}',
+      '.qir-template-detail-title{color:#26384d;font-weight:650;text-indent:0!important;}',
+      '.qir-template-doc-table{width:100%;border-collapse:collapse;margin:8pt 0 12pt;color:#37465a;font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif;font-size:8pt;line-height:1.35;table-layout:fixed;mso-table-layout-alt:fixed;mso-table-lspace:0pt;mso-table-rspace:0pt;}',
+      '.qir-template-doc-table th,.qir-template-doc-table td{height:22pt;padding:3pt 4pt;border:.5pt solid #d9dfe6;mso-border-alt:solid #d9dfe6 .5pt;text-align:left;vertical-align:middle;}',
+      '.qir-template-doc-table th{background:#f3f6fa;color:#26384d;font-weight:650;}',
+      '.qir-template-doc-table tr.is-total td{background:#fafafa;color:#1f2d3d;font-weight:650;}',
       '.qir-template-field-table th:nth-child(1),.qir-template-field-table td:nth-child(1){width:43%;}',
       '.qir-template-field-table th:nth-child(2),.qir-template-field-table td:nth-child(2){width:28%;}',
       '.qir-template-field-table th:nth-child(3),.qir-template-field-table td:nth-child(3){width:14%;text-align:center;}',
       '.qir-template-field-table th:nth-child(4),.qir-template-field-table td:nth-child(4){width:15%;text-align:center;}',
       '.qir-template-kpi-row{display:table;width:100%;border-spacing:8pt;margin:8pt 0;}',
       '.qir-template-kpi-row div{display:table-cell;min-height:54pt;padding:10pt;border:1pt solid #dce9f8;background:#f8fbff;}',
-      '.qir-template-kpi-row span{display:block;color:#000;font-size:9pt;}',
-      '.qir-template-kpi-row b{display:block;margin-top:4pt;color:#000;font-size:18pt;font-weight:650;}',
-      '.qir-template-inserted-dashboard{margin:10pt 0;padding:10pt;border:1pt solid #dce9f8;background:#fbfdff;}',
+      '.qir-template-kpi-row span{display:block;color:#6f8298;font-size:9pt;}',
+      '.qir-template-kpi-row b{display:block;margin-top:4pt;color:#1677ff;font-size:18pt;font-weight:650;}',
+      '.qir-template-inserted-dashboard{margin:10pt 0;padding:10pt;border:1pt solid #dce9f8;background:#fbfdff;color:#26384d;}',
       '.qir-inserted-dashboard-head{margin-bottom:8pt;}',
-      '.qir-inserted-dashboard-head strong{color:#000;font-size:12pt;font-weight:650;}',
+      '.qir-inserted-dashboard-head strong{color:#1f2d3d;font-size:12pt;font-weight:650;}',
+      '.qir-inserted-dashboard-summary{margin:-2pt 0 8pt;color:#526579;font-size:10pt;line-height:1.5;text-indent:0!important;mso-char-indent-count:0!important;}',
       '.qir-inserted-dashboard-body{padding:10pt;border:1pt solid #e6eff8;background:#fff;}',
       '.qir-template-table-dashboard .qir-inserted-dashboard-body{min-height:auto;padding:8pt;}',
       '.qir-template-pie-dashboard .qir-inserted-dashboard-head{text-align:center;}',
-      '.qir-template-pie-dashboard .qir-inserted-dashboard-head strong{color:#000;font-size:15pt;font-weight:500;}',
+      '.qir-template-pie-dashboard .qir-inserted-dashboard-head strong{color:#29445f;font-size:15pt;font-weight:500;}',
       '.qir-template-pie-dashboard .qir-inserted-dashboard-body{padding:8pt;background:#fff;}',
-      '.qir-rule-pie-chart{height:260pt;margin:0;background:#fff;text-align:center;}',
-      '.qir-chart-fallback{height:100%;display:table;width:100%;color:#000;font-size:9pt;text-align:center;}',
+      '.qir-rule-pie-chart,.qir-rectify-trend-chart{margin:0 auto;background:#fff;text-align:center;}',
+      '.qir-word-chart-img{display:block;width:390pt;height:auto;margin:2pt auto;border:0;}',
+      '.qir-word-chart-fallback{margin:0;padding:18pt 8pt;border:1pt dashed #c7d9ec;background:#f8fbff;color:#526579;font-size:9pt;text-align:center;}',
+      '.qir-chart-fallback{height:100%;display:table;width:100%;color:#8aa0b7;font-size:9pt;text-align:center;}',
       '.qir-chart-fallback:before{content:"ECharts 图表将在页面预览中渲染";display:table-cell;vertical-align:middle;}',
       '.qir-inserted-kpi-grid{display:table;width:100%;border-spacing:8pt;}',
       '.qir-inserted-kpi-grid div{display:table-cell;padding:10pt;border:1pt solid #dce9f8;background:#f8fbff;}',
-      '.qir-inserted-kpi-grid span,.qir-inserted-kpi-grid em{display:block;color:#000;font-size:9pt;font-style:normal;}',
-      '.qir-inserted-kpi-grid b{display:block;margin:5pt 0;color:#000;font-size:18pt;}',
-      '.qir-inserted-table{width:100%;border-collapse:collapse;color:#000;font-size:9pt;}',
+      '.qir-inserted-kpi-grid span,.qir-inserted-kpi-grid em{display:block;color:#6f8298;font-size:9pt;font-style:normal;}',
+      '.qir-inserted-kpi-grid b{display:block;margin:5pt 0;color:#1677ff;font-size:18pt;}',
+      '.qir-inserted-table{width:100%;border-collapse:collapse;color:#44566c;font-size:8pt;}',
       '.qir-inserted-table.qir-template-doc-table{margin:0;}',
-      '.qir-inserted-table th,.qir-inserted-table td{height:24pt;padding:0 7pt;border:1pt solid #edf1f6;text-align:left;}',
-      '.qir-inserted-table th{background:#f7f9fc;color:#000;font-weight:650;}',
-      '.qir-inserted-bars div{margin:6pt 0;color:#000;font-size:9pt;}',
+      '.qir-inserted-table th,.qir-inserted-table td{height:22pt;padding:3pt 4pt;border:.5pt solid #d9dfe6;mso-border-alt:solid #d9dfe6 .5pt;text-align:left;}',
+      '.qir-inserted-table th{background:#f7f9fc;color:#26384d;font-weight:650;}',
+      '.qir-inserted-bars div{margin:6pt 0;color:#526579;font-size:9pt;}',
       '.qir-inserted-bars b{display:inline-block;height:8pt;background:#1677ff;}',
       '.qir-inserted-pie,.qir-inserted-trend-line{border:1pt solid #e6eff8;background:#f8fbff;}'
     ].join('');
   }
 
+  function formatReportWordGeneratedDateTime(config) {
+    var value = config && config.lastGeneratedTime && config.lastGeneratedTime !== '-' ? String(config.lastGeneratedTime) : '';
+    var parts;
+    var dateParts;
+    if (!value) return '';
+    parts = value.split(' ');
+    dateParts = parts[0].split('-');
+    if (dateParts.length === 3) {
+      return Number(dateParts[0]) + '年' + Number(dateParts[1]) + '月' + Number(dateParts[2]) + '日' + (parts[1] ? ' ' + parts[1] : '');
+    }
+    return value;
+  }
+
+  function getReportWordPreviewOverrides(config) {
+    var generatedTime = formatReportWordGeneratedDateTime(config);
+    if (!generatedTime) return null;
+    return {
+      '日期时间': generatedTime,
+      '最后生成时间': config.lastGeneratedTime
+    };
+  }
+
+  function getReportWordChartKey(node) {
+    var dashboard = node && node.closest ? node.closest('.qir-template-inserted-dashboard') : null;
+    var dashboardId = dashboard ? dashboard.getAttribute('data-dashboard-id') : '';
+    return dashboardId || (node ? (node.getAttribute('data-qir-echart') || '') : '');
+  }
+
+  function getReportWordChartSize(node) {
+    var chartType = node ? node.getAttribute('data-qir-echart') : '';
+    if (chartType === 'rectify-trend') {
+      return {
+        exportWidth: 680,
+        exportHeight: 330,
+        displayWidthPx: 520,
+        displayWidthPt: 390,
+        displayHeightPt: 189
+      };
+    }
+    return {
+      exportWidth: 680,
+      exportHeight: 340,
+      displayWidthPx: 520,
+      displayWidthPt: 390,
+      displayHeightPt: 195
+    };
+  }
+
+  function parseReportWordImageDataUrl(dataUrl) {
+    var match = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(String(dataUrl || ''));
+    if (!match) return null;
+    return {
+      mimeType: match[1],
+      base64: match[2]
+    };
+  }
+
+  function collectReportWordChartAssets() {
+    var assets = {};
+    var index = 1;
+    var nodes;
+    if (!window.echarts || !pageEl) return assets;
+    nodes = Array.prototype.slice.call(pageEl.querySelectorAll('[data-qir-report-preview-page] [data-qir-echart]'));
+    nodes.forEach(function (node) {
+      var chart = window.echarts.getInstanceByDom ? window.echarts.getInstanceByDom(node) : null;
+      var dataUrl;
+      var parsed;
+      var key;
+      var size = getReportWordChartSize(node);
+      var oldStyle = node.getAttribute('style');
+      if (!chart || !chart.getDataURL) return;
+      try {
+        node.style.width = size.exportWidth + 'px';
+        node.style.height = size.exportHeight + 'px';
+        if (chart.resize) chart.resize({ width: size.exportWidth, height: size.exportHeight });
+        dataUrl = chart.getDataURL({
+          type: 'png',
+          pixelRatio: 1.5,
+          backgroundColor: '#fff'
+        });
+      } catch (err) {
+        dataUrl = '';
+      } finally {
+        if (oldStyle == null) {
+          node.removeAttribute('style');
+        } else {
+          node.setAttribute('style', oldStyle);
+        }
+        try {
+          if (chart && chart.resize) chart.resize();
+        } catch (resizeErr) {}
+      }
+      parsed = parseReportWordImageDataUrl(dataUrl);
+      key = getReportWordChartKey(node);
+      if (!parsed || !key) return;
+      assets[key] = {
+        location: 'qir-word-chart-' + index + '.png',
+        mimeType: parsed.mimeType,
+        base64: parsed.base64,
+        alt: node.getAttribute('aria-label') || '报告图表',
+        displayWidthPx: size.displayWidthPx,
+        displayWidthPt: size.displayWidthPt,
+        displayHeightPt: size.displayHeightPt
+      };
+      index += 1;
+    });
+    return assets;
+  }
+
+  function renderReportWordChartFallback(node) {
+    var chartType = node ? node.getAttribute('data-qir-echart') : '';
+    var message = chartType === 'rectify-trend'
+      ? '问题整改趋势图未捕获，详见下方问题整改进度表。'
+      : '检核规则数量分布图未捕获，详见下方规则类型分布表。';
+    return '<div class="qir-word-chart-fallback">' + escapeHtml(message) + '</div>';
+  }
+
+  function applyReportWordChartImages(html, chartAssets) {
+    var wrap = document.createElement('div');
+    wrap.innerHTML = html || '';
+    wrap.querySelectorAll('[data-qir-echart]').forEach(function (node) {
+      var key = getReportWordChartKey(node);
+      var asset = chartAssets && chartAssets[key];
+      if (asset) {
+        var img = document.createElement('img');
+        img.className = 'qir-word-chart-img';
+        img.setAttribute('src', asset.location);
+        img.setAttribute('alt', asset.alt);
+        img.setAttribute('width', String(asset.displayWidthPx || 520));
+        img.setAttribute('style', 'display:block;width:' + (asset.displayWidthPt || 390) + 'pt;height:auto;max-height:' + (asset.displayHeightPt || 195) + 'pt;margin:2pt auto;border:0;');
+        node.innerHTML = '';
+        node.setAttribute('style', 'width:' + (asset.displayWidthPt || 390) + 'pt;height:' + (asset.displayHeightPt || 195) + 'pt;margin:0 auto;text-align:center;overflow:hidden;background:#fff;');
+        node.appendChild(img);
+        node.classList.add('qir-word-chart-exported');
+      } else {
+        node.innerHTML = renderReportWordChartFallback(node);
+      }
+      node.removeAttribute('data-qir-echart');
+      node.removeAttribute('data-qir-chart-data');
+      node.removeAttribute('_echarts_instance_');
+    });
+    return wrap.innerHTML;
+  }
+
+  function getReportWordAssetList(chartAssets) {
+    return Object.keys(chartAssets || {}).map(function (key) {
+      return chartAssets[key];
+    }).filter(function (asset) {
+      return asset && asset.base64 && asset.location;
+    });
+  }
+
+  function foldReportWordBase64(base64) {
+    return String(base64 || '').replace(/(.{76})/g, '$1\r\n');
+  }
+
+  function createReportWordMhtmlBlob(html, assets) {
+    var boundary = '----=_NextPart_' + Date.now();
+    var lines = [
+      'MIME-Version: 1.0',
+      'Content-Type: multipart/related; boundary="' + boundary + '"; type="text/html"',
+      '',
+      '--' + boundary,
+      'Content-Type: text/html; charset="utf-8"',
+      'Content-Transfer-Encoding: 8bit',
+      'Content-Location: report.htm',
+      '',
+      '\ufeff' + html
+    ];
+    assets.forEach(function (asset) {
+      lines.push(
+        '--' + boundary,
+        'Content-Type: ' + asset.mimeType,
+        'Content-Transfer-Encoding: base64',
+        'Content-Location: ' + asset.location,
+        'Content-ID: <' + asset.location + '>',
+        '',
+        foldReportWordBase64(asset.base64)
+      );
+    });
+    lines.push('--' + boundary + '--');
+    return new Blob([lines.join('\r\n')], { type: 'application/msword;charset=utf-8' });
+  }
+
+  function getReportWordTableLayout(table) {
+    if (!table || !table.classList) return null;
+    if (table.classList.contains('qir-template-quality-rank-table')) {
+      return { widths: [8, 28, 18, 18, 14, 14], center: [0, 3, 4, 5], fontSize: '7.5pt' };
+    }
+    if (table.classList.contains('qir-template-trend-table')) {
+      return { widths: [10, 25, 8, 15, 15, 13, 14], center: [0, 2, 3, 4, 5, 6], fontSize: '7pt', noWrapBody: true, cellPadding: '2pt 3pt' };
+    }
+    if (table.classList.contains('qir-template-check-table')) {
+      return { widths: [30, 18, 20, 18, 14], center: [2, 3, 4], fontSize: '7.8pt' };
+    }
+    if (table.classList.contains('qir-template-field-table')) {
+      return { widths: [43, 27, 15, 15], center: [2, 3], fontSize: '8pt' };
+    }
+    if (table.classList.contains('qir-template-rule-table')) {
+      return { widths: [36, 28, 36], center: [1, 2], fontSize: '8.2pt' };
+    }
+    return null;
+  }
+
+  function applyReportWordTableLayouts(root) {
+    var tableBaseStyle = [
+      'width:100%',
+      'border-collapse:collapse',
+      'table-layout:fixed',
+      'mso-table-layout-alt:fixed',
+      'mso-table-lspace:0pt',
+      'mso-table-rspace:0pt',
+      'margin:0',
+      'font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif',
+      'color:#37465a'
+    ].join(';');
+    var borderStyle = 'border:.5pt solid #d9dfe6;mso-border-alt:solid #d9dfe6 .5pt;';
+    var headerBaseStyle = [
+      borderStyle,
+      'padding:3pt 3pt',
+      'background:#f3f6fa',
+      'color:#26384d',
+      'font-weight:650',
+      'line-height:1.3',
+      'text-indent:0',
+      'mso-char-indent-count:0',
+      'vertical-align:middle',
+      'mso-height-source:auto'
+    ].join(';');
+    var tableParagraphStyle = [
+      'margin-top:0',
+      'margin-right:0',
+      'margin-bottom:0',
+      'margin-left:0',
+      'mso-para-margin-top:0',
+      'mso-para-margin-bottom:0',
+      'text-indent:0',
+      'mso-char-indent-count:0',
+      'line-height:1.35',
+      'mso-line-height-rule:auto'
+    ].join(';');
+    (root ? root.querySelectorAll('table.qir-template-doc-table') : []).forEach(function (table) {
+      var layout = getReportWordTableLayout(table);
+      var widths = layout ? layout.widths : [];
+      var centerCols = layout ? layout.center : [];
+      var fontSize = layout ? layout.fontSize : '8pt';
+      var cellPadding = layout && layout.cellPadding ? layout.cellPadding : '3pt 3pt';
+      var cellBaseStyle = [
+        borderStyle,
+        'padding:' + cellPadding,
+        'color:#37465a',
+        'line-height:1.35',
+        'text-indent:0',
+        'mso-char-indent-count:0',
+        'vertical-align:middle',
+        'mso-height-source:auto',
+        layout && layout.noWrapBody ? 'white-space:nowrap;mso-no-wrap:yes;word-break:normal' : 'word-break:break-all'
+      ].join(';');
+      var oldColgroup = table.querySelector('colgroup');
+      var colgroup = document.createElement('colgroup');
+      if (oldColgroup) oldColgroup.remove();
+      table.setAttribute('style', tableBaseStyle + ';font-size:' + fontSize);
+      widths.forEach(function (width) {
+        var col = document.createElement('col');
+        col.setAttribute('style', 'width:' + width + '%');
+        colgroup.appendChild(col);
+      });
+      if (widths.length) {
+        table.insertBefore(colgroup, table.firstChild);
+      }
+      table.querySelectorAll('tr').forEach(function (row) {
+        row.removeAttribute('style');
+      });
+      table.querySelectorAll('th,td').forEach(function (cell) {
+        var colIndex = cell.cellIndex || 0;
+        var isHead = cell.tagName && cell.tagName.toLowerCase() === 'th';
+        var widthStyle = widths[colIndex] ? 'width:' + widths[colIndex] + '%;' : '';
+        var align = (isHead || centerCols.indexOf(colIndex) >= 0) ? 'center' : 'left';
+        cell.setAttribute('style', widthStyle + (isHead ? headerBaseStyle : cellBaseStyle) + ';font-size:' + fontSize + ';text-align:' + align);
+        cell.querySelectorAll('p').forEach(function (paragraph) {
+          paragraph.setAttribute('style', tableParagraphStyle + ';font-size:' + fontSize + ';text-align:' + align + ';color:' + (isHead ? '#26384d' : '#37465a'));
+        });
+      });
+    });
+  }
+
+  function applyReportWordPageBreaks(docPages) {
+    docPages.forEach(function (page, index) {
+      var breakEl;
+      var isLast = index === docPages.length - 1;
+      var isCover = page.classList && page.classList.contains('qir-template-cover-page');
+      page.setAttribute('style', [
+        'width:100%',
+        'min-height:23.5cm',
+        'page-break-after:auto',
+        'break-after:auto',
+        'page-break-inside:avoid',
+        'box-sizing:border-box',
+        'color:#26384d',
+        isCover ? 'height:23.5cm' : ''
+      ].filter(Boolean).join(';'));
+      if (index === 0 || !page.parentNode) return;
+      breakEl = page.ownerDocument.createElement('br');
+      breakEl.className = 'qir-word-page-break';
+      breakEl.setAttribute('clear', 'all');
+      breakEl.setAttribute('style', 'page-break-before:always;mso-special-character:line-break;height:0;margin:0;padding:0;font-size:1pt;line-height:1pt;');
+      page.parentNode.insertBefore(breakEl, page);
+    });
+  }
+
   function normalizeReportWordContent(html) {
     var wrap = document.createElement('div');
     var paragraphStyle = [
-      'margin-top:6pt',
+      'margin-top:0',
       'margin-right:0',
-      'margin-bottom:6pt',
+      'margin-bottom:0',
       'margin-left:0',
-      'mso-para-margin-top:.5gd',
-      'mso-para-margin-bottom:.5gd',
+      'mso-para-margin-top:0',
+      'mso-para-margin-bottom:0',
       'text-align:justify',
       'text-justify:inter-ideograph',
       'text-indent:24pt',
@@ -1319,10 +1603,10 @@ DP.pages.qualityInspectReport = (function () {
       'line-height:150%',
       'mso-line-height-rule:auto',
       'mso-pagination:widow-orphan',
-      'font-family:SimSun,"宋体",serif',
-      'mso-ascii-font-family:SimSun',
-      'mso-hansi-font-family:SimSun',
-      'font-size:12pt',
+      'font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif',
+      'mso-ascii-font-family:"Microsoft YaHei"',
+      'mso-hansi-font-family:"Microsoft YaHei"',
+      'font-size:10.5pt',
       'color:#000'
     ].join(';');
     var titleStyle = [
@@ -1332,10 +1616,10 @@ DP.pages.qualityInspectReport = (function () {
       'margin-left:0',
       'text-align:center',
       'line-height:1.35',
-      'font-family:SimSun,"宋体",serif',
+      'font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif',
       'font-size:22pt',
       'font-weight:650',
-      'color:#000'
+      'color:#1f2d3d'
     ].join(';');
     var coverTitleStyle = [
       'margin-top:4cm',
@@ -1344,10 +1628,43 @@ DP.pages.qualityInspectReport = (function () {
       'margin-left:0',
       'text-align:center',
       'line-height:1.35',
-      'font-family:SimSun,"宋体",serif',
+      'font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif',
       'font-size:22pt',
       'font-weight:650',
-      'color:#000'
+      'color:#1f2d3d'
+    ].join(';');
+    var h2Style = [
+      'margin-top:20pt',
+      'margin-right:0',
+      'margin-bottom:8pt',
+      'margin-left:0',
+      'line-height:1.45',
+      'font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif',
+      'font-size:15pt',
+      'font-weight:650',
+      'color:#1f2d3d'
+    ].join(';');
+    var h3Style = [
+      'margin-top:14pt',
+      'margin-right:0',
+      'margin-bottom:7pt',
+      'margin-left:0',
+      'line-height:1.45',
+      'font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif',
+      'font-size:12.5pt',
+      'font-weight:650',
+      'color:#26384d'
+    ].join(';');
+    var h4Style = [
+      'margin-top:12pt',
+      'margin-right:0',
+      'margin-bottom:6pt',
+      'margin-left:0',
+      'line-height:1.45',
+      'font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif',
+      'font-size:11.5pt',
+      'font-weight:650',
+      'color:#26384d'
     ].join(';');
     var reportDateStyle = [
       'margin-top:11cm',
@@ -1357,44 +1674,72 @@ DP.pages.qualityInspectReport = (function () {
       'text-align:center',
       'text-indent:0',
       'mso-char-indent-count:0',
+      'line-height:180%',
+      'mso-line-height-rule:auto',
+      'font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif',
+      'mso-ascii-font-family:"Microsoft YaHei"',
+      'mso-hansi-font-family:"Microsoft YaHei"',
+      'font-size:10.5pt',
+      'color:#526579'
+    ].join(';');
+    var dashboardSummaryStyle = [
+      'margin-top:-2pt',
+      'margin-right:0',
+      'margin-bottom:8pt',
+      'margin-left:0',
+      'text-align:justify',
+      'text-justify:inter-ideograph',
+      'text-indent:0',
+      'mso-char-indent-count:0',
       'line-height:150%',
       'mso-line-height-rule:auto',
-      'font-family:SimSun,"宋体",serif',
-      'mso-ascii-font-family:SimSun',
-      'mso-hansi-font-family:SimSun',
-      'font-size:12pt',
-      'color:#000'
+      'font-family:"Microsoft YaHei",SimSun,"宋体",Arial,sans-serif',
+      'mso-ascii-font-family:"Microsoft YaHei"',
+      'mso-hansi-font-family:"Microsoft YaHei"',
+      'font-size:10pt',
+      'color:#526579'
     ].join(';');
     wrap.innerHTML = html || '';
-    wrap.querySelectorAll('*').forEach(function (node) {
-      node.style.color = '#000';
-    });
+    applyReportWordTableLayouts(wrap);
     var docPages = Array.prototype.slice.call(wrap.querySelectorAll('.qir-template-doc-page'));
-    docPages.forEach(function (page, index) {
-      page.setAttribute('style', 'width:100%;min-height:23.5cm;page-break-after:' + (index === docPages.length - 1 ? 'auto' : 'always') + ';break-after:' + (index === docPages.length - 1 ? 'auto' : 'page') + ';box-sizing:border-box;color:#000');
-    });
+    applyReportWordPageBreaks(docPages);
     wrap.querySelectorAll('h1').forEach(function (heading) {
       var isCoverTitle = heading.closest && heading.closest('.qir-template-cover-page');
       heading.setAttribute('style', isCoverTitle ? coverTitleStyle : titleStyle);
     });
+    wrap.querySelectorAll('h2').forEach(function (heading) {
+      heading.setAttribute('style', h2Style);
+    });
+    wrap.querySelectorAll('h3').forEach(function (heading) {
+      heading.setAttribute('style', h3Style);
+    });
+    wrap.querySelectorAll('h4').forEach(function (heading) {
+      heading.setAttribute('style', h4Style);
+    });
     wrap.querySelectorAll('p').forEach(function (paragraph) {
       var oldClass = paragraph.getAttribute('class') || '';
       var isReportDate = paragraph.classList.contains('qir-template-report-date');
+      var isDashboardSummary = paragraph.classList.contains('qir-inserted-dashboard-summary');
       paragraph.setAttribute('class', ('MsoNormal ' + oldClass).trim());
-      paragraph.setAttribute('style', isReportDate ? reportDateStyle : paragraphStyle);
+      paragraph.setAttribute('style', isReportDate ? reportDateStyle : (isDashboardSummary ? dashboardSummaryStyle : paragraphStyle));
     });
     return wrap.innerHTML;
   }
 
   function createReportWordBlob(config) {
     config = config || reportConfigs[0];
-    var previewData = getTemplatePreviewData(config);
-    var wordContent = normalizeReportWordContent(previewData.html);
+    var chartAssets = collectReportWordChartAssets();
+    var assetList = getReportWordAssetList(chartAssets);
+    var previewData = getTemplatePreviewData(config, getReportWordPreviewOverrides(config));
+    var wordContent = normalizeReportWordContent(applyReportWordChartImages(previewData.html, chartAssets));
     var title = escapeHtml(config.name || '稽查报告');
     var wordSettings = '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->';
     var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
       '<head><meta charset="utf-8"><meta name="ProgId" content="Word.Document"><meta name="Generator" content="Microsoft Word"><title>' + title + '</title>' + wordSettings + '<style>' + getReportWordStyles() + '</style></head>' +
       '<body lang="ZH-CN"><div class="Section1"><article class="qir-template-page qir-word-page">' + wordContent + '</article></div></body></html>';
+    if (assetList.length) {
+      return createReportWordMhtmlBlob(html, assetList);
+    }
     return new Blob(['\ufeff', html], { type: 'application/msword;charset=utf-8' });
   }
 
@@ -1789,6 +2134,25 @@ DP.pages.qualityInspectReport = (function () {
     return prefix + '-' + labels[index % labels.length];
   }
 
+  function getScheduleRuleTaskId(report, index) {
+    var reportId = report && report.id ? report.id : 'report';
+    return 'dqit-link-' + reportId + '-' + index;
+  }
+
+  function getTaskConfigEditUrl(item) {
+    var baseUrl = window.location.href.replace(/#.*$/, '');
+    var params = new URLSearchParams();
+    params.set('nav', 'governance');
+    params.set('page', 'quality-inspect-task');
+    params.set('view', 'edit');
+    params.set('taskId', item.taskId);
+    params.set('taskName', item.ruleTask);
+    params.set('taskTarget', item.tableName || '');
+    params.set('taskType', item.taskType || '自定义稽查');
+    params.set('taskFrequency', item.cycle || '');
+    return baseUrl + '#' + params.toString();
+  }
+
   function getScheduleRuleExecutionRows(run) {
     run = run || getSelectedScheduleRecordRun();
     var config = getReportConfigById(run && run.configId) || getSelectedReportConfig() || reportConfigs[0];
@@ -1805,6 +2169,7 @@ DP.pages.qualityInspectReport = (function () {
       if (run && run.status === '执行中') status = rowIndex < 3 ? '执行成功' : '执行中';
       else if (run && run.status === '执行失败' && rowIndex % 7 === 3) status = '执行失败';
       var seconds = durationSeconds[(rowIndex + ((run && run.index) || 0)) % durationSeconds.length];
+      var ruleTaskName = getScheduleRuleTaskName(report, ruleIndex);
       var row = {
         id: (run && run.id ? run.id : 'schedule-run') + '-rule-' + rowIndex,
         runId: run && run.id ? run.id : '',
@@ -1813,7 +2178,9 @@ DP.pages.qualityInspectReport = (function () {
         tableName: report ? report.tableName : '',
         alias: report ? report.alias : '',
         ruleCode: 'DQ_RULE_' + String(rowIndex + 1).padStart(3, '0'),
-        ruleTask: getScheduleRuleTaskName(report, ruleIndex),
+        ruleTask: ruleTaskName,
+        taskId: getScheduleRuleTaskId(report, ruleIndex),
+        taskType: '自定义稽查',
         startAt: formatDateTime(startAt),
         endAt: status === '执行中' ? '-' : formatDateTime(addSeconds(startAt, seconds)),
         duration: formatDurationText(seconds),
@@ -2200,7 +2567,8 @@ DP.pages.qualityInspectReport = (function () {
         return item.tableName.toLowerCase().indexOf(keyword) >= 0 ||
           item.alias.toLowerCase().indexOf(keyword) >= 0 ||
           item.dataSourceLabel.toLowerCase().indexOf(keyword) >= 0 ||
-          item.desc.toLowerCase().indexOf(keyword) >= 0;
+          item.desc.toLowerCase().indexOf(keyword) >= 0 ||
+          String(item.summary || '').toLowerCase().indexOf(keyword) >= 0;
       });
     }
     rows.sort(function (a, b) { return b.lastExecutionTime.localeCompare(a.lastExecutionTime); });
@@ -2546,6 +2914,59 @@ DP.pages.qualityInspectReport = (function () {
       group.name = input.value.trim() || '未命名过滤组';
     } else if (input.matches('[data-qir-template-filter-group-desc]')) {
       group.desc = input.value.trim() || '暂无描述';
+    }
+  }
+
+  function deleteTemplateFilterGroup(groupId) {
+    var config = getSelectedReportConfig() || reportConfigs[0];
+    var groups = getTemplateFilterGroups(config);
+    var groupIndex = groups.findIndex(function (item) { return item.id === groupId; });
+    if (groupIndex < 0) return;
+    var group = groups[groupIndex];
+
+    function doDelete() {
+      var currentGroups = getTemplateFilterGroups(config);
+      var currentIndex = currentGroups.findIndex(function (item) { return item.id === groupId; });
+      if (currentIndex < 0) return;
+      currentGroups.splice(currentIndex, 1);
+
+      delete state.templateFilterPages[groupId];
+      delete state.templateFilterPageSizes[groupId];
+      if (state.templateFilterActiveGroupId === groupId) {
+        var nextActiveGroup = currentGroups[Math.min(currentIndex, currentGroups.length - 1)] || null;
+        state.templateFilterActiveGroupId = nextActiveGroup ? nextActiveGroup.id : '';
+      }
+      if (state.templateFilterModalGroupId === groupId) {
+        state.templateFilterModalOpen = false;
+        state.templateFilterModalGroupId = '';
+        state.templateFilterModalRowId = '';
+        state.templateFilterModalDraft = null;
+      }
+      if (state.templateCopyTargetGroupId === groupId) {
+        state.templateCopyTargetGroupId = '';
+      }
+
+      if (!currentGroups.length) {
+        setTemplateApplyMode(config, 'common');
+        loadTemplateEditorContent(config, 'common');
+      } else if (state.templateEditTarget === 'group' && state.templateEditGroupId === groupId) {
+        var nextEditGroup = currentGroups[Math.min(currentIndex, currentGroups.length - 1)];
+        loadTemplateEditorContent(config, 'group', nextEditGroup.id, { useCommonFallback: true });
+      }
+
+      renderAll();
+      showToast('数据过滤分组已删除');
+    }
+
+    var message = '确认删除数据过滤分组 <b>' + escapeHtml(group.name) + '</b> 吗？删除后，该分组的过滤条件和分组模板将一并删除。';
+    if (window.DP && typeof DP.confirm === 'function') {
+      DP.confirm(message, {
+        icon: 'danger',
+        okText: '删除',
+        onOk: doDelete
+      });
+    } else if (window.confirm(message.replace(/<[^>]+>/g, ''))) {
+      doDelete();
     }
   }
 
@@ -3350,6 +3771,11 @@ DP.pages.qualityInspectReport = (function () {
   function getTemplateFieldDashboardTitle(item) {
     if (!item) return '字段评估明细表';
     return item.tableName + '（' + item.alias + '）-字段评估明细表';
+  }
+
+  function getTemplateFieldDashboardSummary(item) {
+    if (!item) return '';
+    return '该表涉及评测' + item.fieldCount + '个字段，' + item.dataCount + '万条数据，涉及数据质量校验规则共' + item.issueCount + '条。';
   }
 
   function getSelectedTemplateDashboards() {
@@ -4179,10 +4605,12 @@ DP.pages.qualityInspectReport = (function () {
       ? 'qir-template-pie-dashboard'
       : (item.type === 'chart' ? 'qir-template-chart-dashboard qir-template-trend-dashboard' : 'qir-template-table-dashboard');
     var scrollTargetAttr = options.scrollTarget ? ' data-qir-dashboard-scroll-target="inserted"' : '';
+    var summaryHtml = item.summary ? '<p class="qir-inserted-dashboard-summary">' + escapeHtml(item.summary) + '</p>' : '';
     return '<div class="qir-template-inserted-dashboard ' + dashboardClass + '" contenteditable="false" data-dashboard-id="' + escapeHtml(item.id) + '" data-dashboard-type="' + escapeHtml(item.type) + '"' + scrollTargetAttr + '>' +
       '<div class="qir-inserted-dashboard-head">' +
         '<strong>' + escapeHtml(item.name) + '</strong>' +
       '</div>' +
+      summaryHtml +
       '<div class="qir-inserted-dashboard-body">' + renderInsertedDashboardVisual(item) + '</div>' +
     '</div>';
   }
@@ -4478,9 +4906,6 @@ DP.pages.qualityInspectReport = (function () {
       '有效性合规比例': '99.82%',
       '准确性合规比例': '99.73%',
       '及时性合规比例': '99.88%',
-      '该表稽查字段数': '16',
-      '该表字段数': '2.45',
-      '该表稽查问题总记录数': '12',
       '生成周期': getCycleText(config.cycle),
       '调度周期': getCycleText(config.cycle),
       '最后生成时间': config.lastGeneratedTime && config.lastGeneratedTime !== '-' ? config.lastGeneratedTime : dateTime,
@@ -4631,6 +5056,7 @@ DP.pages.qualityInspectReport = (function () {
       '.qir-template-dashboard-body{padding:12px;background:#fff;}.qir-template-dashboard-body p{margin:4px 0;}',
       '.qir-template-inserted-dashboard{position:relative;margin:14px 0;padding:12px;border:1px solid #dce9f8;border-radius:6px;background:#fbfdff;color:#26384d;box-shadow:0 6px 16px rgba(15,23,42,.05);}',
       '.qir-inserted-dashboard-head{min-height:28px;display:flex;align-items:center;gap:8px;margin-bottom:10px;}.qir-inserted-dashboard-head strong{min-width:0;color:#1f2d3d;font-size:15px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+      '.qir-inserted-dashboard-summary{margin:-2px 0 10px;color:#526579;font-size:13px;line-height:1.6;text-indent:0;}',
       '.qir-inserted-dashboard-head em,.qir-inserted-dashboard-tag,.qir-inserted-dashboard-sub{display:none!important;}',
       '.qir-inserted-dashboard-body{min-height:180px;padding:12px;border:1px solid #e6eff8;border-radius:6px;background:#fff;}',
       '.qir-template-table-dashboard .qir-inserted-dashboard-body{min-height:0;padding:10px;overflow:auto;}',
@@ -4876,10 +5302,12 @@ DP.pages.qualityInspectReport = (function () {
     '</section>';
   }
 
-  function renderTemplateDocTable(headers, rows, className, title, dashboardId) {
+  function renderTemplateDocTable(headers, rows, className, title, dashboardId, summary) {
     var safeTitle = title || '表格仪表盘';
+    var summaryHtml = summary ? '<p class="qir-inserted-dashboard-summary">' + escapeHtml(summary) + '</p>' : '';
     return '<div class="qir-template-inserted-dashboard qir-template-table-dashboard" contenteditable="false" data-dashboard-id="' + escapeHtml(dashboardId || 'dash-template-doc-table') + '" data-dashboard-type="table">' +
       '<div class="qir-inserted-dashboard-head"><strong>' + escapeHtml(safeTitle) + '</strong></div>' +
+      summaryHtml +
       '<div class="qir-inserted-dashboard-body">' + renderDashboardTableHtml(headers, rows, className) + '</div>' +
     '</div>';
   }
@@ -4900,7 +5328,7 @@ DP.pages.qualityInspectReport = (function () {
   }
 
   function renderTemplateFieldDetailTable(item) {
-    return renderTemplateDocTable(['评测字段（对象）', '评测内容', '评测标准', '评估结论'], templateFieldDetailRows, 'qir-template-field-table', getTemplateFieldDashboardTitle(item), getTemplateFieldDashboardId(item));
+    return renderTemplateDocTable(['评测字段（对象）', '评测内容', '评测标准', '评估结论'], templateFieldDetailRows, 'qir-template-field-table', getTemplateFieldDashboardTitle(item), getTemplateFieldDashboardId(item), getTemplateFieldDashboardSummary(item));
   }
 
   function renderTemplateDetailBlocks(startIndex, endIndex) {
@@ -4908,8 +5336,6 @@ DP.pages.qualityInspectReport = (function () {
     var rows = templateDetailSamples.slice(start, typeof endIndex === 'number' ? endIndex : undefined);
     return rows.map(function (item, index) {
       return '<h3>2.' + (start + index + 1) + ' ' + escapeHtml(item.tableName) + '（' + escapeHtml(item.alias) + '）</h3>' +
-        '<p>该表涉及评测' + escapeHtml(item.fieldCount) + '个字段，' + escapeHtml(item.dataCount) + '万条数据，涉及数据质量校验规则共' + escapeHtml(item.issueCount) + '条。</p>' +
-        '<p>具体详情如下：</p>' +
         renderTemplateFieldDetailTable(item);
     }).join('');
   }
@@ -5359,6 +5785,7 @@ DP.pages.qualityInspectReport = (function () {
       '<div class="qir-template-filter-group-top">' +
         renderTemplateFilterGroupMeta(group) +
         '<div class="qir-template-filter-group-actions">' +
+          '<button class="btn btn-danger btn-sm" type="button" data-qir-action="template-filter-delete-group" data-group-id="' + escapeHtml(group.id) + '"><i class="bi bi-trash3"></i><span>删除分组</span></button>' +
           '<div class="qir-query-box qir-template-filter-query"><input type="text" data-qir-template-filter-keyword value="' + escapeHtml(state.templateFilterKeyword) + '" placeholder="请输入表英文名/中文名/备注描述" aria-label="数据过滤查询"><button class="btn btn-primary" type="button" data-qir-action="query-template-filter"><i class="bi bi-search"></i><span>查询</span></button></div>' +
         '</div>' +
       '</div>' +
@@ -5590,7 +6017,7 @@ DP.pages.qualityInspectReport = (function () {
     }
     return rows.map(function (item) {
       return '<tr>' +
-        '<td><div class="qir-rule-task-cell"><b title="' + escapeHtml(item.ruleTask) + '">' + escapeHtml(item.ruleTask) + '</b></div></td>' +
+        '<td><div class="qir-rule-task-cell"><a class="qir-rule-task-link" href="' + escapeHtml(getTaskConfigEditUrl(item)) + '" target="_blank" rel="noopener" title="新开页面编辑任务配置：' + escapeHtml(item.ruleTask) + '"><span>' + escapeHtml(item.ruleTask) + '</span><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></div></td>' +
         '<td><div class="qir-rule-task-cell"><b title="' + escapeHtml(item.tableName) + '">' + escapeHtml(item.tableName) + '</b><span>' + escapeHtml(item.alias || '-') + '</span></div></td>' +
         '<td>' + escapeHtml(item.startAt) + '</td>' +
         '<td>' + escapeHtml(item.endAt) + '</td>' +
@@ -6603,6 +7030,8 @@ DP.pages.qualityInspectReport = (function () {
               }
             }, 0);
           }
+        } else if (action === 'template-filter-delete-group') {
+          deleteTemplateFilterGroup(actionEl.getAttribute('data-group-id') || '');
         } else if (action === 'query-template-filter') {
           var filterGroupEl = actionEl.closest('.qir-template-filter-group');
           var filterInput = filterGroupEl ? filterGroupEl.querySelector('[data-qir-template-filter-keyword]') : pageEl.querySelector('[data-qir-template-filter-keyword]');
