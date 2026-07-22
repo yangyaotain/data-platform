@@ -390,8 +390,7 @@
 
 .dqit-w-check { width: 38px; }
 .dqit-w-name { width: 18%; }
-.dqit-w-target { width: 13%; }
-.dqit-w-source { width: 14%; }
+.dqit-w-target { width: 27%; }
 .dqit-w-type { width: 10%; }
 .dqit-w-frequency { width: 11%; }
 .dqit-w-status { width: 9%; }
@@ -417,41 +416,56 @@
   color: var(--primary);
 }
 
-.dqit-task-target {
+.dqit-inspect-object-cell {
   display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dqit-inspect-object-values {
+  display: flex;
+  flex: 1;
   min-width: 0;
   flex-direction: column;
+  gap: 4px;
+}
+
+.dqit-inspect-object {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #26384d;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dqit-inspect-more {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
   gap: 3px;
-}
-
-.dqit-task-target b,
-.dqit-task-target span {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 16px;
-  white-space: nowrap;
-}
-
-.dqit-task-target b {
-  color: #26384d;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.dqit-task-target span {
-  color: #7b8fa8;
+  padding: 2px 0;
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+  font-family: inherit;
   font-size: 12px;
+  line-height: 18px;
 }
 
-.dqit-data-source {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  color: #26384d;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.dqit-inspect-more:hover {
+  color: var(--primary-dark, #096dd9);
+}
+
+.dqit-inspect-more i {
+  font-size: 11px;
+}
+
+.dqit-inspect-object-cell.is-expanded {
+  align-items: flex-start;
+  padding: 4px 0;
 }
 
 .dqit-status {

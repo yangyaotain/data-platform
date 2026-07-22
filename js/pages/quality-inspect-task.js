@@ -27,6 +27,7 @@ DP.pages.qualityInspectTask = (function () {
       'std-warehouse': true
     },
     selectedIds: {},
+    expandedInspectObjects: {},
     page: 1,
     pageSize: 16,
     filters: {
@@ -82,9 +83,10 @@ DP.pages.qualityInspectTask = (function () {
     '17号', '18号', '19号', '20号', '21号', '22号', '23号', '24号',
     '25号', '26号', '27号', '28号', '29号', '30号', '31号', '最后一天'
   ];
-  var tableOptions = ['buildinglog', 'ods_workorder_ticket', 'dwd_order_detail_di', 'crm_member_base', 'fin_settlement_bill', 'api_access_log'];
+  var tableOptions = ['buildinglog', 'oa_leave_apply', 'ods_workorder_ticket', 'dwd_order_detail_di', 'crm_member_base', 'fin_settlement_bill', 'api_access_log'];
   var inspectTableAliases = {
     buildinglog: '楼宇日志表',
+    oa_leave_apply: '请假申请表',
     crm_member_base: '会员基础表',
     express_task_collect: '快递采集任务表',
     dwd_order_detail_di: '订单明细表',
@@ -112,6 +114,7 @@ DP.pages.qualityInspectTask = (function () {
   };
   var taskDataSourceByTarget = {
     buildinglog: '业务系统/oa_mysql_db',
+    oa_leave_apply: '数据仓库/dw_hive_ods',
     crm_member_base: '业务系统/crm_sqlserver',
     express_task_collect: '数据仓库/dw_hive_ods',
     dwd_order_detail_di: '数据仓库/dw_hive_dwd',
@@ -453,7 +456,7 @@ DP.pages.qualityInspectTask = (function () {
 
   var taskRows = [
     task('dqit-001', '手机号码稽查', '每天 10:18:57', '运行中', 'present', '2026-05-22 10:13:46', '2026-06-23 10:18:57', 'biz-customer', '基础稽查', 'crm_member_base', 4, '校验客户手机号非空、格式、号段和重复情况。'),
-    task('dqit-002', 'express_task_collect表非空校验', '每天 10:05:02', '运行中', 'present', '2026-05-22 09:59:50', '2026-06-23 10:05:02', 'demo-ods', '自定义稽查', 'express_task_collect', 5, '对快递采集任务关键字段进行非空稽查。'),
+    task('dqit-002', '请假申请表非空校验', '每天 10:05:02', '运行中', 'present', '2026-05-22 09:59:50', '2026-06-23 10:05:02', 'demo-ods', '基础稽查', 'oa_leave_apply', 5, '对请假申请表关键字段进行非空稽查。'),
     task('dqit-003', '订单号唯一性稽查', '每天 01:20:00', '运行中', '数据治理部', '2026-06-18 09:23:12', '2026-06-23 01:20:00', 'biz-order', '自定义稽查', 'dwd_order_detail_di', 6, '检查订单明细表订单号重复记录。'),
     task('dqit-004', '订单状态标准代码稽查', '每天 02:10:00', '执行中', '数据治理部', '2026-06-16 15:42:27', '2026-06-23 02:10:00', 'standard-code', '标准稽查', 'dim_order_status', 3, '校验订单状态与标准代码值域一致性。'),
     task('dqit-005', '客户证件号格式稽查', '每天 03:35:00', '运行中', '客户运营部', '2026-06-14 11:08:36', '2026-06-23 03:35:00', 'biz-customer', '基础稽查', 'crm_customer_identity', 4, '校验证件号长度、字符规则和脱敏前格式。'),
@@ -477,6 +480,59 @@ DP.pages.qualityInspectTask = (function () {
     task('dqit-023', '营销活动日期范围稽查', '每天 02:25:00', '异常', '营销分析组', '2026-05-25 14:16:39', '2026-06-23 02:25:00', 'demo-mart', '自定义稽查', 'mart_campaign_effect', 4, '活动结束时间不得早于开始时间。'),
     task('dqit-024', '库存快照数量非负稽查', '每小时 45 分', '运行中', '供应链数据组', '2026-05-24 11:36:22', '2026-06-23 15:45:00', 'demo-dws', '基础稽查', 'dws_inventory_snapshot', 5, '库存数量、锁定数量和在途数量不得为负数。')
   ];
+
+  var basicInspectObjectsByTaskId = {
+    'dqit-001': [
+      '业务系统/crm_sqlserver/crm_member_base',
+      '业务系统/crm_sqlserver/crm_customer_contact',
+      '数据仓库/dw_hive_ods/ods_crm_member_contact'
+    ],
+    'dqit-002': [
+      '数据仓库/dw_hive_ods/oa_leave_apply',
+      '数据仓库/dw_hive_ods/oa_leave_approval',
+      '数据仓库/dw_hive_ods/oa_leave_flow'
+    ],
+    'dqit-005': [
+      '业务系统/crm_sqlserver/crm_customer_identity',
+      '业务系统/crm_sqlserver/crm_member_identity',
+      '数据仓库/dw_hive_ods/ods_crm_customer_identity'
+    ],
+    'dqit-007': [
+      '业务系统/oa_mysql_db/hr_attendance_record',
+      '业务系统/oa_mysql_db/hr_overtime_record',
+      '数据仓库/dw_hive_ods/ods_hr_clock_record'
+    ],
+    'dqit-009': [
+      '业务系统/erp_oracle_db/fin_payment_record',
+      '业务系统/erp_oracle_db/fin_refund_record',
+      '数据仓库/dw_hive_ods/ods_fin_payment_detail'
+    ],
+    'dqit-013': [
+      '数据仓库/dw_hive_ods/ods_order_main',
+      '数据仓库/dw_hive_ods/ods_order_detail',
+      '数据仓库/dw_hive_ods/ods_order_payment'
+    ],
+    'dqit-017': [
+      '数据仓库/dw_hive_ads/ads_member_profile_tag',
+      '数据仓库/dw_hive_ads/ads_member_value_tag',
+      '数据仓库/dw_hive_ads/ads_member_behavior_tag'
+    ],
+    'dqit-018': [
+      '数据仓库/dw_hive_dwd/dim_product_sku',
+      '数据仓库/dw_hive_dwd/dim_product_spu',
+      '数据仓库/dw_hive_dwd/dim_product_status'
+    ],
+    'dqit-022': [
+      '业务系统/prod_postgresql/std_common_code',
+      '业务系统/prod_postgresql/std_region_code',
+      '业务系统/prod_postgresql/std_business_status'
+    ],
+    'dqit-024': [
+      '数据仓库/dw_hive_dws/dws_inventory_snapshot',
+      '数据仓库/dw_hive_dws/dws_inventory_locked',
+      '数据仓库/dw_hive_dws/dws_inventory_in_transit'
+    ]
+  };
 
   function task(id, name, frequency, status, creator, createdAt, lastRunAt, group, type, target, ruleCount, desc, dataSource) {
     return {
@@ -503,6 +559,14 @@ DP.pages.qualityInspectTask = (function () {
   function getTaskDataSource(item) {
     if (!item) return '-';
     return item.dataSource || getDefaultTaskDataSource(item.target, item.group);
+  }
+
+  function getInspectObjects(item) {
+    if (!item) return [];
+    if (item.type === '基础稽查' && basicInspectObjectsByTaskId[item.id]) {
+      return basicInspectObjectsByTaskId[item.id].slice();
+    }
+    return [getTaskDataSource(item) + '/' + item.target];
   }
 
   function getFormDataSourceFromTask(item) {
@@ -639,7 +703,7 @@ DP.pages.qualityInspectTask = (function () {
         if (normalize(item.name).indexOf(keyword) < 0) return false;
       }
       if (targetKeyword) {
-        var targetText = [item.target, getInspectTableAlias(item.target)].join(' ');
+        var targetText = getInspectObjects(item).concat([getInspectTableAlias(item.target)]).join(' ');
         if (normalize(targetText).indexOf(targetKeyword) < 0) return false;
       }
       return true;
@@ -805,7 +869,7 @@ DP.pages.qualityInspectTask = (function () {
         '<select class="dqit-status-select" data-dqit-filter="status" aria-label="运行状态">' + renderStatusOptions() + '</select>' +
         '<div class="dqit-query-box">' +
           '<label class="dqit-query-field"><span>任务名称</span><input id="dqitKeywordInput" type="text" value="' + escapeHtml(state.filters.keyword) + '" placeholder="请输入任务名称" aria-label="任务名称查询"></label>' +
-          '<label class="dqit-query-field is-table"><span>稽查表</span><input id="dqitTargetInput" type="text" value="' + escapeHtml(state.filters.targetKeyword) + '" placeholder="请输入英文名/中文名" aria-label="稽查表查询"></label>' +
+          '<label class="dqit-query-field is-table"><span>稽查对象</span><input id="dqitTargetInput" type="text" value="' + escapeHtml(state.filters.targetKeyword) + '" placeholder="请输入数据源/表名" aria-label="稽查对象查询"></label>' +
           '<button class="btn btn-primary" type="button" data-dqit-action="query"><i class="bi bi-search"></i><span>查询</span></button>' +
         '</div>' +
       '</div>' +
@@ -824,19 +888,30 @@ DP.pages.qualityInspectTask = (function () {
     '</div>';
   }
 
+  function renderInspectObjects(item) {
+    var objects = getInspectObjects(item);
+    var canExpand = item.type === '基础稽查' && objects.length > 1;
+    var expanded = canExpand && !!state.expandedInspectObjects[item.id];
+    var visibleObjects = expanded ? objects : objects.slice(0, 1);
+    var values = visibleObjects.map(function (inspectObject) {
+      return '<span class="dqit-inspect-object" title="' + escapeHtml(inspectObject) + '">' + escapeHtml(inspectObject) + '</span>';
+    }).join('');
+    var toggle = canExpand
+      ? '<button class="dqit-inspect-more" type="button" data-dqit-action="toggle-inspect-objects" data-id="' + escapeHtml(item.id) + '" aria-expanded="' + (expanded ? 'true' : 'false') + '"><span>' + (expanded ? '收起' : '更多') + '</span><i class="bi ' + (expanded ? 'bi-chevron-up' : 'bi-chevron-down') + '"></i></button>'
+      : '';
+    return '<div class="dqit-inspect-object-cell' + (expanded ? ' is-expanded' : '') + '"><div class="dqit-inspect-object-values">' + values + '</div>' + toggle + '</div>';
+  }
+
   function renderTableRows() {
     var rows = getVisibleRows();
     if (!rows.length) {
-      return '<tr class="dqit-empty-row"><td colspan="9">暂无匹配稽查任务</td></tr>';
+      return '<tr class="dqit-empty-row"><td colspan="8">暂无匹配稽查任务</td></tr>';
     }
     return rows.map(function (item) {
-      var targetAlias = getInspectTableAlias(item.target);
-      var dataSource = getTaskDataSource(item);
       return '<tr>' +
         '<td><input type="checkbox" data-dqit-row-check="' + escapeHtml(item.id) + '"' + (state.selectedIds[item.id] ? ' checked' : '') + ' aria-label="选择稽查任务"></td>' +
         '<td title="' + escapeHtml(item.desc) + '"><a class="dqit-task-name" data-dqit-action="view-row" data-id="' + escapeHtml(item.id) + '">' + escapeHtml(item.name) + '</a></td>' +
-        '<td><div class="dqit-task-target"><b title="' + escapeHtml(item.target) + '">' + escapeHtml(item.target) + '</b><span title="' + escapeHtml(targetAlias) + '">' + escapeHtml(targetAlias) + '</span></div></td>' +
-        '<td><span class="dqit-data-source" title="' + escapeHtml(dataSource) + '">' + escapeHtml(dataSource) + '</span></td>' +
+        '<td>' + renderInspectObjects(item) + '</td>' +
         '<td>' + renderTaskType(item.type) + '</td>' +
         '<td>' + escapeHtml(item.frequency) + '</td>' +
         '<td>' + renderStatus(item.status) + '</td>' +
@@ -853,12 +928,12 @@ DP.pages.qualityInspectTask = (function () {
     return '<div class="dqit-table-wrap">' +
       '<table class="ds-table dqit-table">' +
         '<colgroup>' +
-          '<col class="dqit-w-check"><col class="dqit-w-name"><col class="dqit-w-target"><col class="dqit-w-source"><col class="dqit-w-type"><col class="dqit-w-frequency"><col class="dqit-w-status">' +
+          '<col class="dqit-w-check"><col class="dqit-w-name"><col class="dqit-w-target"><col class="dqit-w-type"><col class="dqit-w-frequency"><col class="dqit-w-status">' +
           '<col class="dqit-w-last"><col class="dqit-w-action">' +
         '</colgroup>' +
         '<thead><tr>' +
           '<th class="col-ck"><input type="checkbox" data-dqit-check-all' + (allChecked ? ' checked' : '') + ' aria-label="全选稽查任务"></th>' +
-          '<th>任务名称</th><th>稽查表</th><th>所属数据源</th><th>任务类型</th><th>频率</th><th>运行状态</th><th>最后执行时间</th><th>操作</th>' +
+          '<th>任务名称</th><th>稽查对象</th><th>任务类型</th><th>频率</th><th>运行状态</th><th>最后执行时间</th><th>操作</th>' +
         '</tr></thead>' +
         '<tbody>' + renderTableRows() + '</tbody>' +
       '</table>' +
@@ -3089,6 +3164,9 @@ DP.pages.qualityInspectTask = (function () {
       state.page = 1;
       state.selectedIds = {};
       renderAllKeepFormScroll();
+    } else if (action === 'toggle-inspect-objects') {
+      state.expandedInspectObjects[id] = !state.expandedInspectObjects[id];
+      renderAll();
     } else if (action === 'query-result-runs') {
       var executionModeSelect = pageEl.querySelector('#dqitResultExecutionMode');
       state.resultExecutionMode = executionModeSelect ? executionModeSelect.value : '';
@@ -3634,6 +3712,7 @@ DP.pages.qualityInspectTask = (function () {
       'std-warehouse': true
     };
     state.selectedIds = {};
+    state.expandedInspectObjects = {};
     state.page = 1;
     state.pageSize = 16;
     state.filters = { status: '', type: '', keyword: '', targetKeyword: '' };
