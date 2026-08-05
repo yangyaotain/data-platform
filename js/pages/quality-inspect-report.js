@@ -799,6 +799,14 @@ DP.pages.qualityInspectReport = (function () {
     return sanitizeReportFileName(config.name || '稽查报告') + '-' + getReportWordExportDate(config) + '.doc';
   }
 
+  function getHistoryReportWordExportFileName(history) {
+    return sanitizeReportFileName(getHistoryReportName(history)) + '.doc';
+  }
+
+  function getHistoryAllReportExportFileName(history) {
+    return sanitizeReportFileName(getHistoryReportName(history)) + '-数据详情-' + getExportTimestamp() + '.zip';
+  }
+
   function xmlEscape(value) {
     return String(value == null ? '' : value)
       .replace(/&/g, '&amp;')
@@ -1144,20 +1152,23 @@ DP.pages.qualityInspectReport = (function () {
     return createZip(files);
   }
 
-  function downloadBlob(blob, fileName) {
-    var url = URL.createObjectURL(blob);
-    var link = document.createElement('a');
+  function downloadBlob(blob, fileName, targetDocument) {
+    var downloadDocument = targetDocument || document;
+    var downloadWindow = downloadDocument.defaultView || window;
+    var urlApi = downloadWindow.URL || URL;
+    var url = urlApi.createObjectURL(blob);
+    var link = downloadDocument.createElement('a');
     link.href = url;
     link.download = fileName;
-    document.body.appendChild(link);
+    downloadDocument.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 0);
+    downloadDocument.body.removeChild(link);
+    downloadWindow.setTimeout(function () { urlApi.revokeObjectURL(url); }, 0);
   }
 
-  function exportReport(report) {
+  function exportReport(report, targetDocument) {
     if (!report) return;
-    downloadBlob(createReportWorkbookBlob(report), getReportExportFileName(report));
+    downloadBlob(createReportWorkbookBlob(report), getReportExportFileName(report), targetDocument);
   }
 
   function getUniqueZipFileName(fileName, usedNames) {
@@ -1334,14 +1345,16 @@ DP.pages.qualityInspectReport = (function () {
     };
   }
 
-  function collectReportWordChartAssets() {
+  function collectReportWordChartAssets(root, chartWindow, selector) {
     var assets = {};
     var index = 1;
     var nodes;
-    if (!window.echarts || !pageEl) return assets;
-    nodes = Array.prototype.slice.call(pageEl.querySelectorAll('[data-qir-report-preview-page] [data-qir-echart]'));
+    var chartContext = chartWindow || window;
+    var chartRoot = root || pageEl;
+    if (!chartContext.echarts || !chartRoot) return assets;
+    nodes = Array.prototype.slice.call(chartRoot.querySelectorAll(selector || '[data-qir-report-preview-page] [data-qir-echart]'));
     nodes.forEach(function (node) {
-      var chart = window.echarts.getInstanceByDom ? window.echarts.getInstanceByDom(node) : null;
+      var chart = chartContext.echarts.getInstanceByDom ? chartContext.echarts.getInstanceByDom(node) : null;
       var dataUrl;
       var parsed;
       var key;
@@ -1726,11 +1739,12 @@ DP.pages.qualityInspectReport = (function () {
     return wrap.innerHTML;
   }
 
-  function createReportWordBlob(config) {
+  function createReportWordBlob(config, options) {
     config = config || reportConfigs[0];
-    var chartAssets = collectReportWordChartAssets();
+    options = options || {};
+    var chartAssets = options.chartAssets || collectReportWordChartAssets();
     var assetList = getReportWordAssetList(chartAssets);
-    var previewData = getTemplatePreviewData(config, getReportWordPreviewOverrides(config));
+    var previewData = options.previewData || getTemplatePreviewData(config, getReportWordPreviewOverrides(config));
     var wordContent = normalizeReportWordContent(applyReportWordChartImages(previewData.html, chartAssets));
     var title = escapeHtml(config.name || '稽查报告');
     var wordSettings = '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->';
@@ -1747,6 +1761,67 @@ DP.pages.qualityInspectReport = (function () {
     var config = getSelectedReportConfig() || reportConfigs[0];
     downloadBlob(createReportWordBlob(config), getReportWordExportFileName(config));
     showToast('Word 报告已生成');
+  }
+
+  function showHistoryWindowToast(previewWindow, message) {
+    if (!previewWindow || previewWindow.closed || !previewWindow.document) return;
+    var previewDocument = previewWindow.document;
+    var old = previewDocument.querySelector('.qir-history-window-toast');
+    if (old) old.remove();
+    previewDocument.body.insertAdjacentHTML('beforeend', '<div class="qir-history-window-toast"><i class="bi bi-check-circle"></i><span>' + escapeHtml(message) + '</span></div>');
+    var toast = previewDocument.querySelector('.qir-history-window-toast');
+    previewWindow.setTimeout(function () { if (toast) toast.classList.add('show'); }, 20);
+    previewWindow.setTimeout(function () {
+      if (toast && toast.parentNode) toast.remove();
+    }, 1800);
+  }
+
+  function getHistoryReportRowsByKeyword(history, keyword) {
+    var normalizedKeyword = String(keyword || '').trim().toLowerCase();
+    return getHistoryReportRows(history).filter(function (item) {
+      if (!normalizedKeyword) return true;
+      return item.tableName.toLowerCase().indexOf(normalizedKeyword) >= 0 ||
+        item.alias.toLowerCase().indexOf(normalizedKeyword) >= 0 ||
+        item.dataSourceLabel.toLowerCase().indexOf(normalizedKeyword) >= 0;
+    });
+  }
+
+  function exportHistoryReportWord(history, previewWindow, triggerEl) {
+    if (!history || !previewWindow || previewWindow.closed) return;
+    var previewConfig = getHistoryPreviewConfig(history);
+    var chartAssets = collectReportWordChartAssets(previewWindow.document, previewWindow, '[data-qir-preview-page] [data-qir-echart]');
+    var previewData = getHistoryTemplatePreviewData(history);
+    if (triggerEl) triggerEl.disabled = true;
+    try {
+      downloadBlob(createReportWordBlob(previewConfig, {
+        chartAssets: chartAssets,
+        previewData: previewData
+      }), getHistoryReportWordExportFileName(history), previewWindow.document);
+      showHistoryWindowToast(previewWindow, 'Word 报告已生成');
+    } finally {
+      if (triggerEl) triggerEl.disabled = false;
+    }
+  }
+
+  function exportHistoryAllDetailReports(history, previewWindow, triggerEl) {
+    if (!history || !previewWindow || previewWindow.closed) return;
+    var keywordInput = previewWindow.document.querySelector('[data-history-keyword]');
+    var rows = getHistoryReportRowsByKeyword(history, keywordInput ? keywordInput.value : '');
+    if (!rows.length) {
+      showHistoryWindowToast(previewWindow, '暂无可导出的数据详情');
+      return;
+    }
+    if (triggerEl) triggerEl.disabled = true;
+    createAllReportExcelZipBlob(rows).then(function (zipBlob) {
+      if (previewWindow.closed) return;
+      downloadBlob(zipBlob, getHistoryAllReportExportFileName(history), previewWindow.document);
+      showHistoryWindowToast(previewWindow, '全部导出压缩包已生成');
+    }).catch(function (err) {
+      if (window.console && console.error) console.error(err);
+      showHistoryWindowToast(previewWindow, '全部导出失败，请稍后重试');
+    }).finally(function () {
+      if (triggerEl && !previewWindow.closed) triggerEl.disabled = false;
+    });
   }
 
   function showToast(message) {
@@ -5173,22 +5248,34 @@ DP.pages.qualityInspectReport = (function () {
     return getTemplatePreviewData(getHistoryPreviewConfig(history), getHistoryTemplateOverrides(history));
   }
 
-  function renderHistoryWindowDataRows(history) {
-    var rows = getHistoryReportRows(history);
-    if (!rows.length) {
-      return '<tr class="qir-history-empty-row"><td colspan="6">暂无表级稽查数据</td></tr>';
-    }
+  function renderReportDataRows(rows, actionScope) {
+    var historyMode = actionScope === 'history';
     return rows.map(function (item) {
-      var searchText = [item.tableName, item.alias, item.dataSourceLabel, item.desc].join(' ').toLowerCase();
-      return '<tr data-history-data-row data-search="' + escapeHtml(searchText) + '">' +
-        '<td><div class="qir-history-table-name"><b>' + escapeHtml(item.tableName) + '</b><span>' + escapeHtml(item.alias) + '</span></div></td>' +
+      var searchText = [item.tableName, item.alias, item.dataSourceLabel].join(' ').toLowerCase();
+      var rowAttrs = historyMode
+        ? ' data-history-data-row data-id="' + escapeHtml(item.id) + '" data-search="' + escapeHtml(searchText) + '"'
+        : '';
+      var detailAction = historyMode ? 'data-history-action="open-detail"' : 'data-qir-action="open-detail"';
+      var exportAction = historyMode ? 'data-history-action="export-report"' : 'data-qir-action="export-report"';
+      return '<tr' + rowAttrs + '>' +
+        '<td><div class="qir-table-name qir-history-table-name"><b>' + escapeHtml(item.tableName) + '</b><span>' + escapeHtml(item.alias) + '</span></div></td>' +
         '<td>' + escapeHtml(item.dataSourceLabel) + '</td>' +
-        '<td>' + escapeHtml(formatNumber(item.fileRecordCount)) + '</td>' +
-        '<td><span class="qir-problem-count">' + escapeHtml(formatNumber(item.problemRecordCount)) + '</span></td>' +
+        '<td>' + escapeHtml(item.ruleCount) + '</td>' +
         '<td>' + renderRate(item.avgPassRate) + '</td>' +
+        '<td><span class="qir-problem-count">' + escapeHtml(item.problemRecordCount) + '</span></td>' +
         '<td>' + escapeHtml(item.lastExecutionTime) + '</td>' +
+        '<td><div class="qir-table-actions">' +
+          '<button class="qir-view-btn" type="button" ' + detailAction + ' data-id="' + escapeHtml(item.id) + '" title="详情" aria-label="详情"><i class="bi bi-file-earmark-text"></i><span>详情</span></button>' +
+          '<button class="qir-view-btn qir-export-link" type="button" ' + exportAction + ' data-id="' + escapeHtml(item.id) + '" title="导出 Excel" aria-label="导出 Excel"><i class="bi bi-file-earmark-excel"></i><span>导出</span></button>' +
+        '</div></td>' +
       '</tr>';
     }).join('');
+  }
+
+  function renderHistoryWindowDataRows(history) {
+    var rows = getHistoryReportRows(history);
+    return renderReportDataRows(rows, 'history') +
+      '<tr class="qir-history-empty-row" data-history-empty-row' + (rows.length ? ' style="display:none"' : '') + '><td colspan="7">暂无匹配稽查报告</td></tr>';
   }
 
   function renderHistoryWindowDataTab(history) {
@@ -5196,13 +5283,17 @@ DP.pages.qualityInspectReport = (function () {
     return '<section class="qir-history-report-panel qir-history-data-panel" data-history-panel="data">' +
       '<div class="qir-history-data-toolbar">' +
         '<div class="qir-history-data-title"><strong>表级稽查数据</strong><span>共 ' + escapeHtml(metrics.rowCount) + ' 张表，稽查总记录数 ' + escapeHtml(formatNumber(metrics.totalRecordCount)) + ' 条</span></div>' +
-        '<div class="qir-history-query"><span>表名称</span><input type="text" data-history-keyword placeholder="请输入表名称/数据源" aria-label="表名称或数据源查询"><button type="button" data-history-query><i class="bi bi-search"></i><b>查询</b></button></div>' +
+        '<div class="qir-history-query"><span>表名称</span><input type="text" data-history-keyword placeholder="请输入表名称" aria-label="表名称模糊查询"><button type="button" data-history-query><i class="bi bi-search"></i><b>查询</b></button><button class="qir-history-export-all" type="button" data-history-action="export-all"><i class="bi bi-file-zip"></i><b>全部导出</b></button></div>' +
       '</div>' +
       '<div class="qir-history-data-table-wrap">' +
         '<table class="qir-history-data-table">' +
-          '<thead><tr><th>表名称</th><th>所属数据源</th><th>稽查总记录数</th><th>问题记录数</th><th>平均通过率</th><th>最后执行时间</th></tr></thead>' +
+          '<thead><tr><th>表名称</th><th>所属数据源</th><th>规则数</th><th>平均通过率</th><th>问题记录数</th><th>最后执行时间</th><th>操作</th></tr></thead>' +
           '<tbody>' + renderHistoryWindowDataRows(history) + '</tbody>' +
         '</table>' +
+      '</div>' +
+      '<div class="qir-history-data-footer">' +
+        '<div>显示第 <span data-history-page-start>0</span> 到第 <span data-history-page-end>0</span> 条记录，总共 <span data-history-page-total>0</span> 条记录 每页显示 <select data-history-page-size><option value="10">10</option><option value="20">20</option></select> 条记录</div>' +
+        '<div class="qir-history-page-nav" data-history-page-nav></div>' +
       '</div>' +
     '</section>';
   }
@@ -5219,6 +5310,10 @@ DP.pages.qualityInspectReport = (function () {
       '.qir-history-report-tabs button{height:32px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 14px;border:1px solid transparent;border-radius:3px;background:transparent;color:#526579;font-family:inherit;font-size:13px;cursor:pointer;}',
       '.qir-history-report-tabs button:hover{color:#1677ff;background:#eaf4ff;}',
       '.qir-history-report-tabs button.active{border-color:#91caff;background:#fff;color:#1677ff;box-shadow:0 2px 6px rgba(22,119,255,.08);}',
+      '.qir-history-report-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}',
+      '.qir-history-export-word{height:32px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;border:1px solid #1677ff;border-radius:3px;background:#1677ff;color:#fff;font-family:inherit;font-size:13px;cursor:pointer;}',
+      '.qir-history-export-word:hover{border-color:#4096ff;background:#4096ff;}',
+      '.qir-history-export-word:disabled,.qir-history-export-all:disabled{cursor:not-allowed;opacity:.58;}',
       '.qir-history-report-close{height:32px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;border:1px solid #d9e4f0;border-radius:3px;background:#fff;color:#526579;font-family:inherit;font-size:13px;cursor:pointer;}',
       '.qir-history-report-close:hover{border-color:#91caff;background:#eaf4ff;color:#1677ff;}',
       '.qir-history-report-body{flex:1;min-height:0;overflow:hidden;}',
@@ -5238,12 +5333,15 @@ DP.pages.qualityInspectReport = (function () {
       '.qir-history-query input:focus{border-color:#1677ff;}',
       '.qir-history-query button{height:34px;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:70px;padding:0 13px;border:1px solid #1677ff;border-radius:0 2px 2px 0;background:#1677ff;color:#fff;font-family:inherit;font-size:13px;cursor:pointer;}',
       '.qir-history-query button b{font-weight:500;}',
-      '.qir-history-data-table-wrap{flex:1;min-height:0;overflow:auto;margin:12px 14px;border:1px solid #dfe5ec;background:#fff;}',
-      '.qir-history-data-table{width:100%;min-width:1080px;border-collapse:collapse;table-layout:fixed;}',
+      '.qir-history-query .qir-history-export-all{min-width:94px;margin-left:8px;border-color:#d9e4f0;border-radius:3px;background:#fff;color:#526579;}',
+      '.qir-history-query .qir-history-export-all:hover{border-color:#91caff;background:#eaf4ff;color:#1677ff;}',
+      '.qir-history-data-table-wrap{flex:1;min-height:0;overflow:auto;margin:12px 14px 0;border:1px solid #dfe5ec;background:#fff;}',
+      '.qir-history-data-table{width:100%;min-width:1160px;border-collapse:collapse;table-layout:fixed;}',
       '.qir-history-data-table th,.qir-history-data-table td{height:42px;padding:0 10px;border-right:1px solid #e4e9f0;border-bottom:1px solid #edf1f6;color:#26384d;text-align:left;white-space:nowrap;font-size:13px;}',
       '.qir-history-data-table th{background:#f7f9fc;color:#25364a;font-weight:600;}',
       '.qir-history-data-table tbody tr:nth-child(even){background:#f7f7f7;}',
       '.qir-history-data-table th:last-child,.qir-history-data-table td:last-child{border-right:none;}',
+      '.qir-history-data-table th:nth-child(1){width:22%;}.qir-history-data-table th:nth-child(2){width:15%;}.qir-history-data-table th:nth-child(3){width:7%;}.qir-history-data-table th:nth-child(4){width:13%;}.qir-history-data-table th:nth-child(5){width:11%;}.qir-history-data-table th:nth-child(6){width:17%;}.qir-history-data-table th:nth-child(7){width:15%;}',
       '.qir-history-table-name{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px;}',
       '.qir-history-table-name b,.qir-history-table-name span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
       '.qir-history-table-name b{color:#1677ff;font-weight:650;}',
@@ -5252,8 +5350,16 @@ DP.pages.qualityInspectReport = (function () {
       '.qir-rate i{position:absolute;left:0;top:0;bottom:0;opacity:.24;}',
       '.qir-rate b{position:relative;z-index:1;font-size:12px;font-weight:650;}',
       '.qir-rate-high i{background:#52c41a}.qir-rate-high b{color:#237804}.qir-rate-mid i{background:#faad14}.qir-rate-mid b{color:#ad6800}.qir-rate-low i{background:#ff4d4f}.qir-rate-low b,.qir-problem-count{color:#cf1322!important;}',
+      '.qir-table-actions{display:flex;align-items:center;gap:12px;}',
+      '.qir-view-btn{display:inline-flex;align-items:center;gap:4px;padding:0;border:none;background:transparent;color:#1677ff;font-family:inherit;font-size:13px;cursor:pointer;}',
+      '.qir-view-btn:hover{color:#0958d9;}.qir-export-link{color:#389e0d;}.qir-export-link:hover{color:#237804;}',
       '.qir-history-empty-row td{text-align:center;color:#8aa0b7;}',
-      '.qir-history-window-toast{position:fixed;left:50%;bottom:24px;z-index:20;transform:translate(-50%,8px);opacity:0;padding:9px 16px;border-radius:4px;background:rgba(31,45,61,.9);color:#fff;font-size:13px;transition:opacity .18s ease,transform .18s ease;pointer-events:none;}',
+      '.qir-history-data-footer{min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 14px;padding:0 2px;color:#66798f;font-size:12px;box-sizing:border-box;flex-shrink:0;}',
+      '.qir-history-data-footer select{height:28px;margin:0 4px;border:1px solid #d9dfe6;border-radius:3px;background:#fff;color:#26384d;font-family:inherit;font-size:12px;}',
+      '.qir-history-page-nav{display:flex;align-items:center;gap:4px;}',
+      '.qir-history-page-nav button{min-width:30px;height:28px;padding:0 7px;border:1px solid #d9dfe6;border-radius:3px;background:#fff;color:#526579;font-family:inherit;font-size:12px;cursor:pointer;}',
+      '.qir-history-page-nav button:hover:not(:disabled),.qir-history-page-nav button.active{border-color:#1677ff;color:#1677ff;}.qir-history-page-nav button.active{background:#eaf4ff;}.qir-history-page-nav button:disabled{cursor:not-allowed;opacity:.45;}',
+      '.qir-history-window-toast{position:fixed;left:50%;bottom:24px;z-index:20;display:flex;align-items:center;gap:7px;transform:translate(-50%,8px);opacity:0;padding:9px 16px;border-radius:4px;background:rgba(31,45,61,.9);color:#fff;font-size:13px;transition:opacity .18s ease,transform .18s ease;pointer-events:none;}',
       '.qir-history-window-toast.show{opacity:1;transform:translate(-50%,0);}',
       'body.history-data-active .qir-preview-zoom-toolbar{display:none!important;}',
       '@media (max-width:900px){.qir-history-report-topbar{height:auto;align-items:flex-start;flex-wrap:wrap}.qir-history-report-panel{height:calc(100vh - 98px)}.qir-history-report-window .qir-preview-app{height:calc(100vh - 98px);grid-template-columns:1fr}.qir-history-report-window .qir-preview-toc{height:auto;max-height:220px}.qir-history-report-window .qir-preview-stage{height:auto;min-height:calc(100vh - 318px)}.qir-history-data-panel.active{height:calc(100vh - 98px)}.qir-history-data-toolbar{align-items:flex-start;flex-direction:column}.qir-history-query{width:100%;margin-left:0}.qir-history-query input{width:100%;min-width:0}}'
@@ -5263,15 +5369,49 @@ DP.pages.qualityInspectReport = (function () {
   function getHistoryReportWindowScripts() {
     return [
       '(function(){',
-      'function setTab(key){document.querySelectorAll("[data-history-tab]").forEach(function(btn){btn.classList.toggle("active",btn.getAttribute("data-history-tab")===key);});document.querySelectorAll("[data-history-panel]").forEach(function(panel){panel.classList.toggle("active",panel.getAttribute("data-history-panel")===key);});document.body.classList.toggle("history-data-active",key==="data");}',
+      'var page=1;var pageSize=10;var appliedKeyword="";',
+      'function setTab(key){document.querySelectorAll("[data-history-tab]").forEach(function(btn){btn.classList.toggle("active",btn.getAttribute("data-history-tab")===key);});document.querySelectorAll("[data-history-panel]").forEach(function(panel){panel.classList.toggle("active",panel.getAttribute("data-history-panel")===key);});var dataActive=key==="data";document.body.classList.toggle("history-data-active",dataActive);var wordBtn=document.querySelector("[data-history-overview-action]");if(wordBtn){wordBtn.style.display=dataActive?"none":"inline-flex";}}',
       'document.querySelectorAll("[data-history-tab]").forEach(function(btn){btn.addEventListener("click",function(){setTab(btn.getAttribute("data-history-tab")||"overview");});});',
       'var input=document.querySelector("[data-history-keyword]");',
-      'function filterRows(){var keyword=input?input.value.trim().toLowerCase():"";document.querySelectorAll("[data-history-data-row]").forEach(function(row){var text=row.getAttribute("data-search")||"";row.style.display=!keyword||text.indexOf(keyword)>=0?"":"none";});}',
-      'if(input){input.addEventListener("input",filterRows);input.addEventListener("keydown",function(e){if(e.key==="Enter"){filterRows();}});}',
-      'var queryBtn=document.querySelector("[data-history-query]");if(queryBtn){queryBtn.addEventListener("click",filterRows);}',
+      'function getMatchedRows(){return Array.prototype.filter.call(document.querySelectorAll("[data-history-data-row]"),function(row){var text=row.getAttribute("data-search")||"";return !appliedKeyword||text.indexOf(appliedKeyword)>=0;});}',
+      'function renderPageNav(totalPages){var nav=document.querySelector("[data-history-page-nav]");if(!nav){return;}var html="<button type=\\"button\\" data-history-page=\\"prev\\""+(page<=1?" disabled":"")+"><i class=\\"bi bi-chevron-left\\"></i></button>";for(var i=1;i<=totalPages;i+=1){html+="<button type=\\"button\\" data-history-page=\\""+i+"\\""+(page===i?" class=\\"active\\"":"")+">"+i+"</button>";}html+="<button type=\\"button\\" data-history-page=\\"next\\""+(page>=totalPages?" disabled":"")+"><i class=\\"bi bi-chevron-right\\"></i></button>";nav.innerHTML=html;}',
+      'function renderRows(){var rows=getMatchedRows();var total=rows.length;var totalPages=Math.max(1,Math.ceil(total/pageSize));page=Math.max(1,Math.min(totalPages,page));var start=total?(page-1)*pageSize:0;var end=total?Math.min(total,page*pageSize):0;document.querySelectorAll("[data-history-data-row]").forEach(function(row){row.style.display="none";});rows.forEach(function(row,index){if(index>=start&&index<end){row.style.display="";}});var empty=document.querySelector("[data-history-empty-row]");if(empty){empty.style.display=total?"none":"";}var startEl=document.querySelector("[data-history-page-start]");var endEl=document.querySelector("[data-history-page-end]");var totalEl=document.querySelector("[data-history-page-total]");if(startEl){startEl.textContent=total?start+1:0;}if(endEl){endEl.textContent=end;}if(totalEl){totalEl.textContent=total;}renderPageNav(totalPages);}',
+      'function applyQuery(){appliedKeyword=input?input.value.trim().toLowerCase():"";page=1;renderRows();}',
+      'if(input){input.addEventListener("keydown",function(e){if(e.key==="Enter"){applyQuery();}});}',
+      'var queryBtn=document.querySelector("[data-history-query]");if(queryBtn){queryBtn.addEventListener("click",applyQuery);}',
+      'var pageSizeSelect=document.querySelector("[data-history-page-size]");if(pageSizeSelect){pageSizeSelect.addEventListener("change",function(){pageSize=Number(pageSizeSelect.value)||10;page=1;renderRows();});}',
+      'document.addEventListener("click",function(e){var btn=e.target.closest("[data-history-page]");if(!btn||btn.disabled){return;}var target=btn.getAttribute("data-history-page");var totalPages=Math.max(1,Math.ceil(getMatchedRows().length/pageSize));if(target==="prev"){page-=1;}else if(target==="next"){page+=1;}else{page=Number(target)||1;}page=Math.max(1,Math.min(totalPages,page));renderRows();});',
       'setTab("overview");',
+      'renderRows();',
       '})();'
     ].join('');
+  }
+
+  function bindHistoryReportWindowActions(previewWindow, history) {
+    if (!previewWindow || previewWindow.closed || !previewWindow.document) return;
+    var previewDocument = previewWindow.document;
+    var historyRows = getHistoryReportRows(history);
+    previewDocument.addEventListener('click', function (event) {
+      var actionEl = event.target.closest('[data-history-action]');
+      if (!actionEl) return;
+      var action = actionEl.getAttribute('data-history-action') || '';
+      if (action === 'export-word') {
+        exportHistoryReportWord(history, previewWindow, actionEl);
+      } else if (action === 'export-all') {
+        exportHistoryAllDetailReports(history, previewWindow, actionEl);
+      } else if (action === 'export-report') {
+        var exportId = actionEl.getAttribute('data-id') || '';
+        var exportTarget = historyRows.filter(function (item) { return item.id === exportId; })[0] || null;
+        exportReport(exportTarget, previewDocument);
+      } else if (action === 'open-detail') {
+        state.selectedReportId = actionEl.getAttribute('data-id') || '';
+        state.view = 'detail';
+        state.rulePages = {};
+        renderAll();
+        previewWindow.close();
+        window.focus();
+      }
+    });
   }
 
   function openHistoryReportView(id) {
@@ -5288,8 +5428,9 @@ DP.pages.qualityInspectReport = (function () {
       return;
     }
     previewWindow.document.open();
-    previewWindow.document.write('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + escapeHtml(title) + '</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script><style>' + getHistoryReportWindowStyles() + '</style></head><body><div class="qir-history-report-window"><header class="qir-history-report-topbar"><div class="qir-history-report-tabs"><button class="active" type="button" data-history-tab="overview"><i class="bi bi-file-earmark-richtext"></i><span>报告概述</span></button><button type="button" data-history-tab="data"><i class="bi bi-table"></i><span>数据详情</span></button></div><div class="qir-history-report-title"><strong>' + escapeHtml(title) + '</strong><span>生成时间：' + escapeHtml(history.generatedTime) + ' · 统计范围：' + escapeHtml(getHistoryScopeText(history)) + '</span></div><button class="qir-history-report-close" type="button" data-qir-preview-close><i class="bi bi-x-lg"></i><span>关闭</span></button></header><main class="qir-history-report-body"><section class="qir-history-report-panel active" data-history-panel="overview"><div class="qir-preview-app"><aside class="qir-preview-toc"><h2><i class="bi bi-list-ul"></i><span>报告目录</span></h2><nav>' + previewData.toc + '</nav></aside><main class="qir-preview-stage"><div class="qir-preview-page-wrap"><article class="qir-template-page" data-qir-preview-page>' + previewData.html + '</article></div></main></div></section>' + renderHistoryWindowDataTab(history) + '</main></div><div class="qir-preview-zoom-toolbar" aria-label="预览缩放工具条"><button type="button" data-qir-preview-zoom-out title="缩小" aria-label="缩小"><i class="bi bi-dash-lg"></i></button><input type="range" min="60" max="180" step="10" value="100" data-qir-preview-zoom-range aria-label="缩放比例"><button type="button" data-qir-preview-zoom-in title="放大" aria-label="放大"><i class="bi bi-plus-lg"></i></button><button class="qir-preview-zoom-value" type="button" data-qir-preview-zoom-reset title="恢复 100%" aria-label="恢复 100%"><i class="bi bi-aspect-ratio"></i><span data-qir-preview-zoom-value>100%</span></button></div><script>' + getTemplatePreviewScripts() + getHistoryReportWindowScripts() + '</script></body></html>');
+    previewWindow.document.write('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + escapeHtml(title) + '</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script><style>' + getHistoryReportWindowStyles() + '</style></head><body><div class="qir-history-report-window"><header class="qir-history-report-topbar"><div class="qir-history-report-tabs"><button class="active" type="button" data-history-tab="overview"><i class="bi bi-file-earmark-richtext"></i><span>报告概述</span></button><button type="button" data-history-tab="data"><i class="bi bi-table"></i><span>数据详情</span></button></div><div class="qir-history-report-title"><strong>' + escapeHtml(title) + '</strong><span>生成时间：' + escapeHtml(history.generatedTime) + ' · 统计范围：' + escapeHtml(getHistoryScopeText(history)) + '</span></div><div class="qir-history-report-actions"><button class="qir-history-export-word" type="button" data-history-action="export-word" data-history-overview-action><i class="bi bi-file-earmark-word"></i><span>导出Word</span></button><button class="qir-history-report-close" type="button" data-qir-preview-close><i class="bi bi-x-lg"></i><span>关闭</span></button></div></header><main class="qir-history-report-body"><section class="qir-history-report-panel active" data-history-panel="overview"><div class="qir-preview-app"><aside class="qir-preview-toc"><h2><i class="bi bi-list-ul"></i><span>报告目录</span></h2><nav>' + previewData.toc + '</nav></aside><main class="qir-preview-stage"><div class="qir-preview-page-wrap"><article class="qir-template-page" data-qir-preview-page>' + previewData.html + '</article></div></main></div></section>' + renderHistoryWindowDataTab(history) + '</main></div><div class="qir-preview-zoom-toolbar" aria-label="预览缩放工具条"><button type="button" data-qir-preview-zoom-out title="缩小" aria-label="缩小"><i class="bi bi-dash-lg"></i></button><input type="range" min="60" max="180" step="10" value="100" data-qir-preview-zoom-range aria-label="缩放比例"><button type="button" data-qir-preview-zoom-in title="放大" aria-label="放大"><i class="bi bi-plus-lg"></i></button><button class="qir-preview-zoom-value" type="button" data-qir-preview-zoom-reset title="恢复 100%" aria-label="恢复 100%"><i class="bi bi-aspect-ratio"></i><span data-qir-preview-zoom-value>100%</span></button></div><script>' + getTemplatePreviewScripts() + getHistoryReportWindowScripts() + '</script></body></html>');
     previewWindow.document.close();
+    bindHistoryReportWindowActions(previewWindow, history);
     previewWindow.focus();
   }
 
@@ -6201,20 +6342,7 @@ DP.pages.qualityInspectReport = (function () {
     return '<div class="qir-table-wrap">' +
       '<table class="ds-table qir-table qir-detail-list-table">' +
         '<thead><tr><th>表名称</th><th>所属数据源</th><th>规则数</th><th>平均通过率</th><th>问题记录数</th><th>最后执行时间</th><th>操作</th></tr></thead>' +
-        '<tbody>' + (rows.length ? rows.map(function (item) {
-          return '<tr>' +
-            '<td><div class="qir-table-name"><b>' + escapeHtml(item.tableName) + '</b><span>' + escapeHtml(item.alias) + '</span></div></td>' +
-            '<td>' + escapeHtml(item.dataSourceLabel) + '</td>' +
-            '<td>' + escapeHtml(item.ruleCount) + '</td>' +
-            '<td>' + renderRate(item.avgPassRate) + '</td>' +
-            '<td><span class="qir-problem-count">' + escapeHtml(item.problemRecordCount) + '</span></td>' +
-            '<td>' + escapeHtml(item.lastExecutionTime) + '</td>' +
-            '<td><div class="qir-table-actions">' +
-              '<button class="qir-view-btn" type="button" data-qir-action="open-detail" data-id="' + escapeHtml(item.id) + '" title="详情" aria-label="详情"><i class="bi bi-file-earmark-text"></i><span>详情</span></button>' +
-              '<button class="qir-view-btn qir-export-link" type="button" data-qir-action="export-report" data-id="' + escapeHtml(item.id) + '" title="导出 Excel" aria-label="导出 Excel"><i class="bi bi-file-earmark-excel"></i><span>导出</span></button>' +
-            '</div></td>' +
-          '</tr>';
-        }).join('') : '<tr class="qir-empty-row"><td colspan="7">暂无匹配稽查报告</td></tr>') +
+        '<tbody>' + (rows.length ? renderReportDataRows(rows, 'main') : '<tr class="qir-empty-row"><td colspan="7">暂无匹配稽查报告</td></tr>') +
         '</tbody>' +
       '</table>' +
     '</div>';
