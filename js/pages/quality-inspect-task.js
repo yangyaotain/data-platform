@@ -188,6 +188,7 @@ DP.pages.qualityInspectTask = (function () {
     { value: 'existing', label: '已有规则' },
     { value: 'custom', label: '自定义' }
   ];
+  var evaluationStandards = ['完整性', '有效性', '及时性', '一致性', '准确性', '唯一性'];
   var reportSummary = {
     total: 2500,
     passed: 2302,
@@ -316,10 +317,14 @@ DP.pages.qualityInspectTask = (function () {
   ];
 
   var ruleRows = [
-    { id: 'rule-not-null', group: 'rule-business', name: '非空校验字段不能为空', desc: '非空校验（name 字段不能为空）' },
-    { id: 'rule-repeat', group: 'rule-business', name: '筛选出重复的记录', desc: '校验name字段的唯一性，筛选出重复的记录' },
-    { id: 'rule-length', group: 'rule-demo-common', name: '长度不能超过 10 个字符', desc: '长度不能超过 10 个字符' }
+    { id: 'rule-not-null', group: 'rule-business', name: '非空校验字段不能为空', standard: '有效性', desc: '非空校验（name 字段不能为空）' },
+    { id: 'rule-repeat', group: 'rule-business', name: '筛选出重复的记录', standard: '准确性', desc: '校验name字段的唯一性，筛选出重复的记录' },
+    { id: 'rule-length', group: 'rule-demo-common', name: '长度不能超过 10 个字符', standard: '有效性', desc: '长度不能超过 10 个字符' }
   ];
+
+  function getInspectRule(ruleId) {
+    return ruleRows.filter(function (row) { return row.id === ruleId; })[0] || ruleRows[1];
+  }
 
   var standardTree = [
     {
@@ -1215,6 +1220,8 @@ DP.pages.qualityInspectTask = (function () {
     var groupKey = item ? item.group : 'business';
     var groupNode = findTreeNode(taskTree, groupKey) || findTreeNode(taskTree, 'business');
     var formDataSource = getFormDataSourceFromTask(item);
+    var ruleMode = item && item.ruleMode === 'custom' ? 'custom' : 'existing';
+    var selectedRule = getInspectRule(item && item.ruleId ? item.ruleId : 'rule-repeat');
     return {
       taskName: item ? item.name : '字段不重复校验',
       businessLayerKey: groupNode ? groupNode.key : 'business',
@@ -1222,9 +1229,11 @@ DP.pages.qualityInspectTask = (function () {
       weight: item ? String(Math.min(100, Math.max(1, item.ruleCount * 4))) : '20',
       dataSourceKey: formDataSource.key,
       dataSource: formDataSource.label,
-      ruleMode: 'existing',
-      ruleId: 'rule-repeat',
-      ruleName: '筛选出重复的记录',
+      ruleMode: ruleMode,
+      ruleId: selectedRule.id,
+      ruleName: item && item.ruleName ? item.ruleName : selectedRule.name,
+      customStandard: item && evaluationStandards.indexOf(item.customStandard) >= 0 ? item.customStandard : '有效性',
+      customDescription: item && item.customDescription ? item.customDescription : '',
       params: [
         { name: '${id}', attr: '字段', desc: '主键字段，用于定位重复记录', table: target || 'buildinglog', field: 'Id' },
         { name: '${name}', attr: '字段', desc: '业务名称字段，用于重复分组', table: target || 'buildinglog', field: 'Name' },
@@ -2052,6 +2061,7 @@ DP.pages.qualityInspectTask = (function () {
     }
     state.form = draft;
     var isCustomRule = draft.ruleMode === 'custom';
+    var selectedRule = getInspectRule(draft.ruleId);
     return '<section class="dqit-form-shell">' +
       '<div class="dqit-form-head">' +
         '<div class="dqit-form-title"><i class="bi bi-list"></i><span>自定义稽查</span></div>' +
@@ -2063,8 +2073,12 @@ DP.pages.qualityInspectTask = (function () {
         renderFormRow('考核权重', '<input class="dqit-input" type="number" min="1" max="100" data-dqit-form-field="weight" value="' + escapeHtml(draft.weight) + '">', '<i class="bi bi-info-circle-fill"></i><span>1-100数字</span>') +
         renderFormRow('数据源', renderTreePicker('dataSource', draft.dataSource, draft.dataSourceKey, dataSourceTree, '请选择数据源')) +
         renderFormRow('规则选择', '<select data-dqit-custom-field="ruleMode">' + renderOptions(customRuleModeOptions, draft.ruleMode) + '</select>') +
-        (isCustomRule ? '' : renderFormRow('稽查规则', '<div class="dqit-rule-field"><input class="dqit-input" type="text" readonly value="' + escapeHtml(draft.ruleName) + '"><button class="btn btn-primary" type="button" data-dqit-action="open-rule-modal"><i class="bi bi-check-circle"></i><span>选择</span></button></div>') +
-        renderParamConfig()) +
+        (isCustomRule
+          ? renderFormRow('评价标准', '<select data-dqit-custom-field="customStandard">' + renderOptions(evaluationStandards, draft.customStandard) + '</select>') +
+            renderFormRow('描述', '<textarea class="dqit-textarea" data-dqit-custom-field="customDescription" maxlength="100" placeholder="100个字符以内">' + escapeHtml(draft.customDescription) + '</textarea>', '<span>100个字符以内；</span>')
+          : renderFormRow('稽查规则', '<div class="dqit-rule-field"><input class="dqit-input" type="text" readonly value="' + escapeHtml(draft.ruleName) + '"><button class="btn btn-primary" type="button" data-dqit-action="open-rule-modal"><i class="bi bi-check-circle"></i><span>选择</span></button></div>') +
+            renderFormRow('评价标准', '<select class="dqit-select-readonly" disabled aria-readonly="true">' + renderOptions(evaluationStandards, selectedRule.standard) + '</select>') +
+            renderParamConfig()) +
         renderSqlSection() +
         renderScheduleSection() +
         '<div class="dqit-form-actions-bottom">' +
@@ -2670,6 +2684,16 @@ DP.pages.qualityInspectTask = (function () {
     return '执行一次 ' + (s.datetime || '2026-06-24 09:18:48');
   }
 
+  function applyCustomTaskRuleConfig(item, draft) {
+    if (!item || !draft) return item;
+    item.ruleMode = draft.ruleMode === 'custom' ? 'custom' : 'existing';
+    item.ruleId = draft.ruleId || 'rule-repeat';
+    item.ruleName = draft.ruleName || getInspectRule(item.ruleId).name;
+    item.customStandard = evaluationStandards.indexOf(draft.customStandard) >= 0 ? draft.customStandard : '有效性';
+    item.customDescription = String(draft.customDescription || '').trim().slice(0, 100);
+    return item;
+  }
+
   function getBasicEntityTableName() {
     var first = state.form.entities && state.form.entities[0] ? state.form.entities[0].name : 'tms_demo.express_task_collect';
     var parts = String(first).split('.');
@@ -2731,7 +2755,8 @@ DP.pages.qualityInspectTask = (function () {
     var target = state.form.params[0] ? state.form.params[0].table : 'buildinglog';
     var isCustomRuleMode = state.form.ruleMode === 'custom';
     var ruleCount = isCustomRuleMode ? 1 : state.form.params.length;
-    var ruleDesc = isCustomRuleMode ? '自定义SQL规则' : state.form.ruleName;
+    var customDescription = String(state.form.customDescription || '').trim();
+    var ruleDesc = isCustomRuleMode ? (customDescription || '自定义SQL规则') : state.form.ruleName;
     if (state.formMode === 'edit' && state.editingId) {
       var item = getTaskById(state.editingId);
       if (item) {
@@ -2742,9 +2767,11 @@ DP.pages.qualityInspectTask = (function () {
         item.dataSource = getDisplayDataSourceFromForm(target);
         item.ruleCount = ruleCount;
         item.desc = ruleDesc + '，数据源：' + state.form.dataSource + '。';
+        applyCustomTaskRuleConfig(item, state.form);
       }
     } else {
-      taskRows.unshift(task('dqit-' + String(Date.now()).slice(-6), state.form.taskName, getFrequencyText(), '已停止', 'present', formatDateTime(new Date()), '--', state.form.businessLayerKey, '自定义稽查', target, ruleCount, ruleDesc + '，数据源：' + state.form.dataSource + '。', getDisplayDataSourceFromForm(target)));
+      var customItem = task('dqit-' + String(Date.now()).slice(-6), state.form.taskName, getFrequencyText(), '已停止', 'present', formatDateTime(new Date()), '--', state.form.businessLayerKey, '自定义稽查', target, ruleCount, ruleDesc + '，数据源：' + state.form.dataSource + '。', getDisplayDataSourceFromForm(target));
+      taskRows.unshift(applyCustomTaskRuleConfig(customItem, state.form));
     }
     state.treeKey = state.form.businessLayerKey;
     backToList();
@@ -2913,7 +2940,7 @@ DP.pages.qualityInspectTask = (function () {
 
   function chooseRule() {
     if (!state.ruleModal || !state.form) return;
-    var selected = ruleRows.filter(function (row) { return row.id === state.ruleModal.selectedId; })[0] || ruleRows[1];
+    var selected = getInspectRule(state.ruleModal.selectedId);
     state.form.ruleId = selected.id;
     state.form.ruleName = selected.name;
     state.ruleModal = null;

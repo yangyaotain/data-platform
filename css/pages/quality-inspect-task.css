@@ -977,6 +977,7 @@
 }
 
 .dqit-input,
+.dqit-textarea,
 .dqit-form-control select,
 .dqit-schedule-type,
 .dqit-schedule-sub,
@@ -995,7 +996,15 @@
   transition: border-color .16s, box-shadow .16s;
 }
 
+.dqit-textarea {
+  min-height: 76px;
+  padding: 9px 10px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
 .dqit-input:focus,
+.dqit-textarea:focus,
 .dqit-form-control select:focus,
 .dqit-schedule-type:focus,
 .dqit-schedule-sub:focus,
@@ -1008,6 +1017,13 @@
 .dqit-input-readonly {
   background: #f0f2f5;
   color: #53657a;
+}
+
+.dqit-form-control select.dqit-select-readonly:disabled {
+  background: #f0f2f5;
+  color: #53657a;
+  cursor: not-allowed;
+  opacity: 1;
 }
 
 .dqit-form-hint {
