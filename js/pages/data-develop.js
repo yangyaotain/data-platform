@@ -270,31 +270,31 @@ DP.pages.dataDevelop = {
 
   /* ---- 树数据 ---- */
   _treeData: [
-    { label: '批量计算业务流程', icon: 'biz', children: [
-      { label: '单表采集子流程1-1', icon: 'table' },
-      { label: '采集写FTP', icon: 'ftp' },
-      { label: '多模态数据采集', icon: 'multi' },
-      { label: '采集写HTTP', icon: 'http' },
-      { label: '整库采集子流程', icon: 'db' },
-      { label: '在线编程子流程1-1', icon: 'code' },
-      { label: '上传程序包子流程1-1', icon: 'pkg' },
-      { label: '数治子流程1-1', icon: 'govern' }
+    { id: 'flow-batch', kind: 'flow', label: '批量计算业务流程', icon: 'biz', children: [
+      { id: 'sub-batch-single-table', label: '单表采集子流程1-1', icon: 'table' },
+      { id: 'sub-batch-ftp', label: '采集写FTP', icon: 'ftp' },
+      { id: 'sub-batch-multimodal', label: '多模态数据采集', icon: 'multi' },
+      { id: 'sub-batch-http', label: '采集写HTTP', icon: 'http' },
+      { id: 'sub-batch-database', label: '整库采集子流程', icon: 'db' },
+      { id: 'sub-batch-online-sql', kind: 'code', label: '在线编程子流程1-1', icon: 'code' },
+      { id: 'sub-batch-package', label: '上传程序包子流程1-1', icon: 'pkg' },
+      { id: 'sub-batch-governance', label: '数治子流程1-1', icon: 'govern' }
     ]},
-    { label: '流式计算业务流程', icon: 'stream', children: [
-      { label: '数据同步-FlinkCDC同步', icon: 'sync' },
-      { label: '流式接入流程', icon: 'inlet' },
-      { label: '在线编程流程-Flinksql', icon: 'code' },
-      { label: '上传程序包流程', icon: 'pkg' },
-      { label: '流式处理流程-数易', icon: 'process' }
+    { id: 'flow-stream', kind: 'flow', label: '流式计算业务流程', icon: 'stream', children: [
+      { id: 'sub-stream-cdc', label: '数据同步-FlinkCDC同步', icon: 'sync' },
+      { id: 'sub-stream-ingest', label: '流式接入流程', icon: 'inlet' },
+      { id: 'sub-stream-flinksql', kind: 'code', label: '在线编程流程-Flinksql', icon: 'code' },
+      { id: 'sub-stream-package', label: '上传程序包流程', icon: 'pkg' },
+      { id: 'sub-stream-process', label: '流式处理流程-数易', icon: 'process' }
     ]},
-    { label: '业务流程2', icon: 'biz', children: [
-      { label: '批量采集业务流程', icon: 'biz', children: [
-        { label: 'ods_tabname_hf', icon: 'table' },
-        { label: 'ods_tabname_hf', icon: 'table' }
+    { id: 'flow-business-2', kind: 'flow', label: '业务流程2', icon: 'biz', children: [
+      { id: 'flow-business-2-collect', label: '批量采集业务流程', icon: 'biz', children: [
+        { id: 'sub-business-2-ods-1', label: 'ods_tabname_hf', icon: 'table' },
+        { id: 'sub-business-2-ods-2', label: 'ods_tabname_hf', icon: 'table' }
       ]},
-      { label: '文件夹', icon: 'folder', children: [
-        { label: '数据子流程2-2-1', icon: 'process' },
-        { label: '数据子流程2-2-2', icon: 'process' }
+      { id: 'folder-business-2-code', label: '文件夹', icon: 'folder', children: [
+        { id: 'sub-data-2-2-1', kind: 'code', label: '数据子流程2-2-1', icon: 'process' },
+        { id: 'sub-data-2-2-2', kind: 'code', label: '数据子流程2-2-2', icon: 'process' }
       ]}
     ]}
   ],
@@ -375,9 +375,15 @@ DP.pages.dataDevelop = {
   _currentView: 'flow',
 
   /* ---- 初始化 ---- */
-  init: function () {
+  init: function (opts) {
     var self = this;
+    opts = opts || {};
     self._currentView = 'flow';
+
+    if (DP.setProjectSelectorMode) DP.setProjectSelectorMode('context');
+    if (opts.project && opts.environment && DP.setProjectEnvironment) {
+      DP.setProjectEnvironment(opts.project, opts.environment, { mode: 'context', silent: true });
+    }
 
     self._renderTree();
     self._renderCanvas();
@@ -391,6 +397,8 @@ DP.pages.dataDevelop = {
     self._initEditorSidebarTabs();
     self._initEditorBottomTabs();
     self._initPropsTabs();
+
+    if (opts.subflowId || opts.recordId) self._openTarget(opts);
   },
 
   /* ---- Tab 切换（按父容器隔离） ---- */
@@ -453,7 +461,7 @@ DP.pages.dataDevelop = {
       var pad = 10 + depth * 16;
       var bi = iconMap[item.icon] || 'bi-file-earmark';
       var clr = iconColorMap[item.icon] || '#999';
-      var html = '<div class="dd-tree-node" style="padding-left:' + pad + 'px" data-label="' + item.label + '">';
+      var html = '<div class="dd-tree-node" style="padding-left:' + pad + 'px" data-label="' + item.label + '" data-node-id="' + (item.id || '') + '" data-node-kind="' + (item.kind || '') + '">';
       if (hasChild) {
         html += '<span class="dd-tree-arrow open"><i class="bi bi-caret-right-fill"></i></span>';
       } else {
@@ -496,9 +504,10 @@ DP.pages.dataDevelop = {
       node.classList.add('active');
 
       var label = node.getAttribute('data-label');
-      if (label === '批量计算业务流程') {
+      var kind = node.getAttribute('data-node-kind');
+      if (kind === 'flow') {
         self._switchToFlowView();
-      } else if (label === '在线编程子流程1-1') {
+      } else if (kind === 'code' || self._editorContents[label]) {
         self._switchToEditorView(label);
       }
     });
@@ -740,16 +749,68 @@ DP.pages.dataDevelop = {
     document.getElementById('ddEditorView').style.display = 'none';
   },
 
-  _switchToEditorView: function (label) {
+  _switchToEditorView: function (label, record) {
     this._currentView = 'editor';
     document.getElementById('ddFlowView').style.display = 'none';
     document.getElementById('ddEditorView').style.display = '';
-    this._renderEditorContent(label);
+    this._renderEditorContent(label, record);
+  },
+
+  _findCodeRecord: function (opts) {
+    if (!window.DP.developmentCodeRecords) return null;
+    opts = opts || {};
+    return DP.developmentCodeRecords.find(function (record) {
+      if (opts.recordId) return record.id === opts.recordId;
+      return record.project === opts.project &&
+        record.environment === opts.environment &&
+        record.businessFlowId === opts.flowId &&
+        record.subflowId === opts.subflowId;
+    }) || null;
+  },
+
+  _openTarget: function (opts) {
+    var container = document.getElementById('ddTreeContent');
+    if (!container) return;
+    var record = this._findCodeRecord(opts);
+    var targetId = opts.subflowId || (record && record.subflowId);
+    var targetNode = Array.prototype.find.call(container.querySelectorAll('.dd-tree-node'), function (node) {
+      return node.getAttribute('data-node-id') === targetId;
+    });
+    if (!targetNode) return;
+
+    var branch = targetNode.closest('.dd-tree-children');
+    while (branch) {
+      branch.classList.add('open');
+      var parentNode = branch.previousElementSibling;
+      if (parentNode) {
+        var arrow = parentNode.querySelector('.dd-tree-arrow');
+        if (arrow) arrow.classList.add('open');
+      }
+      branch = branch.parentElement ? branch.parentElement.closest('.dd-tree-children') : null;
+    }
+
+    container.querySelectorAll('.dd-tree-node.active').forEach(function (node) { node.classList.remove('active'); });
+    targetNode.classList.add('active');
+    targetNode.scrollIntoView({ block: 'center' });
+    this._switchToEditorView(targetNode.getAttribute('data-label'), record);
+
+    var targetLine = parseInt(opts.line, 10);
+    if (!isNaN(targetLine) && targetLine > 0) {
+      var gutterLines = document.querySelectorAll('#ddCodeGutter > div');
+      gutterLines.forEach(function (line) { line.classList.remove('dd-code-gutter-line-active'); });
+      if (gutterLines[targetLine - 1]) gutterLines[targetLine - 1].classList.add('dd-code-gutter-line-active');
+      var editorWrap = document.querySelector('.dd-code-editor-wrap');
+      if (editorWrap) editorWrap.scrollTop = Math.max(0, (targetLine - 1) * 22 - 110);
+    }
   },
 
   /* ---- 渲染编辑器内容 ---- */
-  _renderEditorContent: function (label) {
-    var content = this._editorContents[label];
+  _renderEditorContent: function (label, record) {
+    var baseContent = this._editorContents[label];
+    var content = record ? {
+      code: record.code,
+      output: record.id === 'code-batch-dev-sql' && baseContent ? baseContent.output : null
+    } : baseContent;
     var gutter = document.getElementById('ddCodeGutter');
     var codeEl = document.getElementById('ddCodeContent');
     var output = document.getElementById('ddEditorOutput');
@@ -778,6 +839,16 @@ DP.pages.dataDevelop = {
         }
       });
       output.innerHTML = oh;
+    } else if (output) {
+      output.innerHTML = '<div class="out-time">> 已从代码检索定位到当前代码，等待执行...</div>';
+    }
+
+    var basicPanel = document.querySelector('.dd-sidebar-panel[data-sidebar="basic"]');
+    if (basicPanel) {
+      var nameInput = basicPanel.querySelector('.dd-prop-input[type="text"]');
+      if (nameInput) nameInput.value = label;
+      var selects = basicPanel.querySelectorAll('.dd-prop-select');
+      if (record && selects[1]) selects[1].value = record.language === 'Flink SQL' ? 'SQL' : record.language;
     }
   },
 

@@ -4,6 +4,9 @@
  */
 window.DP = window.DP || {};
 
+DP._projectSelectorMode = DP._projectSelectorMode || 'context';
+DP._projectContext = DP._projectContext || { project: '数据中台项目', environment: '开发' };
+
 /**
  * 切换菜单组（顶部导航切换时调用）
  */
@@ -40,6 +43,82 @@ DP.setActiveMenu = function (activeEl) {
   document.querySelectorAll('.menu-link.active').forEach(function (el) { el.classList.remove('active'); });
   document.querySelectorAll('.sub-menu li a.active').forEach(function (el) { el.classList.remove('active'); });
   activeEl.classList.add('active');
+};
+
+/**
+ * 获取当前数据开发项目/环境。
+ */
+DP.getProjectEnvironment = function () {
+  return { project: DP._projectContext.project, environment: DP._projectContext.environment };
+};
+
+/**
+ * 设置项目/环境并同步公共选择器。
+ */
+DP.setProjectEnvironment = function (project, environment, opts) {
+  opts = opts || {};
+  var selector = document.getElementById('devProjectSelector');
+  if (!selector) return;
+
+  var selectedProject = project || DP._projectContext.project;
+  var selectedEnvironment = environment || DP._projectContext.environment;
+  var projectItem = Array.prototype.find.call(selector.querySelectorAll('.dev-proj-item'), function (item) {
+    return item.dataset.proj === selectedProject;
+  });
+  var environmentGroup = Array.prototype.find.call(selector.querySelectorAll('.dev-env-group'), function (group) {
+    return group.dataset.proj === selectedProject;
+  });
+
+  if (!projectItem || !environmentGroup) return;
+
+  var environmentItem = Array.prototype.find.call(environmentGroup.querySelectorAll('.dev-proj-env'), function (item) {
+    return item.dataset.env === selectedEnvironment;
+  });
+  if (!environmentItem) environmentItem = environmentGroup.querySelector('.dev-proj-env');
+  if (!environmentItem) return;
+  selectedEnvironment = environmentItem.dataset.env;
+
+  selector.querySelectorAll('.dev-proj-item').forEach(function (item) { item.classList.remove('active'); });
+  selector.querySelectorAll('.dev-env-group').forEach(function (group) { group.classList.remove('active'); });
+  selector.querySelectorAll('.dev-proj-env').forEach(function (item) { item.classList.remove('active'); });
+  projectItem.classList.add('active');
+  environmentGroup.classList.add('active');
+  environmentItem.classList.add('active');
+
+  var currentText = selector.querySelector('.dev-proj-text');
+  if (currentText) currentText.textContent = selectedProject + ' / ' + selectedEnvironment;
+
+  DP._projectContext = { project: selectedProject, environment: selectedEnvironment };
+
+  selector.classList.remove('open');
+  if (!opts.silent) {
+    document.dispatchEvent(new CustomEvent('dp:project-environment-change', {
+      detail: { mode: 'context', project: selectedProject, environment: selectedEnvironment }
+    }));
+  }
+};
+
+/**
+ * 代码检索是固定全局检索，search 模式隐藏项目选择器；context 模式恢复选择器。
+ */
+DP.setProjectSelectorMode = function (mode) {
+  var selector = document.getElementById('devProjectSelector');
+  if (!selector) return;
+  DP._projectSelectorMode = mode === 'search' ? 'search' : 'context';
+
+  var searchInput = document.getElementById('devProjSearchInput');
+  if (searchInput) searchInput.value = '';
+  selector.querySelectorAll('.dev-proj-item').forEach(function (item) {
+    item.style.display = '';
+  });
+
+  var activeNav = document.querySelector('.nav-item.active');
+  var activeNavKey = activeNav ? activeNav.dataset.page : '';
+  var showSelector = DP._projectSelectorMode === 'context' && (activeNavKey === 'develop' || activeNavKey === 'explore');
+  selector.style.display = showSelector ? 'block' : 'none';
+  if (DP._projectSelectorMode === 'context') {
+    DP.setProjectEnvironment(DP._projectContext.project, DP._projectContext.environment, { silent: true });
+  }
 };
 
 /**
@@ -142,12 +221,11 @@ DP.initProjectSelector = function () {
   // 环境选择
   devProjSelector.querySelectorAll('.dev-proj-env').forEach(function (env) {
     env.addEventListener('click', function () {
-      devProjSelector.querySelectorAll('.dev-proj-env').forEach(function (e) { e.classList.remove('active'); });
-      env.classList.add('active');
       var projName = env.closest('.dev-env-group').dataset.proj;
       var envName = env.dataset.env;
-      document.querySelector('.dev-proj-text').textContent = projName + ' / ' + envName;
-      devProjSelector.classList.remove('open');
+      DP.setProjectEnvironment(projName, envName);
     });
   });
+
+  DP.setProjectSelectorMode(DP._projectSelectorMode);
 };

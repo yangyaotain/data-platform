@@ -107,12 +107,17 @@ document.addEventListener('DOMContentLoaded', function () {
     DP.setActiveMenu(link);
   }
 
-  DP.rememberRoute = function (menuKey, navKey) {
+  DP.rememberRoute = function (menuKey, navKey, opts) {
     if (!menuKey) return;
     var currentNav = navKey || getActiveNavKey();
     var params = new URLSearchParams();
     if (currentNav) params.set('nav', currentNav);
     params.set('page', menuKey);
+
+    var routeOptionKeys = ['project', 'environment', 'flowId', 'subflowId', 'recordId', 'keyword', 'line'];
+    routeOptionKeys.forEach(function (key) {
+      if (opts && opts[key] != null && opts[key] !== '') params.set(key, String(opts[key]));
+    });
 
     var nextHash = '#' + params.toString();
     if (location.hash === nextHash) return;
@@ -123,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function () {
   DP.showPage = function (menuKey, opts) {
     rawShowPage.call(DP, menuKey, opts);
     if (!opts || !opts.skipRoute) {
-      DP.rememberRoute(menuKey);
+      DP.rememberRoute(menuKey, '', opts);
     }
   };
 

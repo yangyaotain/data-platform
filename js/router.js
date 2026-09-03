@@ -14,6 +14,9 @@ DP.showPage = function (menuKey, opts) {
   if (!c) return;
 
   document.body.classList.toggle('datamap-standalone', menuKey === 'datamap-home' || menuKey === '数据地图');
+  if (DP.setProjectSelectorMode) {
+    DP.setProjectSelectorMode(menuKey === 'dev-code-search' || menuKey === '代码检索' ? 'search' : 'context');
+  }
 
   if (menuKey === 'datasource') {
     c.innerHTML = DP.pages.datasource.html;
@@ -49,7 +52,10 @@ DP.showPage = function (menuKey, opts) {
     DP.pages.projectMgr.init();
   } else if (menuKey === '数据开发') {
     c.innerHTML = DP.pages.dataDevelop.html;
-    DP.pages.dataDevelop.init();
+    DP.pages.dataDevelop.init(opts || {});
+  } else if (menuKey === 'dev-code-search' || menuKey === '代码检索') {
+    c.innerHTML = DP.pages.codeSearch.html;
+    DP.pages.codeSearch.init(opts || {});
   } else if (menuKey === '资产概览') {
     c.innerHTML = DP.pages.metaSearchHome.html;
     DP.pages.metaSearchHome.init();
