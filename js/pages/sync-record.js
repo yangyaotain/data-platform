@@ -9,6 +9,8 @@ DP.pages.syncRecord = (function () {
     selectedSource: 'all',
     selectedLabel: '全部',
     keyword: '',
+    startDate: '2026-05-17',
+    endDate: '2026-06-17',
     page: 1,
     pageSize: 10
   };
@@ -123,7 +125,7 @@ DP.pages.syncRecord = (function () {
   }
 
   function getFilteredRows() {
-    return records.filter(sourceMatches);
+    return records.filter(function (record) { return sourceMatches(record) && (!state.startDate || record.startTime.slice(0, 10) >= state.startDate) && (!state.endDate || record.startTime.slice(0, 10) <= state.endDate); });
   }
 
   function renderTree(items, depth) {
@@ -146,6 +148,7 @@ DP.pages.syncRecord = (function () {
   function renderRows(rows) {
     var start = (state.page - 1) * state.pageSize;
     var pageRows = rows.slice(start, start + state.pageSize);
+    if (!pageRows.length) return '<tr><td colspan="7" class="sr-empty">暂无符合条件的同步记录</td></tr>';
     return pageRows.map(function (item) {
       return '<tr>' +
         '<td title="' + escapeHtml(item.source) + '">' + escapeHtml(item.source) + '</td>' +
@@ -297,6 +300,11 @@ DP.pages.syncRecord = (function () {
     });
 
     pageEl.addEventListener('change', function (event) {
+      if (event.target.matches('[data-sr-date]')) {
+        state.startDate = pageEl.querySelector('[data-sr-date="start"]').value;
+        state.endDate = pageEl.querySelector('[data-sr-date="end"]').value;
+        state.page = 1; refresh(pageEl); return;
+      }
       if (event.target.matches('[data-sr-page-size]')) {
         state.pageSize = Number(event.target.value) || 10;
         state.page = 1;
@@ -317,7 +325,7 @@ DP.pages.syncRecord = (function () {
             '</div>' +
           '</span>' +
         '</label>' +
-        '<label class="sr-filter-field"><span class="sr-label">选择时间:</span><input class="sr-date-input" type="text" value="2026-05-17 14:06:48 - 2026-06-17 14:06:48" aria-label="选择时间"></label>' +
+        '<div class="sr-filter-field"><span class="sr-label">选择时间:</span>' + DP.datePicker.render({ mode: 'range', label: '同步时间', start: state.startDate, end: state.endDate, startAttrs: { 'data-sr-date': 'start' }, endAttrs: { 'data-sr-date': 'end' } }) + '</div>' +
         '<button class="btn btn-primary sr-query-btn" type="button" data-sr-query><i class="bi bi-search"></i> 查询</button>' +
       '</div>' +
       '<div class="sr-table-wrap">' +
@@ -332,6 +340,8 @@ DP.pages.syncRecord = (function () {
     init: function () {
       var pageEl = document.querySelector('.page-sync-record');
       if (!pageEl) return;
+      state.startDate = pageEl.querySelector('[data-sr-date="start"]').value;
+      state.endDate = pageEl.querySelector('[data-sr-date="end"]').value;
       state.selectedSource = 'all';
       state.selectedLabel = '全部';
       state.page = 1;

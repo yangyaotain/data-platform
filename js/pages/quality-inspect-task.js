@@ -8,6 +8,7 @@ DP.pages = DP.pages || {};
 DP.pages.qualityInspectTask = (function () {
   var pageEl = null;
   var reportGaugeChart = null;
+  var versions = DP.qualityVersions;
 
   var state = {
     view: 'list',
@@ -294,36 +295,18 @@ DP.pages.qualityInspectTask = (function () {
     }
   ];
 
-  var ruleTree = [
-    {
-      key: 'rule-demo',
-      label: '中电数治演示',
-      icon: 'bi-layers-fill',
-      iconClass: 'is-blue',
-      children: [
-        { key: 'rule-demo-common', label: '公共稽查规则', icon: 'bi-folder-fill' }
-      ]
-    },
-    {
-      key: 'rule-business',
-      label: '业务系统',
-      icon: 'bi-hdd-network-fill',
-      iconClass: 'is-system',
-      children: [
-        { key: 'rule-workorder', label: '工单系统', icon: 'bi-ui-checks' },
-        { key: 'rule-order', label: '订单交易系统', icon: 'bi-receipt' }
-      ]
-    }
-  ];
+  var ruleTree = DP.pages.dataQualityRule.getRuleTree();
 
-  var ruleRows = [
-    { id: 'rule-not-null', group: 'rule-business', name: '非空校验字段不能为空', standard: '有效性', desc: '非空校验（name 字段不能为空）' },
-    { id: 'rule-repeat', group: 'rule-business', name: '筛选出重复的记录', standard: '准确性', desc: '校验name字段的唯一性，筛选出重复的记录' },
-    { id: 'rule-length', group: 'rule-demo-common', name: '长度不能超过 10 个字符', standard: '有效性', desc: '长度不能超过 10 个字符' }
-  ];
+  // 兼容原演示配置的规则标识，所有选择和版本引用归到质量规则目录。
+  var ruleAliases = { 'rule-not-null': 'qr-001', 'rule-repeat': 'qr-002', 'rule-length': 'qr-003', length: 'qr-005', range: 'qr-006', size: 'qr-007', 'id-card': 'qr-008', timely: 'qr-009', unique: 'qr-010', phone: 'qr-011', 'not-null': 'qr-012', 'field-not-null': 'qr-004', 'custom-not-null': 'qr-001', 'custom-repeat': 'qr-002', 'custom-length': 'qr-003' };
+
+  function canonicalRuleId(id) { return ruleAliases[id] || id; }
+  function getRuleCatalog() { return DP.pages.dataQualityRule.getRules(); }
 
   function getInspectRule(ruleId) {
-    return ruleRows.filter(function (row) { return row.id === ruleId; })[0] || ruleRows[1];
+    var ref = state.form && state.form.ruleRef;
+    if (ref && ref.id === canonicalRuleId(ruleId)) return Object.assign({ id: ref.id, version: ref.version }, versions.clone(ref.snapshot));
+    return getRuleCatalog().find(function (row) { return row.id === canonicalRuleId(ruleId); }) || { id: '', name: '请选择稽查规则', standard: '', desc: '' };
   }
 
   var standardTree = [
@@ -370,41 +353,6 @@ DP.pages.qualityInspectTask = (function () {
     '时间戳(毫秒)'
   ];
   var basicOffsetUnitOptions = ['小时', '天', '周', '月'];
-  var basicRuleGroups = [
-    {
-      id: 'system',
-      label: '系统规则',
-      icon: 'bi-folder-fill',
-      children: [
-        { id: 'length', label: '长度校验', desc: '字段值长度需在配置的最小值与最大值之间', ruleType: 'fixed' },
-        { id: 'range', label: '取值范围约束', desc: '字段值必须落在规则维护的枚举或阈值范围内', ruleType: 'fixed' },
-        { id: 'size', label: '大小值校验', desc: '数值型字段不得超过配置的上限或低于下限', ruleType: 'fixed' },
-        { id: 'id-card', label: '身份证号校验(18位)', desc: '身份证号需满足18位长度、出生日期和校验位规则', ruleType: 'fixed' },
-        { id: 'timely', label: '及时性校验', desc: '时间字段需满足业务要求的采集或入仓时效', ruleType: 'fixed' },
-        { id: 'unique', label: '唯一性校验', desc: '同一业务主键在目标范围内不得重复出现', ruleType: 'fixed' },
-        { id: 'phone', label: '电话号码与手机号码校验(11位)码校验', desc: '电话号码或手机号需满足11位号码格式规则', ruleType: 'fixed' },
-        { id: 'not-null', label: '非空校验', desc: '字段值不能为空、空字符串或仅包含空白字符', ruleType: 'fixed' }
-      ]
-    },
-    {
-      id: 'business',
-      label: '业务系统',
-      icon: 'bi-layers-fill',
-      children: [
-        { id: 'field-not-null', label: '字段非空校验', desc: '稽查字段值不能为空，用于发现关键业务字段缺失记录', ruleType: 'fixed' }
-      ]
-    },
-    {
-      id: 'custom',
-      label: '自定义稽查规则',
-      icon: 'bi-code-square',
-      children: [
-        { id: 'custom-not-null', label: '非空校验-字段不能为空', desc: '通过自定义 SQL 检查关键字段空值记录', ruleType: 'custom' },
-        { id: 'custom-repeat', label: '筛选出重复的记录', desc: '通过自定义 SQL 识别指定字段组合的重复数据', ruleType: 'custom' },
-        { id: 'custom-length', label: '长度不能超过 10 个字符', desc: '通过自定义 SQL 校验编码类字段长度阈值', ruleType: 'custom' }
-      ]
-    }
-  ];
   var basicEntities = [
     { name: 'tms_demo.express_task_collect.actual_collected_time', alias: 'actual_collected_time', ruleId: 'field-not-null' },
     { name: 'tms_demo.express_task_collect.actual_commit_time', alias: 'actual_commit_time', ruleId: 'field-not-null' },
@@ -568,6 +516,7 @@ DP.pages.qualityInspectTask = (function () {
 
   function getInspectObjects(item) {
     if (!item) return [];
+    if (item.config && item.config.kind === 'basic') return item.config.form.entities.map(function (entity) { return getTaskDataSource(item) + '/' + entity.name; });
     if (item.type === '基础稽查' && basicInspectObjectsByTaskId[item.id]) {
       return basicInspectObjectsByTaskId[item.id].slice();
     }
@@ -654,7 +603,11 @@ DP.pages.qualityInspectTask = (function () {
     return taskRows.filter(function (item) { return keys.indexOf(item.group) >= 0; }).length;
   }
 
-  function getNodeCount(node) {
+  function getNodeCount(node, rulePicker) {
+    if (rulePicker) {
+      var keys = collectTreeKeys(node);
+      return getRuleCatalog().filter(function (rule) { return rule.ruleType === '质量稽查（自定义稽查）' && keys.indexOf(rule.group) >= 0; }).length;
+    }
     if (typeof node.count === 'number') return node.count;
     return getTreeCount(node);
   }
@@ -667,7 +620,7 @@ DP.pages.qualityInspectTask = (function () {
       var children = node.children || [];
       var hasChildren = children.length > 0;
       var open = !!keyword || !!state.treeOpen[node.key] || !!options.forceOpen;
-      var activeKey = options.activeKey || state.treeKey;
+      var activeKey = options.activeKey == null ? state.treeKey : options.activeKey;
       var isActive = activeKey === node.key;
       var action = options.action || 'toggle-tree';
       var selectAction = options.selectAction || '';
@@ -680,7 +633,7 @@ DP.pages.qualityInspectTask = (function () {
           '<button class="dqit-tree-select" type="button"' + pickerAttr + '>' +
             '<i class="bi ' + escapeHtml(node.icon || 'bi-folder-fill') + ' dqit-tree-icon ' + escapeHtml(node.iconClass || '') + '"></i>' +
             '<span class="dqit-tree-name">' + escapeHtml(node.label) + '</span>' +
-            '<span class="dqit-tree-count">' + getNodeCount(node) + '</span>' +
+            '<span class="dqit-tree-count">' + getNodeCount(node, selectAction === 'select-rule-tree') + '</span>' +
           '</button>' +
         '</div>' +
         (hasChildren ? '<ul class="dqit-tree-children">' + renderTreeNodes(children, keyword, options) + '</ul>' : '') +
@@ -753,18 +706,21 @@ DP.pages.qualityInspectTask = (function () {
   }
 
   function getResultTotal() {
-    return 798;
+    var item = getViewTask();
+    return item && item.executionSnapshot ? (item.executionSnapshot.runCount == null ? 798 : item.executionSnapshot.runCount) : 0;
   }
 
   function getReportRun(index) {
-    var item = getViewTask();
-    var startDate = new Date(2026, 5, 24, 15, 10, 0);
+    var taskItem = getViewTask();
+    var item = taskItem && taskItem.executionSnapshot || taskItem;
+    var startDate = item && item.startedAt ? new Date(item.startedAt.replace(' ', 'T')) : new Date(2026, 5, 24, 15, 10, 0);
     startDate.setHours(startDate.getHours() - index);
     var completeDate = new Date(startDate.getTime());
     completeDate.setMinutes(completeDate.getMinutes() + 1);
     completeDate.setSeconds(18 + (index % 7));
     return {
       index: index,
+      taskVersion: item.taskVersion || '--',
       reportName: getReportName(item),
       startAt: formatDateTime(startDate),
       endAt: formatDateTime(completeDate),
@@ -801,6 +757,28 @@ DP.pages.qualityInspectTask = (function () {
   }
 
   function getReportSql() {
+    var item = getViewTask();
+    var snapshot = item && item.executionSnapshot;
+    if (snapshot && snapshot.config) {
+      var config = snapshot.config;
+      var form = config.form;
+      if (config.kind === 'custom') return form.ruleMode === 'custom' ? form.sqlCustom : form.sqlGenerated;
+      if (config.kind === 'basic') return form.paramMode === '自定义SQL' ? form.customSql : form.entities.map(function (entity) {
+        var param = entity.paramConfig;
+        if (param) return param.ruleMode === 'custom' ? param.sqlCustom : param.sqlGenerated;
+        var ref = entity.ruleRef;
+        if (!ref) return '-- ' + entity.name;
+        var bound = { params: [] };
+        var parts = getBasicEntityParts(entity);
+        bindRuleTemplate(bound, ref, parts.table, parts.field);
+        return '-- ' + entity.name + ' · ' + ref.version + '\n' + bound.sqlGenerated;
+      }).join('\n\n');
+      if (!form.ruleRef) return '';
+      var standardBound = { params: [] };
+      var standardParts = getBasicEntityParts(form.entities[0]);
+      bindRuleTemplate(standardBound, form.ruleRef, standardParts.table, standardParts.field);
+      return standardBound.sqlGenerated;
+    }
     return [
       'SELECT COUNT(1) as total_num',
       'FROM (',
@@ -889,6 +867,7 @@ DP.pages.qualityInspectTask = (function () {
         ? '<button type="button" data-dqit-action="stop-row" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-stop-circle-fill"></i><span>停止</span></button>'
         : '<button type="button" data-dqit-action="start-row" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-play-circle-fill"></i><span>启动</span></button>') +
       '<button type="button" data-dqit-action="edit-row" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-pencil-square"></i><span>编辑</span></button>' +
+      '<button type="button" data-dqit-action="versions" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-clock-history"></i><span>版本管理</span></button>' +
       '<button class="danger" type="button" data-dqit-action="delete-row" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-trash3"></i><span>删除</span></button>' +
     '</div>';
   }
@@ -910,12 +889,13 @@ DP.pages.qualityInspectTask = (function () {
   function renderTableRows() {
     var rows = getVisibleRows();
     if (!rows.length) {
-      return '<tr class="dqit-empty-row"><td colspan="8">暂无匹配稽查任务</td></tr>';
+      return '<tr class="dqit-empty-row"><td colspan="9">暂无匹配稽查任务</td></tr>';
     }
     return rows.map(function (item) {
       return '<tr>' +
         '<td><input type="checkbox" data-dqit-row-check="' + escapeHtml(item.id) + '"' + (state.selectedIds[item.id] ? ' checked' : '') + ' aria-label="选择稽查任务"></td>' +
         '<td title="' + escapeHtml(item.desc) + '"><a class="dqit-task-name" data-dqit-action="view-row" data-id="' + escapeHtml(item.id) + '">' + escapeHtml(item.name) + '</a></td>' +
+        '<td><span class="qv-badge current">' + escapeHtml(item.currentVersion) + '</span></td>' +
         '<td>' + renderInspectObjects(item) + '</td>' +
         '<td>' + renderTaskType(item.type) + '</td>' +
         '<td>' + escapeHtml(item.frequency) + '</td>' +
@@ -933,12 +913,12 @@ DP.pages.qualityInspectTask = (function () {
     return '<div class="dqit-table-wrap">' +
       '<table class="ds-table dqit-table">' +
         '<colgroup>' +
-          '<col class="dqit-w-check"><col class="dqit-w-name"><col class="dqit-w-target"><col class="dqit-w-type"><col class="dqit-w-frequency"><col class="dqit-w-status">' +
+          '<col class="dqit-w-check"><col class="dqit-w-name"><col class="dqit-w-version"><col class="dqit-w-target"><col class="dqit-w-type"><col class="dqit-w-frequency"><col class="dqit-w-status">' +
           '<col class="dqit-w-last"><col class="dqit-w-action">' +
         '</colgroup>' +
         '<thead><tr>' +
           '<th class="col-ck"><input type="checkbox" data-dqit-check-all' + (allChecked ? ' checked' : '') + ' aria-label="全选稽查任务"></th>' +
-          '<th>任务名称</th><th>稽查对象</th><th>任务类型</th><th>频率</th><th>运行状态</th><th>最后执行时间</th><th>操作</th>' +
+          '<th>任务名称</th><th>当前版本</th><th>稽查对象</th><th>任务类型</th><th>频率</th><th>运行状态</th><th>最后执行时间</th><th>操作</th>' +
         '</tr></thead>' +
         '<tbody>' + renderTableRows() + '</tbody>' +
       '</table>' +
@@ -1021,7 +1001,7 @@ DP.pages.qualityInspectTask = (function () {
     }
     return rows.map(function (run) {
       return '<tr>' +
-        '<td>' + escapeHtml(run.reportName) + '</td>' +
+        '<td>' + escapeHtml(run.reportName) + '<span class="dqit-run-version">任务版本 ' + escapeHtml(run.taskVersion) + '</span></td>' +
         '<td>' + escapeHtml(run.startAt) + '</td>' +
         '<td>' + escapeHtml(run.endAt) + '</td>' +
         '<td>' + escapeHtml(run.frequency) + '</td>' +
@@ -1216,6 +1196,7 @@ DP.pages.qualityInspectTask = (function () {
   }
 
   function createFormDraft(item) {
+    if (item && item.config) return versions.clone(item.config.form);
     var target = item ? item.target : 'buildinglog';
     var groupKey = item ? item.group : 'business';
     var groupNode = findTreeNode(taskTree, groupKey) || findTreeNode(taskTree, 'business');
@@ -1264,6 +1245,7 @@ DP.pages.qualityInspectTask = (function () {
   }
 
   function createStandardFormDraft(item) {
+    if (item && item.config) return versions.clone(item.config.form);
     var groupKey = item ? item.group : 'demo';
     var groupNode = findTreeNode(taskTree, groupKey) || findTreeNode(taskTree, 'demo');
     return {
@@ -1300,12 +1282,21 @@ DP.pages.qualityInspectTask = (function () {
     });
   }
 
-  function getBasicRule(ruleId) {
-    for (var i = 0; i < basicRuleGroups.length; i++) {
-      var found = basicRuleGroups[i].children.filter(function (rule) { return rule.id === ruleId; })[0];
-      if (found) return found;
-    }
-    return basicRuleGroups[1].children[0];
+  function getBasicRule(ruleId, ref) {
+    var rule = ref && ref.id === canonicalRuleId(ruleId) ? ref.snapshot : getRuleCatalog().find(function (row) { return row.id === canonicalRuleId(ruleId); });
+    if (!rule) return { id: ruleId, label: '请选择质量规则', desc: '', ruleType: 'fixed' };
+    return { id: canonicalRuleId(ruleId), label: rule.name, desc: rule.desc, ruleType: rule.ruleType === '质量稽查（自定义稽查）' ? 'custom' : 'fixed' };
+  }
+
+  function getBasicRuleGroups() {
+    return [
+      { id: 'system', label: '系统规则', icon: 'bi-folder-fill', children: [] },
+      { id: 'fixed', label: '标准稽查规则', icon: 'bi-layers-fill', children: [] },
+      { id: 'custom', label: '自定义稽查规则', icon: 'bi-code-square', children: [] }
+    ].map(function (group) {
+      group.children = getRuleCatalog().filter(function (rule) { return (rule.ruleType === '系统规则' ? 'system' : (rule.ruleType === '质量稽查（自定义稽查）' ? 'custom' : 'fixed')) === group.id; }).map(function (rule) { return getBasicRule(rule.id); });
+      return group;
+    });
   }
 
   function isCustomBasicRule(rule) {
@@ -1354,7 +1345,8 @@ DP.pages.qualityInspectTask = (function () {
           attr: param.attr,
           desc: param.desc,
           table: param.table || '',
-          field: param.field || ''
+          field: param.field || '',
+          value: param.value == null ? '' : param.value
         };
       }),
       sqlTemplate: draft.sqlTemplate || getDefaultTemplateSql(),
@@ -1452,6 +1444,7 @@ DP.pages.qualityInspectTask = (function () {
   }
 
   function createBasicFormDraft(item) {
+    if (item && item.config) return versions.clone(item.config.form);
     var groupKey = item ? item.group : 'demo';
     var groupNode = findTreeNode(taskTree, groupKey) || findTreeNode(taskTree, 'demo');
     return {
@@ -1550,7 +1543,7 @@ DP.pages.qualityInspectTask = (function () {
         '<td>' + escapeHtml(param.desc || '') + '</td>' +
         '<td>' +
           '<div class="dqit-param-config-cell">' +
-            '<div class="dqit-param-config-group"><span class="dqit-param-config-label">数据库表</span>' + renderSearchSelect(tableId, param.table, tableOptions, '请选择表') + '</div>' +
+            (param.attr === '表' || param.attr === '字段' ? '<div class="dqit-param-config-group"><span class="dqit-param-config-label">数据库表</span>' + renderSearchSelect(tableId, param.table, tableOptions, '请选择表') + '</div>' : '<div class="dqit-param-config-group"><span class="dqit-param-config-label">参数值</span><input class="dqit-input" type="text" data-dqit-param-value="' + index + '" value="' + escapeHtml(param.value || '') + '" placeholder="请输入参数值"></div>') +
             (param.attr === '字段' ? '<div class="dqit-param-config-group"><span class="dqit-param-config-label">表字段</span>' + renderSearchSelect(fieldId, param.field, fieldOptions, '请选择字段') + '</div>' : '') +
           '</div>' +
         '</td>' +
@@ -1650,7 +1643,7 @@ DP.pages.qualityInspectTask = (function () {
 
   function renderSchedulePopup(type) {
     if (!state.schedulePopup || state.schedulePopup !== type) return '';
-    if (type === 'date') return renderDatePicker();
+    if (type === 'date') return '';
     return renderTimePicker(type);
   }
 
@@ -1690,25 +1683,6 @@ DP.pages.qualityInspectTask = (function () {
     '</div>';
   }
 
-  function renderDatePicker() {
-    var days = [
-      { text: '31', muted: true }, { text: '1' }, { text: '2' }, { text: '3' }, { text: '4' }, { text: '5' }, { text: '6' },
-      { text: '7' }, { text: '8' }, { text: '9' }, { text: '10' }, { text: '11' }, { text: '12' }, { text: '13' },
-      { text: '14' }, { text: '15' }, { text: '16' }, { text: '17' }, { text: '18' }, { text: '19' }, { text: '20' },
-      { text: '21' }, { text: '22' }, { text: '23' }, { text: '24', active: true }, { text: '25' }, { text: '26' }, { text: '27' },
-      { text: '28' }, { text: '29' }, { text: '30' }, { text: '1', muted: true }, { text: '2', muted: true }, { text: '3', muted: true }, { text: '4', muted: true },
-      { text: '5', muted: true }, { text: '6', muted: true }, { text: '7', muted: true }, { text: '8', muted: true }, { text: '9', muted: true }, { text: '10', muted: true }, { text: '11', muted: true }
-    ];
-    return '<div class="dqit-date-picker">' +
-      '<div class="dqit-date-head"><button type="button"><i class="bi bi-chevron-double-left"></i></button><button type="button"><i class="bi bi-chevron-left"></i></button><strong>2026年&nbsp;&nbsp;6月</strong><button type="button"><i class="bi bi-chevron-right"></i></button><button type="button"><i class="bi bi-chevron-double-right"></i></button></div>' +
-      '<div class="dqit-date-week"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>' +
-      '<div class="dqit-date-grid">' + days.map(function (day) {
-        return '<button type="button" data-dqit-action="pick-date-day" data-day="' + escapeHtml(day.text) + '" class="' + (day.muted ? 'muted ' : '') + (day.active ? 'active' : '') + '">' + escapeHtml(day.text) + '</button>';
-      }).join('') + '</div>' +
-      '<div class="dqit-date-footer"><span>选择时间</span><div><button type="button" data-dqit-action="schedule-clear"><span>清空</span></button><button type="button" data-dqit-action="schedule-now"><span>现在</span></button><button type="button" data-dqit-action="schedule-ok"><span>确定</span></button></div></div>' +
-    '</div>';
-  }
-
   function renderScheduleControls() {
     var s = state.form.schedule;
     var html = '<select class="dqit-schedule-type" data-dqit-schedule-field="type">' + renderOptions(scheduleTypes, s.type) + '</select>';
@@ -1723,7 +1697,7 @@ DP.pages.qualityInspectTask = (function () {
       html += '<select class="dqit-schedule-sub" data-dqit-schedule-field="day">' + renderOptions(dayOptions, s.day) + '</select>' +
         '<div class="dqit-schedule-popover-wrap"><input class="dqit-schedule-input compact" type="text" readonly data-dqit-schedule-field="time" data-dqit-action="open-schedule-popup" data-popup="time" value="' + escapeHtml(s.time) + '">' + renderSchedulePopup('time') + '</div>';
     } else {
-      html += '<div class="dqit-schedule-popover-wrap"><input class="dqit-schedule-input wide" type="text" readonly data-dqit-schedule-field="datetime" data-dqit-action="open-schedule-popup" data-popup="date" value="' + escapeHtml(s.datetime) + '">' + renderSchedulePopup('date') + '</div>';
+      html += DP.datePicker.render({ mode: 'single', label: '单次执行时间', value: s.datetime, output: 'datetime', withTime: true, valueAttrs: { 'data-dqit-schedule-field': 'datetime' } });
     }
     return html + '<div class="dqit-schedule-hint"><i class="bi bi-info-circle-fill"></i><span>' + escapeHtml(renderScheduleHint()) + '</span></div>';
   }
@@ -1767,9 +1741,9 @@ DP.pages.qualityInspectTask = (function () {
 
   function renderBasicRuleTree(entityIndex) {
     var keyword = normalize(state.basicRuleKeyword);
-    return basicRuleGroups.map(function (group) {
+    return getBasicRuleGroups().map(function (group) {
       var children = group.children.filter(function (rule) {
-        return !keyword || normalize(rule.label + ' ' + rule.desc).indexOf(keyword) >= 0;
+        return !keyword || normalize(group.label).indexOf(keyword) >= 0 || normalize(rule.label + ' ' + rule.desc).indexOf(keyword) >= 0;
       });
       if (keyword && !children.length && normalize(group.label).indexOf(keyword) < 0) return '';
       return '<li class="dqit-basic-rule-group">' +
@@ -1785,10 +1759,10 @@ DP.pages.qualityInspectTask = (function () {
   function renderBasicRuleSelect(entity, index) {
     var selectId = 'basic-rule-' + index;
     var isOpen = state.openBasicRuleSelect === selectId;
-    var rule = getBasicRule(entity.ruleId);
+    var rule = getBasicRule(entity.ruleId, entity.ruleRef);
     return '<div class="dqit-basic-rule-select">' +
       '<button type="button" class="dqit-basic-rule-value" data-dqit-action="toggle-basic-rule-select" data-select-id="' + escapeHtml(selectId) + '">' +
-        '<span>' + escapeHtml(rule.label) + '</span><i class="bi bi-caret-down-fill"></i>' +
+        '<span>' + escapeHtml(rule.label) + (entity.ruleRef ? ' · ' + escapeHtml(entity.ruleRef.version) : '') + '</span><i class="bi bi-caret-down-fill"></i>' +
       '</button>' +
       (isOpen ? '<div class="dqit-basic-rule-menu">' +
         '<div class="dqit-basic-rule-search"><input type="text" data-dqit-basic-rule-search value="' + escapeHtml(state.basicRuleKeyword) + '" placeholder="关键字搜索"><button type="button" data-dqit-action="query-basic-rule"><i class="bi bi-search"></i></button></div>' +
@@ -1799,7 +1773,7 @@ DP.pages.qualityInspectTask = (function () {
 
   function renderBasicEntitySection() {
     var rows = (state.form.entities || []).map(function (entity, index) {
-      var rule = getBasicRule(entity.ruleId);
+      var rule = getBasicRule(entity.ruleId, entity.ruleRef);
       var isConfigured = isBasicParamConfigured(entity);
       var actionHtml = isCustomBasicRule(rule)
         ? '<button class="dqit-basic-param-btn' + (isConfigured ? ' configured' : ' unconfigured') + '" type="button" data-dqit-action="open-basic-param-modal" data-index="' + index + '"><i class="bi bi-sliders"></i><span>参数配置</span><em>' + (isConfigured ? '已配置' : '未配置') + '</em></button>'
@@ -2003,7 +1977,7 @@ DP.pages.qualityInspectTask = (function () {
     if (!state.basicParamModal || !state.form) return '';
     var entity = state.form.entities && state.form.entities[state.basicParamModal.entityIndex];
     if (!entity) return '';
-    var rule = getBasicRule(entity.ruleId);
+    var rule = getBasicRule(entity.ruleId, entity.ruleRef);
     var draft = state.basicParamModal.draft || createBasicParamDraft(entity);
     return '<div class="dqit-modal-mask" data-dqit-modal-mask="basic-param">' +
       '<div class="dqit-basic-param-dialog" role="dialog" aria-modal="true" aria-label="参数配置">' +
@@ -2076,7 +2050,7 @@ DP.pages.qualityInspectTask = (function () {
         (isCustomRule
           ? renderFormRow('评价标准', '<select data-dqit-custom-field="customStandard">' + renderOptions(evaluationStandards, draft.customStandard) + '</select>') +
             renderFormRow('描述', '<textarea class="dqit-textarea" data-dqit-custom-field="customDescription" maxlength="100" placeholder="100个字符以内">' + escapeHtml(draft.customDescription) + '</textarea>', '<span>100个字符以内；</span>')
-          : renderFormRow('稽查规则', '<div class="dqit-rule-field"><input class="dqit-input" type="text" readonly value="' + escapeHtml(draft.ruleName) + '"><button class="btn btn-primary" type="button" data-dqit-action="open-rule-modal"><i class="bi bi-check-circle"></i><span>选择</span></button></div>') +
+          : renderFormRow('稽查规则', '<div class="dqit-rule-field"><input class="dqit-input" type="text" readonly value="' + escapeHtml(draft.ruleName) + (draft.ruleRef ? ' · ' + escapeHtml(draft.ruleRef.version) : '') + '"><button class="btn btn-primary" type="button" data-dqit-action="open-rule-modal"><i class="bi bi-check-circle"></i><span>选择</span></button></div>') +
             renderFormRow('评价标准', '<select class="dqit-select-readonly" disabled aria-readonly="true">' + renderOptions(evaluationStandards, selectedRule.standard) + '</select>') +
             renderParamConfig()) +
         renderSqlSection() +
@@ -2102,10 +2076,10 @@ DP.pages.qualityInspectTask = (function () {
         renderRequiredFormRow('任务名称', '<input class="dqit-input" type="text" data-dqit-form-field="taskName" value="' + escapeHtml(draft.taskName) + '" placeholder="50个字符以内">', '<i class="bi bi-info-circle-fill"></i><span>50个字符以内，只允许数字，字母，中文，下划线；</span>') +
         renderRequiredFormRow('业务分层', renderTreePicker('businessLayer', draft.businessLayer, draft.businessLayerKey, taskTree, '请选择业务分层')) +
         renderRequiredFormRow('标准数据', '<div class="dqit-rule-field dqit-standard-field"><input class="dqit-input dqit-input-readonly" type="text" readonly value="' + escapeHtml(draft.standardData) + '"><button class="btn btn-primary" type="button" data-dqit-action="open-standard-modal"><i class="bi bi-plus-lg"></i><span>选择</span></button></div>') +
-        renderRequiredFormRow('关联数据源', '<select data-dqit-standard-field="datasource">' + renderOptions(standardDatasourceOptions, draft.datasource) + '</select>') +
+        renderRequiredFormRow('关联数据源', '<select data-dqit-standard-field="datasource">' + renderOptions(standardDatasourceOptions.indexOf(draft.datasource) < 0 ? standardDatasourceOptions.concat(draft.datasource) : standardDatasourceOptions, draft.datasource) + '</select>') +
         renderRequiredFormRow('考核权重', '<input class="dqit-input" type="number" min="1" max="100" data-dqit-form-field="weight" value="' + escapeHtml(draft.weight) + '">', '<i class="bi bi-info-circle-fill"></i><span>只允许1-100数字</span>') +
         renderStandardEntitySection() +
-        renderRequiredFormRow('质量规则', '<input class="dqit-input dqit-input-readonly" type="text" readonly value="' + escapeHtml(draft.qualityRule) + '">') +
+        renderRequiredFormRow('质量规则', '<input class="dqit-input dqit-input-readonly" type="text" readonly value="' + escapeHtml(draft.qualityRule) + (draft.ruleRef ? ' · ' + escapeHtml(draft.ruleRef.version) : '') + '">') +
         renderRequiredFormRow('稽查机制', '<select data-dqit-standard-field="inspectMode">' + renderOptions(inspectModeOptions, draft.inspectMode) + '</select>') +
         renderStandardScheduleSection() +
         '<div class="dqit-form-actions-bottom">' +
@@ -2159,8 +2133,9 @@ DP.pages.qualityInspectTask = (function () {
     var selectedKey = state.ruleModal.treeKey;
     var selectedNode = findTreeNode(ruleTree, selectedKey);
     var keys = collectTreeKeys(selectedNode);
-    return ruleRows.filter(function (item) {
-      if (keys.length && keys.indexOf(item.group) < 0 && selectedKey !== 'rule-business') return false;
+    return getRuleCatalog().filter(function (item) {
+      if (item.ruleType !== '质量稽查（自定义稽查）') return false;
+      if (keys.length && keys.indexOf(item.group) < 0) return false;
       if (keyword && normalize(item.name + ' ' + item.desc).indexOf(keyword) < 0) return false;
       return true;
     });
@@ -2178,15 +2153,15 @@ DP.pages.qualityInspectTask = (function () {
             '<div class="dqit-rule-tree-wrap"><ul class="dqit-tree">' + (renderTreeNodes(ruleTree, normalize(state.ruleModal.treeKeyword), { forceOpen: true, activeKey: state.ruleModal.treeKey, action: 'toggle-picker-tree', selectAction: 'select-rule-tree' }) || '<li class="dqit-empty-tree">暂无匹配目录</li>') + '</ul></div>' +
           '</div>' +
           '<div class="dqit-rule-right">' +
-            '<div class="dqit-rule-query"><input type="text" data-dqit-rule-keyword value="' + escapeHtml(state.ruleModal.keyword) + '" placeholder="关键字查询"><button class="btn btn-primary" type="button" data-dqit-action="query-rule"><i class="bi bi-search"></i><span>查询</span></button></div>' +
+            '<div class="dqit-rule-query"><input type="text" data-dqit-rule-keyword value="' + escapeHtml(state.ruleModal.keywordDraft == null ? state.ruleModal.keyword : state.ruleModal.keywordDraft) + '" placeholder="关键字查询"><button class="btn btn-primary" type="button" data-dqit-action="query-rule"><i class="bi bi-search"></i><span>查询</span></button></div>' +
             '<div class="dqit-rule-table-wrap">' +
-              '<table class="ds-table dqit-rule-table"><thead><tr><th></th><th>名称</th><th>描述</th></tr></thead><tbody>' +
+              '<table class="ds-table dqit-rule-table"><thead><tr><th></th><th>名称</th><th>当前版本</th><th>描述</th></tr></thead><tbody>' +
                 (rows.length ? rows.map(function (row) {
                   return '<tr data-dqit-action="select-rule" data-rule-id="' + escapeHtml(row.id) + '">' +
                     '<td><input type="radio" name="dqitRule" ' + (state.ruleModal.selectedId === row.id ? ' checked' : '') + '></td>' +
-                    '<td>' + escapeHtml(row.name) + '</td><td>' + escapeHtml(row.desc) + '</td>' +
+                    '<td>' + escapeHtml(row.name) + '</td><td>' + escapeHtml(row.currentVersion) + '</td><td>' + escapeHtml(row.desc) + '</td>' +
                   '</tr>';
-                }).join('') : '<tr class="dqit-empty-row"><td colspan="3">暂无匹配稽查规则</td></tr>') +
+                }).join('') : '<tr class="dqit-empty-row"><td colspan="4">暂无匹配稽查规则</td></tr>') +
               '</tbody></table>' +
             '</div>' +
             '<div class="dqit-rule-footer-note">显示第 ' + (rows.length ? 1 : 0) + ' 到第 ' + rows.length + ' 条记录，总共 ' + rows.length + ' 条记录</div>' +
@@ -2477,6 +2452,9 @@ DP.pages.qualityInspectTask = (function () {
 
   function renderAll() {
     if (!pageEl) return;
+    var active = document.activeElement;
+    var searchSelector = active && pageEl.contains(active) ? ['[data-dqit-picker-search]', '[data-dqit-param-search]', '[data-dqit-rule-tree-search]', '[data-dqit-rule-keyword]', '[data-dqit-basic-rule-search]', '[data-dqit-basic-field-tree-search]', '[data-dqit-basic-field-keyword]'].find(function (selector) { return active.matches(selector); }) : '';
+    var caret = searchSelector ? active.selectionStart : null;
     var fullMode = state.view === 'form' || state.view === 'result' || state.view === 'report' || state.view === 'log';
     var content = renderListShell();
     if (state.view === 'form') content = state.formKind === 'standard' ? renderStandardFormShell() : (state.formKind === 'basic' ? renderBasicFormShell() : renderFormShell());
@@ -2487,6 +2465,18 @@ DP.pages.qualityInspectTask = (function () {
     pageEl.classList.toggle('form-mode', fullMode);
     pageEl.innerHTML = content +
       renderOperationModal() + renderRuleModal() + renderStandardModal() + renderBasicFieldModal() + renderBasicParamModal() + renderReportSqlModal() + renderReportLogModal() + renderTestSqlModal();
+    if (state.view === 'form') {
+      var title = pageEl.querySelector('.dqit-form-title');
+      if (title) title.insertAdjacentHTML('beforeend', '<span class="qv-badge current">' + escapeHtml(state.formVersion || '首次保存 V1.0') + '</span>');
+      var actions = pageEl.querySelector('.dqit-form-actions-bottom');
+      var summaryControl = '<textarea class="dqit-textarea" data-dqit-form-field="changeSummary" maxlength="200" placeholder="说明本次保存内容或创建新版本的原因，200字以内">' + escapeHtml(state.form.changeSummary || '') + '</textarea>';
+      var saveModeRow = state.formMode === 'edit' ? renderRequiredFormRow('保存方式', DP.qualityVersionPanel.saveOptions('dqit', state.formVersion, state.nextVersion, state.saveMode), '<span data-dqit-save-hint role="status" aria-live="polite">' + escapeHtml(DP.qualityVersionPanel.saveHint(state.formVersion, state.latestVersion, state.nextVersion, state.saveMode)) + '</span>') : '';
+      if (actions) actions.insertAdjacentHTML('beforebegin', '<div class="dqit-version-fields">' + saveModeRow + (state.formMode === 'edit' ? renderRequiredFormRow : renderFormRow)('变更说明', summaryControl, '<span>' + (state.formMode === 'edit' ? '保存配置或新建版本时填写变更说明' : '首次保存生成 V1.0') + '</span>') + '</div>');
+    }
+    if (searchSelector) {
+      var nextInput = pageEl.querySelector(searchSelector);
+      if (nextInput) { nextInput.focus(); if (caret != null) nextInput.setSelectionRange(caret, caret); }
+    }
     if (state.view === 'report') {
       if (window.requestAnimationFrame) window.requestAnimationFrame(initReportGauge);
       else initReportGauge();
@@ -2509,13 +2499,13 @@ DP.pages.qualityInspectTask = (function () {
     if (nextScroller) nextScroller.scrollTop = scrollTop;
   }
 
-  function showToast(message) {
+  function showToast(message, duration) {
     var old = pageEl.querySelector('.dqit-toast');
     if (old) old.remove();
-    pageEl.insertAdjacentHTML('beforeend', '<div class="dqit-toast"><i class="bi bi-check-circle"></i><span>' + escapeHtml(message) + '</span></div>');
+    pageEl.insertAdjacentHTML('beforeend', '<div class="dqit-toast" role="status" aria-live="polite"><i class="bi bi-check-circle"></i><span>' + escapeHtml(message) + '</span></div>');
     var toast = pageEl.querySelector('.dqit-toast');
     window.setTimeout(function () { if (toast) toast.classList.add('show'); }, 20);
-    window.setTimeout(function () { if (toast && toast.parentNode) toast.remove(); }, 1800);
+    window.setTimeout(function () { if (toast && toast.parentNode) toast.remove(); }, duration || 1800);
   }
 
   function ensureRouteTask(opts) {
@@ -2537,8 +2527,10 @@ DP.pages.qualityInspectTask = (function () {
       1,
       '由任务调度执行详情跳转的规则任务。'
     );
-    taskRows.unshift(item);
-    return item;
+    var created = versions.save('tasks', item.id, snapshotTask(item), { seed: item });
+    if (created.error) { showToast(created.error); return null; }
+    taskRows = versions.rows('tasks');
+    return created.item;
   }
 
   function openForm(kind, mode, id, options) {
@@ -2547,12 +2539,21 @@ DP.pages.qualityInspectTask = (function () {
       mode = kind;
       kind = 'custom';
     }
+    taskRows = versions.rows('tasks');
     var item = id ? getTaskById(id) : null;
+    if (id && !item) return showToast('该任务已不存在');
     state.view = 'form';
     state.formKind = kind || 'custom';
     state.formMode = mode || 'create';
     state.editingId = item ? item.id : '';
     state.form = state.formKind === 'standard' ? createStandardFormDraft(item) : (state.formKind === 'basic' ? createBasicFormDraft(item) : createFormDraft(item));
+    attachRuleReferences(state.form, state.formKind);
+    state.form.changeSummary = '';
+    state.formRevision = item ? item.revision : null;
+    state.formVersion = item ? item.currentVersion : '';
+    state.latestVersion = item ? versions.latestVersion(item) : '';
+    state.nextVersion = item ? versions.nextVersion(item) : '';
+    state.saveMode = 'current';
     state.openPicker = '';
     state.openParamSelect = '';
     state.openBasicRuleSelect = '';
@@ -2620,19 +2621,16 @@ DP.pages.qualityInspectTask = (function () {
     if (!state.modal) return;
     var type = state.modal.type;
     var ids = state.modal.ids.slice();
+    var operationResult = versions.operate('tasks', ids, type);
+    if (operationResult.error) return showToast(operationResult.error);
+    taskRows = versions.rows('tasks');
     if (type === 'delete') {
-      taskRows = taskRows.filter(function (item) { return ids.indexOf(item.id) < 0; });
       state.selectedIds = {};
       state.modal = null;
       renderAllKeepFormScroll();
       showToast('稽查任务已删除');
       return;
     }
-    taskRows.forEach(function (item) {
-      if (ids.indexOf(item.id) < 0) return;
-      item.status = type === 'start' ? '运行中' : '已停止';
-      if (type === 'start') item.lastRunAt = formatDateTime(new Date());
-    });
     state.selectedIds = {};
     state.modal = null;
     renderAll();
@@ -2645,10 +2643,14 @@ DP.pages.qualityInspectTask = (function () {
 
   function captureFormDraft() {
     if (!state.form || !pageEl) return;
+    var saveMode = pageEl.querySelector('[data-dqit-save-mode]:checked');
+    if (saveMode) state.saveMode = saveMode.value;
     var taskName = pageEl.querySelector('[data-dqit-form-field="taskName"]');
     var weight = pageEl.querySelector('[data-dqit-form-field="weight"]');
     if (taskName) state.form.taskName = taskName.value.trim();
     if (weight) state.form.weight = weight.value.trim();
+    var summary = pageEl.querySelector('[data-dqit-form-field="changeSummary"]');
+    if (summary) state.form.changeSummary = summary.value;
     var scheduleFields = pageEl.querySelectorAll('[data-dqit-schedule-field]');
     scheduleFields.forEach(function (field) {
       var key = field.getAttribute('data-dqit-schedule-field');
@@ -2700,82 +2702,139 @@ DP.pages.qualityInspectTask = (function () {
     return parts.length >= 3 ? parts[parts.length - 2] : first;
   }
 
+  function generateBoundSql(draft) {
+    return String(draft.sqlTemplate || '').replace(/\$\{[^}]+\}/g, function (token) {
+      var param = (draft.params || []).find(function (p) { return p.name === token; });
+      if (!param) return token;
+      var value = param.attr === '字段' ? param.field : (param.attr === '表' ? param.table : param.value);
+      return value == null || value === '' ? token : value;
+    });
+  }
+
+  function bindRuleTemplate(draft, ref, table, field) {
+    var previous = draft.params || [];
+    draft.params = (ref.snapshot.params || []).map(function (param) {
+      var old = previous.find(function (p) { return p.name === param.name && p.attr === param.attr; });
+      var next = Object.assign({}, param, { table: old && old.table || table || 'buildinglog', field: old && old.field || field || 'Name', value: old && old.value || '' });
+      if (param.attr === 'Catalog') next.value = ref.snapshot.catalog;
+      else if (param.attr === 'Schema') next.value = ref.snapshot.schema;
+      else if (param.attr.indexOf('数据') === 0) next.value = old && old.value || (param.attr === '数据（数字）' ? '10' : '');
+      return next;
+    });
+    draft.sqlTemplate = ref.snapshot.sql;
+    draft.sqlGenerated = generateBoundSql(draft);
+  }
+
+  function attachRuleReferences(draft, kind) {
+    if (kind === 'custom' && draft.ruleMode !== 'custom' && !draft.ruleRef) {
+      draft.ruleRef = versions.reference(canonicalRuleId(draft.ruleId));
+      if (draft.ruleRef) {
+        draft.ruleId = draft.ruleRef.id;
+        draft.ruleName = draft.ruleRef.snapshot.name;
+        bindRuleTemplate(draft, draft.ruleRef, draft.params && draft.params[0] && draft.params[0].table);
+      }
+    } else if (kind === 'basic') {
+      (draft.entities || []).forEach(function (entity) {
+        if (entity.ruleRef) return;
+        entity.ruleRef = versions.reference(canonicalRuleId(entity.ruleId));
+        if (!entity.ruleRef) return;
+        entity.ruleId = entity.ruleRef.id;
+        if (entity.paramConfig && entity.paramConfig.ruleMode !== 'custom') {
+          var parts = getBasicEntityParts(entity);
+          bindRuleTemplate(entity.paramConfig, entity.ruleRef, parts.table, parts.field);
+        }
+      });
+    } else if (kind === 'standard' && !draft.ruleRef) {
+      draft.ruleRef = versions.reference(draft.standardDataKey === 'phone' ? 'qr-011' : 'qr-004');
+      if (draft.ruleRef) draft.qualityRule = draft.ruleRef.snapshot.name;
+    }
+  }
+
+  function taskConfig(kind, draft) {
+    var form = versions.clone(draft);
+    delete form.changeSummary;
+    return { kind: kind, type: kind === 'basic' ? '基础稽查' : (kind === 'standard' ? '标准稽查' : '自定义稽查'), form: form };
+  }
+
+  function parseStoredSchedule(text, fallback) {
+    var s = versions.clone(fallback);
+    var time = String(text).match(/\d{2}:\d{2}:\d{2}/);
+    if (time) s.time = time[0];
+    if (/^每小时/.test(text)) { s.type = 'hourly'; s.minute = (text.match(/\d+/) || ['0'])[0]; }
+    else if (/^每天/.test(text)) s.type = 'daily';
+    else if (/^每周/.test(text)) { s.type = 'weekly'; s.week = '周' + ((text.match(/[一二三四五六日]/) || ['一'])[0]); }
+    else if (/^每月/.test(text)) { s.type = 'monthly'; s.day = (text.match(/\d+号|最后一天/) || ['1号'])[0]; }
+    else if (/^执行一次/.test(text)) { s.type = 'once'; s.datetime = text.replace(/^执行一次\s*/, ''); }
+    return s;
+  }
+
+  function snapshotTask(item) {
+    var kind = item.type === '基础稽查' ? 'basic' : (item.type === '标准稽查' ? 'standard' : 'custom');
+    var draft = kind === 'basic' ? createBasicFormDraft(item) : (kind === 'standard' ? createStandardFormDraft(item) : createFormDraft(item));
+    if (kind !== 'custom') draft.dataSource = getTaskDataSource(item);
+    draft.schedule = parseStoredSchedule(item.frequency, draft.schedule);
+    if (kind === 'basic') {
+      var objectTables = (basicInspectObjectsByTaskId[item.id] || [item.target]).map(function (name) { return name.split('/').pop(); });
+      draft.entities = Array.from({ length: item.ruleCount || 1 }, function (_, index) {
+        var table = objectTables[index % objectTables.length];
+        return { name: table + '.' + fieldOptions[index % fieldOptions.length], alias: fieldOptions[index % fieldOptions.length], ruleId: item.name.indexOf('手机') >= 0 ? 'qr-011' : 'qr-012' };
+      });
+    } else if (kind === 'standard') {
+      draft.datasource = item.target;
+      draft.entities = Array.from({ length: item.ruleCount || 1 }, function (_, index) { return { name: item.target + '.' + fieldOptions[index % fieldOptions.length], alias: fieldOptions[index % fieldOptions.length], desc: item.desc }; });
+    }
+    attachRuleReferences(draft, kind);
+    return taskConfig(kind, draft);
+  }
+
+  function applyTaskConfig(item, config) {
+    var c = config.form;
+    var s = c.schedule;
+    item.name = c.taskName;
+    item.group = c.businessLayerKey;
+    item.type = config.type;
+    item.frequency = s.type === 'hourly' ? '每小时 ' + String(s.minute).padStart(2, '0') + ' 分' : s.type === 'daily' ? '每天 ' + s.time : s.type === 'weekly' ? '每' + s.week + ' ' + s.time : s.type === 'monthly' ? '每月' + s.day + ' ' + s.time : '执行一次 ' + s.datetime;
+    if (config.kind === 'custom') {
+      item.target = c.params && c.params.length ? c.params[0].table : item.target || 'buildinglog';
+      item.dataSource = dataSourceDisplayByPickerKey[c.dataSourceKey] || c.dataSource;
+      item.ruleCount = 1;
+      item.desc = c.ruleMode === 'custom' ? c.customDescription : c.ruleName;
+      applyCustomTaskRuleConfig(item, c);
+    } else {
+      var entityName = c.entities.length ? c.entities[0].name : '';
+      item.target = config.kind === 'standard' ? c.datasource : entityName.split('.').slice(0, -1).join('.');
+      item.dataSource = c.dataSource || getDefaultTaskDataSource(item.target, item.group);
+      item.ruleCount = c.entities.length;
+      item.desc = config.kind === 'standard' ? c.qualityRule + '，标准数据：' + c.standardData : c.inspectObject + '基础规则稽查，共 ' + c.entities.length + ' 个稽查实体。';
+    }
+  }
+
   function saveForm() {
     captureFormDraft();
-    if (!state.form.taskName) {
-      showToast('请输入任务名称');
-      return;
-    }
-    if (state.formKind === 'basic') {
-      var basicTarget = getBasicEntityTableName();
-      var basicDesc = state.form.inspectObject + '基础规则稽查，共 ' + (state.form.entities || []).length + ' 个稽查实体。';
-      if (state.formMode === 'edit' && state.editingId) {
-        var basicItem = getTaskById(state.editingId);
-        if (basicItem) {
-          basicItem.name = state.form.taskName;
-          basicItem.frequency = getFrequencyText();
-          basicItem.group = state.form.businessLayerKey;
-          basicItem.type = '基础稽查';
-          basicItem.target = basicTarget;
-          basicItem.dataSource = getDefaultTaskDataSource(basicTarget, state.form.businessLayerKey);
-          basicItem.ruleCount = (state.form.entities || []).length;
-          basicItem.desc = basicDesc;
-        }
-      } else {
-        taskRows.unshift(task('dqit-' + String(Date.now()).slice(-6), state.form.taskName, getFrequencyText(), '已停止', 'present', formatDateTime(new Date()), '--', state.form.businessLayerKey, '基础稽查', basicTarget, (state.form.entities || []).length, basicDesc, getDefaultTaskDataSource(basicTarget, state.form.businessLayerKey)));
-      }
-      state.treeKey = state.form.businessLayerKey;
-      backToList();
-      showToast('基础稽查任务已保存');
-      return;
-    }
-    if (state.formKind === 'standard') {
-      var standardTarget = state.form.datasource || 'aierp_pro_test';
-      var standardDesc = state.form.qualityRule + '，标准数据：' + state.form.standardData + '。';
-      if (state.formMode === 'edit' && state.editingId) {
-        var standardItem = getTaskById(state.editingId);
-        if (standardItem) {
-          standardItem.name = state.form.taskName;
-          standardItem.frequency = getFrequencyText();
-          standardItem.group = state.form.businessLayerKey;
-          standardItem.type = '标准稽查';
-          standardItem.target = standardTarget;
-          standardItem.dataSource = getDefaultTaskDataSource(standardTarget, state.form.businessLayerKey);
-          standardItem.ruleCount = (state.form.entities || []).length;
-          standardItem.desc = standardDesc;
-        }
-      } else {
-        taskRows.unshift(task('dqit-' + String(Date.now()).slice(-6), state.form.taskName, getFrequencyText(), '已停止', 'present', formatDateTime(new Date()), '--', state.form.businessLayerKey, '标准稽查', standardTarget, (state.form.entities || []).length, standardDesc, getDefaultTaskDataSource(standardTarget, state.form.businessLayerKey)));
-      }
-      state.treeKey = state.form.businessLayerKey;
-      backToList();
-      showToast('标准稽查任务已保存');
-      return;
-    }
-    var target = state.form.params[0] ? state.form.params[0].table : 'buildinglog';
-    var isCustomRuleMode = state.form.ruleMode === 'custom';
-    var ruleCount = isCustomRuleMode ? 1 : state.form.params.length;
-    var customDescription = String(state.form.customDescription || '').trim();
-    var ruleDesc = isCustomRuleMode ? (customDescription || '自定义SQL规则') : state.form.ruleName;
-    if (state.formMode === 'edit' && state.editingId) {
-      var item = getTaskById(state.editingId);
-      if (item) {
-        item.name = state.form.taskName;
-        item.frequency = getFrequencyText();
-        item.group = state.form.businessLayerKey;
-        item.target = target;
-        item.dataSource = getDisplayDataSourceFromForm(target);
-        item.ruleCount = ruleCount;
-        item.desc = ruleDesc + '，数据源：' + state.form.dataSource + '。';
-        applyCustomTaskRuleConfig(item, state.form);
-      }
-    } else {
-      var customItem = task('dqit-' + String(Date.now()).slice(-6), state.form.taskName, getFrequencyText(), '已停止', 'present', formatDateTime(new Date()), '--', state.form.businessLayerKey, '自定义稽查', target, ruleCount, ruleDesc + '，数据源：' + state.form.dataSource + '。', getDisplayDataSourceFromForm(target));
-      taskRows.unshift(applyCustomTaskRuleConfig(customItem, state.form));
-    }
-    state.treeKey = state.form.businessLayerKey;
+    var draft = state.form;
+    if (!draft.taskName || draft.taskName.length > 50) return showToast('请输入50字以内的任务名称');
+    if (!draft.businessLayerKey || !draft.weight || Number(draft.weight) < 1 || Number(draft.weight) > 100) return showToast('请选择业务分层并填写1至100的考核权重');
+    if (state.formKind === 'custom' && draft.ruleMode !== 'custom' && !draft.ruleRef) return showToast('请选择有效的稽查规则');
+    if (state.formKind === 'custom' && draft.ruleMode === 'custom' && (!draft.sqlCustom.trim() || !draft.customStandard)) return showToast('请填写评价标准和自定义SQL');
+    if (state.formKind !== 'custom' && !(draft.entities || []).length) return showToast('请添加稽查实体');
+    if (state.formKind === 'basic' && draft.entities.some(function (entity) { return !entity.ruleRef; })) return showToast('请为每个实体选择有效的质量规则');
+    if (state.formKind === 'basic' && draft.entities.some(function (entity) { return isCustomBasicRule(getBasicRule(entity.ruleId, entity.ruleRef)) && !isBasicParamConfigured(entity); })) return showToast('请完成自定义稽查规则的参数配置');
+    if (state.formKind === 'standard' && !draft.ruleRef) return showToast('请选择有效的标准数据和质量规则');
+    var schedule = draft.schedule || {};
+    if ((schedule.type === 'hourly' && (schedule.minute === '' || Number(schedule.minute) < 0 || Number(schedule.minute) > 59)) || (schedule.type === 'once' ? !schedule.datetime : schedule.type !== 'hourly' && !schedule.time)) return showToast('请完整填写调度时间');
+    var isNew = state.formMode !== 'edit';
+    var id = isNew ? 'dqit-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7) : state.editingId;
+    var result = versions.save('tasks', id, taskConfig(state.formKind, draft), {
+      revision: state.formRevision, summary: draft.changeSummary, mode: state.saveMode,
+      seed: isNew ? { id: id, creator: 'present', createdAt: versions.now(), lastRunAt: '--', status: '已停止' } : null
+    });
+    if (result.error) return showToast(result.error);
+    var savedAsNew = !isNew && state.saveMode === 'new';
+    var savedMessage = result.unchanged ? '配置未变化，无需保存' : (isNew ? '已创建初始版本 ' : (savedAsNew ? '保存成功，已生成新版本 ' : '已保存当前版本 ')) + result.item.currentVersion + (savedAsNew ? '，并设为当前版本' : '');
+    taskRows = versions.rows('tasks');
+    state.treeKey = draft.businessLayerKey;
     backToList();
-    showToast('自定义稽查任务已保存');
+    showToast(savedMessage, savedAsNew ? 4000 : 1800);
   }
 
   function setSqlText(key, sql) {
@@ -2807,11 +2866,7 @@ DP.pages.qualityInspectTask = (function () {
     if (state.basicParamModal) captureBasicParamModalDraft();
     else captureFormDraft();
     var draft = getActiveConfigDraft() || {};
-    var params = draft.params || [];
-    var idField = (params[0] && params[0].field) || 'Id';
-    var nameField = (params[1] && params[1].field) || 'Name';
-    var tableName = (params[2] && params[2].table) || (params[0] && params[0].table) || 'buildinglog';
-    setSqlText('generated', getDefaultGeneratedSql(tableName, idField, nameField));
+    setSqlText('generated', generateBoundSql(draft));
     showToast('SQL 已生成');
   }
 
@@ -2930,7 +2985,7 @@ DP.pages.qualityInspectTask = (function () {
 
   function openRuleModal() {
     state.ruleModal = {
-      treeKey: 'rule-business',
+      treeKey: '',
       treeKeyword: '',
       keyword: '',
       selectedId: state.form ? state.form.ruleId : 'rule-repeat'
@@ -2940,9 +2995,12 @@ DP.pages.qualityInspectTask = (function () {
 
   function chooseRule() {
     if (!state.ruleModal || !state.form) return;
-    var selected = getInspectRule(state.ruleModal.selectedId);
-    state.form.ruleId = selected.id;
-    state.form.ruleName = selected.name;
+    var ref = versions.reference(canonicalRuleId(state.ruleModal.selectedId));
+    if (!ref) return showToast('所选规则已不存在，请重新选择');
+    state.form.ruleRef = ref;
+    state.form.ruleId = ref.id;
+    state.form.ruleName = ref.snapshot.name;
+    bindRuleTemplate(state.form, ref, state.form.params && state.form.params[0] && state.form.params[0].table);
     state.ruleModal = null;
     renderAll();
     showToast('稽查规则已选择');
@@ -2983,6 +3041,8 @@ DP.pages.qualityInspectTask = (function () {
     state.form.standardData = selected.alias;
     state.form.qualityRule = selected.id === 'phone' ? '电话号码与手机号码校验(11位)码校验' : selected.alias + '标准值域校验';
     state.form.entities = cloneStandardEntities();
+    state.form.ruleRef = null;
+    attachRuleReferences(state.form, 'standard');
     state.standardModal = null;
     renderAll();
     showToast('标准数据已添加');
@@ -3004,7 +3064,12 @@ DP.pages.qualityInspectTask = (function () {
     var ruleId = actionEl.getAttribute('data-rule-id') || 'field-not-null';
     var entity = state.form.entities[index];
     if (entity) {
-      entity.ruleId = ruleId;
+      var ref = versions.reference(canonicalRuleId(ruleId));
+      if (!ref) return showToast('所选规则已不存在，请重新选择');
+      var changed = !entity.ruleRef || entity.ruleRef.id !== ref.id || entity.ruleRef.version !== ref.version || entity.ruleRef.saveId !== ref.saveId || !versions.same(entity.ruleRef.snapshot, ref.snapshot);
+      entity.ruleId = ref.id;
+      entity.ruleRef = ref;
+      if (changed) delete entity.paramConfig;
     }
     state.openBasicRuleSelect = '';
     state.basicRuleKeyword = '';
@@ -3015,7 +3080,7 @@ DP.pages.qualityInspectTask = (function () {
     if (!state.form) return;
     var index = Number(actionEl.getAttribute('data-index'));
     var entity = state.form.entities && state.form.entities[index];
-    var rule = entity ? getBasicRule(entity.ruleId) : null;
+    var rule = entity ? getBasicRule(entity.ruleId, entity.ruleRef) : null;
     if (!entity || !isCustomBasicRule(rule)) {
       showToast('请选择自定义稽查质量规则后再配置参数');
       return;
@@ -3024,6 +3089,10 @@ DP.pages.qualityInspectTask = (function () {
       entityIndex: index,
       draft: cloneBasicParamDraft(entity.paramConfig || createBasicParamDraft(entity))
     };
+    if (!entity.paramConfig && entity.ruleRef) {
+      var parts = getBasicEntityParts(entity);
+      bindRuleTemplate(state.basicParamModal.draft, entity.ruleRef, parts.table, parts.field);
+    }
     state.openPicker = '';
     state.openParamSelect = '';
     state.openBasicRuleSelect = '';
@@ -3044,6 +3113,8 @@ DP.pages.qualityInspectTask = (function () {
   function saveBasicParamModal() {
     if (!state.basicParamModal || !state.form) return;
     captureBasicParamModalDraft();
+    var config = state.basicParamModal.draft;
+    if (config.ruleMode === 'custom' ? !config.sqlCustom.trim() : !config.sqlGenerated.trim()) return showToast('请填写SQL后保存参数配置');
     var entity = state.form.entities && state.form.entities[state.basicParamModal.entityIndex];
     if (entity) {
       state.basicParamModal.draft.configured = true;
@@ -3129,6 +3200,7 @@ DP.pages.qualityInspectTask = (function () {
       exists[name] = true;
       added++;
     });
+    attachRuleReferences(state.form, 'basic');
     state.basicFieldModal = null;
     state.reportSqlModal = null;
     state.reportLogModal = null;
@@ -3179,7 +3251,10 @@ DP.pages.qualityInspectTask = (function () {
   function handleAction(actionEl) {
     var action = actionEl.getAttribute('data-dqit-action');
     var id = actionEl.getAttribute('data-id') || '';
-    if (action === 'toggle-tree') {
+    if (state.view === 'form') captureFormDraft();
+    if (action === 'versions') {
+      DP.qualityVersionPanel.open({ host: pageEl, kind: 'tasks', id: id, toast: showToast, onClose: function () { taskRows = versions.rows('tasks'); renderAll(); } });
+    } else if (action === 'toggle-tree') {
       var key = actionEl.getAttribute('data-key') || '';
       state.treeOpen[key] = !state.treeOpen[key];
       renderAllKeepFormScroll();
@@ -3254,6 +3329,8 @@ DP.pages.qualityInspectTask = (function () {
       state.ruleModal = null;
       renderAllKeepFormScroll();
     } else if (action === 'select-rule-tree') {
+      var currentKeyword = pageEl.querySelector('[data-dqit-rule-keyword]');
+      if (currentKeyword) state.ruleModal.keyword = currentKeyword.value.trim();
       state.ruleModal.treeKey = actionEl.getAttribute('data-key') || 'rule-business';
       renderAllKeepFormScroll();
     } else if (action === 'select-rule') {
@@ -3262,6 +3339,8 @@ DP.pages.qualityInspectTask = (function () {
     } else if (action === 'choose-rule') {
       chooseRule();
     } else if (action === 'query-rule') {
+      var ruleKeyword = pageEl.querySelector('[data-dqit-rule-keyword]');
+      if (ruleKeyword) state.ruleModal.keyword = ruleKeyword.value.trim();
       renderAll();
     } else if (action === 'open-standard-modal') {
       openStandardModal();
@@ -3402,12 +3481,6 @@ DP.pages.qualityInspectTask = (function () {
       }
     } else if (action === 'basic-time-ok') {
       closeBasicTimePopupDom();
-    } else if (action === 'pick-date-day') {
-      var day = String(actionEl.getAttribute('data-day') || '24').padStart(2, '0');
-      var time = state.form.schedule.datetime.split(' ')[1] || '09:18:48';
-      state.form.schedule.datetime = '2026-06-' + day + ' ' + time;
-      updateScheduleInputs('datetime', state.form.schedule.datetime);
-      syncDatePickerActive(actionEl.getAttribute('data-day') || '24');
     } else if (action === 'schedule-clear') {
       if (state.schedulePopup === 'date') {
         state.form.schedule.datetime = '';
@@ -3517,6 +3590,8 @@ DP.pages.qualityInspectTask = (function () {
       if (e.target.matches('[data-dqit-filter]')) {
         var filterKey = e.target.getAttribute('data-dqit-filter');
         state.filters[filterKey] = e.target.value;
+        state.filters.keyword = pageEl.querySelector('#dqitKeywordInput').value.trim();
+        state.filters.targetKeyword = pageEl.querySelector('#dqitTargetInput').value.trim();
         state.page = 1;
         state.selectedIds = {};
         renderAll();
@@ -3550,9 +3625,16 @@ DP.pages.qualityInspectTask = (function () {
         renderAll();
         return;
       }
+      if (e.target.matches('[data-dqit-save-mode]')) {
+        state.saveMode = e.target.value;
+        var saveHint = pageEl.querySelector('[data-dqit-save-hint]');
+        if (saveHint) saveHint.textContent = DP.qualityVersionPanel.saveHint(state.formVersion, state.latestVersion, state.nextVersion, state.saveMode);
+        return;
+      }
       if (e.target.matches('[data-dqit-schedule-field]')) {
         if (!state.form) return;
         state.form.schedule[e.target.getAttribute('data-dqit-schedule-field')] = e.target.value;
+        if (e.target.getAttribute('data-dqit-schedule-field') === 'datetime') return;
         state.schedulePopup = '';
         renderAllKeepFormScroll();
         return;
@@ -3562,6 +3644,7 @@ DP.pages.qualityInspectTask = (function () {
         var customKey = e.target.getAttribute('data-dqit-custom-field');
         state.form[customKey] = e.target.value;
         if (customKey === 'ruleMode') {
+          attachRuleReferences(state.form, 'custom');
           state.ruleModal = null;
           state.openPicker = '';
           state.openParamSelect = '';
@@ -3577,6 +3660,7 @@ DP.pages.qualityInspectTask = (function () {
         if (!state.form) return;
         var formKey = e.target.getAttribute('data-dqit-standard-field') || e.target.getAttribute('data-dqit-basic-field');
         state.form[formKey] = e.target.value;
+        if (formKey === 'datasource') state.form.dataSource = e.target.value;
         if (formKey === 'inspectMode' || formKey === 'paramMode') {
           state.schedulePopup = '';
           state.basicTimePopup = '';
@@ -3609,6 +3693,12 @@ DP.pages.qualityInspectTask = (function () {
     });
 
     pageEl.addEventListener('input', function (e) {
+      if (e.target.matches('[data-dqit-param-value]')) {
+        var activeDraft = getActiveConfigDraft();
+        var param = activeDraft && activeDraft.params[Number(e.target.getAttribute('data-dqit-param-value'))];
+        if (param) param.value = e.target.value;
+        return;
+      }
       if (e.target.matches('[data-dqit-tree-search]')) {
         state.treeKeyword = e.target.value;
         var tree = pageEl.querySelector('[data-dqit-tree]');
@@ -3631,8 +3721,7 @@ DP.pages.qualityInspectTask = (function () {
         return;
       }
       if (e.target.matches('[data-dqit-rule-keyword]')) {
-        state.ruleModal.keyword = e.target.value;
-        renderAll();
+        state.ruleModal.keywordDraft = e.target.value;
         return;
       }
       if (e.target.matches('[data-dqit-standard-tree-search]')) {
@@ -3691,6 +3780,10 @@ DP.pages.qualityInspectTask = (function () {
     });
 
     pageEl.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && e.target.matches('[data-dqit-rule-keyword]')) {
+        var ruleQuery = pageEl.querySelector('[data-dqit-action="query-rule"]');
+        if (ruleQuery) ruleQuery.click();
+      }
       if (e.key === 'Enter' && (e.target.id === 'dqitKeywordInput' || e.target.id === 'dqitTargetInput')) {
         var query = pageEl.querySelector('[data-dqit-action="query"]');
         if (query) query.click();
@@ -3772,12 +3865,24 @@ DP.pages.qualityInspectTask = (function () {
     };
   }
 
+  taskRows = versions.register('tasks', taskRows, {
+    snapshot: snapshotTask,
+    apply: function (item, config) {
+      applyTaskConfig(item, config);
+      // 演示执行记录固定绑定初始化时的版本，之后编辑和回滚不改写它。
+      if (!item.executionSnapshot && item.lastRunAt && item.lastRunAt !== '--') item.executionSnapshot = { name: item.name, target: item.target, frequency: item.frequency, taskVersion: item.currentVersion, config: versions.clone(config) };
+    }
+  });
+  versions.mergeSamples('tasks', DP.qualityVersionExamples.tasks());
+  taskRows = versions.rows('tasks');
+
   return {
     html: '<div class="page-quality-inspect-task"></div>',
     init: function (opts) {
       pageEl = document.querySelector('.page-quality-inspect-task');
       if (!pageEl) return;
       resetState();
+      taskRows = versions.rows('tasks');
       var routeTask = ensureRouteTask(opts || {});
       if (routeTask) {
         var routeKind = routeTask.type === '标准稽查' ? 'standard' : (routeTask.type === '基础稽查' ? 'basic' : 'custom');

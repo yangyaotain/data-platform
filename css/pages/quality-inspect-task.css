@@ -360,7 +360,7 @@
 }
 
 .dqit-table {
-  min-width: 1360px;
+  min-width: 1560px;
   table-layout: fixed;
   border: 1px solid #dfe5ec;
 }
@@ -389,13 +389,15 @@
 }
 
 .dqit-w-check { width: 38px; }
-.dqit-w-name { width: 18%; }
-.dqit-w-target { width: 27%; }
-.dqit-w-type { width: 10%; }
-.dqit-w-frequency { width: 11%; }
-.dqit-w-status { width: 9%; }
-.dqit-w-last { width: 13%; }
-.dqit-w-action { width: 250px; }
+.dqit-w-version { width: 88px; }
+.dqit-run-version { display: block; color: var(--text-light); font-size: 12px; margin-top: 4px; }
+.dqit-w-name { width: 200px; }
+.dqit-w-target { width: 260px; }
+.dqit-w-type { width: 110px; }
+.dqit-w-frequency { width: 150px; }
+.dqit-w-status { width: 95px; }
+.dqit-w-last { width: 165px; }
+.dqit-w-action { width: 340px; }
 
 .dqit-table .col-ck,
 .dqit-table td:first-child {
@@ -2192,8 +2194,7 @@
   flex-shrink: 0;
 }
 
-.dqit-time-picker,
-.dqit-date-picker {
+.dqit-time-picker {
   position: absolute;
   left: 0;
   bottom: calc(100% + 6px);
@@ -2271,8 +2272,7 @@
   border-top: 1px solid #e5e9ef;
 }
 
-.dqit-picker-footer button,
-.dqit-date-footer button {
+.dqit-picker-footer button {
   min-width: 50px;
   height: 30px;
   border: 1px solid #d9dfe6;
@@ -2284,99 +2284,46 @@
   cursor: pointer;
 }
 
-.dqit-picker-footer button:first-child,
-.dqit-date-footer button:first-child {
+.dqit-picker-footer button:first-child {
   border-left: 1px solid #d9dfe6;
 }
 
-.dqit-picker-footer button:hover,
-.dqit-date-footer button:hover {
+.dqit-picker-footer button:hover {
   color: var(--primary);
   border-color: var(--primary);
 }
 
-.dqit-date-picker {
-  width: 308px;
+.dqit-version-fields {
+  margin-top: 24px;
 }
 
-.dqit-date-head {
-  height: 50px;
-  display: grid;
-  grid-template-columns: 34px 34px 1fr 34px 34px;
-  align-items: center;
-  background: #4f82e9;
-  color: #fff;
+.dqit-version-fields .dqit-form-row {
+  align-items: start;
+  row-gap: 6px;
+  margin-bottom: 20px;
 }
 
-.dqit-date-head button {
-  height: 100%;
-  border: none;
-  background: transparent;
-  color: #fff;
-  font-size: 20px;
-  cursor: pointer;
+.dqit-version-fields .dqit-form-row:last-child {
+  margin-bottom: 0;
 }
 
-.dqit-date-head strong {
-  text-align: center;
-  font-size: 16px;
-  font-weight: 600;
+.dqit-version-fields .dqit-form-row > label {
+  line-height: 36px;
 }
 
-.dqit-date-week,
-.dqit-date-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  text-align: center;
+.dqit-version-fields .dqit-form-hint {
+  grid-column: 2;
+  display: block;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
-.dqit-date-week {
-  padding-top: 12px;
-  color: #172335;
-  font-size: 14px;
+.dqit-version-fields .qv-save-options {
+  min-height: 36px;
 }
 
-.dqit-date-week span {
-  height: 28px;
-}
-
-.dqit-date-grid {
-  padding: 0 14px 10px;
-}
-
-.dqit-date-grid button {
-  height: 34px;
-  border: none;
-  background: #fff;
-  color: #5f6f82;
-  font-family: inherit;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.dqit-date-grid button:hover,
-.dqit-date-grid button.active {
-  background: #4f82e9;
-  color: #fff;
-}
-
-.dqit-date-grid button.muted {
-  color: #c7ccd4;
-}
-
-.dqit-date-footer {
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border-top: 1px solid #e5e9ef;
-  color: #53657a;
-  font-size: 13px;
-}
-
-.dqit-date-footer > div {
-  display: flex;
+.dqit-version-fields .dqit-textarea {
+  display: block;
 }
 
 .dqit-form-actions-bottom {

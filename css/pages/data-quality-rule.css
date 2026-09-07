@@ -323,7 +323,7 @@
 }
 
 .dqr-table {
-  min-width: 1120px;
+  min-width: 1320px;
   table-layout: fixed;
   border: 1px solid #dfe5ec;
 }
@@ -352,13 +352,14 @@
 }
 
 .dqr-w-check { width: 38px; }
-.dqr-w-name { width: 17%; }
-.dqr-w-standard { width: 14%; }
-.dqr-w-db { width: 12%; }
-.dqr-w-type { width: 17%; }
-.dqr-w-creator { width: 13%; }
-.dqr-w-time { width: 15%; }
-.dqr-w-action { width: 12%; }
+.dqr-w-version { width: 88px; }
+.dqr-w-name { width: 210px; }
+.dqr-w-standard { width: 90px; }
+.dqr-w-db { width: 110px; }
+.dqr-w-type { width: 184px; }
+.dqr-w-creator { width: 96px; }
+.dqr-w-time { width: 160px; }
+.dqr-w-action { width: 244px; }
 
 .dqr-table .col-ck,
 .dqr-table td:first-child {

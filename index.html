@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="css/variables.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/components/date-picker.css">
+  <link rel="stylesheet" href="css/components/document-editor.css">
   <link rel="stylesheet" href="css/sql-editor.css">
   <link rel="stylesheet" href="css/pages/datasource.css">
   <link rel="stylesheet" href="css/pages/technical-metadata.css">
@@ -22,6 +24,10 @@
   <link rel="stylesheet" href="css/pages/data-develop.css">
   <link rel="stylesheet" href="css/pages/code-search.css">
   <link rel="stylesheet" href="css/pages/project-mgr.css">
+  <link rel="stylesheet" href="css/pages/log-management.css">
+  <link rel="stylesheet" href="css/pages/my-ticket.css">
+  <link rel="stylesheet" href="css/pages/document-management.css">
+  <link rel="stylesheet" href="css/pages/monitor-items.css">
   <link rel="stylesheet" href="css/pages/ai-assistant.css">
   <link rel="stylesheet" href="css/pages/governance-overview.css">
   <link rel="stylesheet" href="css/pages/governance-plan.css">
@@ -31,7 +37,9 @@
   <link rel="stylesheet" href="css/pages/data-quality-analysis.css">
   <link rel="stylesheet" href="css/pages/data-quality-rule.css">
   <link rel="stylesheet" href="css/pages/quality-inspect-report.css">
+  <link rel="stylesheet" href="css/pages/quality-report-send.css">
   <link rel="stylesheet" href="css/pages/quality-inspect-task.css">
+  <link rel="stylesheet" href="css/pages/quality-version.css">
   <link rel="stylesheet" href="css/pages/service-api-dev.css">
   <link rel="stylesheet" href="css/pages/data-map.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -184,8 +192,12 @@
           <li class="menu-item">
             <a class="menu-link" data-menu="flow-config" href="javascript:;"><i class="bi bi-sliders"></i><span>流程配置</span></a>
           </li>
-          <li class="menu-item">
-            <a class="menu-link" data-menu="log-mgr" href="javascript:;"><i class="bi bi-journal-text"></i><span>日志管理</span></a>
+          <li class="menu-item has-sub">
+            <a class="menu-link" data-menu="log-mgr" href="javascript:;"><i class="bi bi-journal-text"></i><span>日志管理</span><i class="bi bi-chevron-down arrow"></i></a>
+            <ul class="sub-menu">
+              <li><a data-menu="console-operation-log" href="javascript:;"><i class="bi bi-journal-text"></i><span>操作日志</span></a></li>
+              <li><a data-menu="console-sql-audit-log" href="javascript:;"><i class="bi bi-shield-check"></i><span>SQL审计日志</span></a></li>
+            </ul>
           </li>
         </ul>
 
@@ -329,7 +341,7 @@
               <li><a href="javascript:;"><i class="bi bi-bell"></i><span>通知中心</span></a></li>
               <li><a href="javascript:;"><i class="bi bi-sliders"></i><span>通知规则</span></a></li>
               <li><a href="javascript:;"><i class="bi bi-display"></i><span>监控中心</span></a></li>
-              <li><a href="javascript:;"><i class="bi bi-list-check"></i><span>监控事项</span></a></li>
+              <li><a data-menu="monitor-items" href="javascript:;"><i class="bi bi-list-check"></i><span>监控事项</span></a></li>
             </ul>
           </li>
           <li class="menu-item has-sub">
@@ -452,8 +464,8 @@
               <li><a data-menu="quality-inspect-report" href="javascript:;"><i class="bi bi-clipboard-data"></i><span>稽查报告</span></a></li>
               <li><a data-menu="quality-inspect-schedule" href="javascript:;"><i class="bi bi-calendar2-week"></i><span>任务调度</span></a></li>
               <li><a data-menu="quality-inspect-task" href="javascript:;"><i class="bi bi-calendar-check"></i><span>任务配置</span></a></li>
-              <li><a data-menu="quality-management" href="javascript:;"><i class="bi bi-ui-checks-grid"></i><span>质量管理</span></a></li>
               <li><a data-menu="quality-rule" href="javascript:;"><i class="bi bi-shield-lock"></i><span>质量规则</span></a></li>
+              <li><a data-menu="quality-report-send" href="javascript:;"><i class="bi bi-send"></i><span>报告发送</span></a></li>
             </ul>
           </li>
           <li class="menu-item has-sub">
@@ -608,6 +620,7 @@
 
   <!-- JS 模块化加载（顺序重要） -->
   <script src="js/config.js"></script>
+  <script src="js/components/date-picker.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
   <script src="js/components/table-detail-view.js"></script>
   <script src="js/pages/datasource.js"></script>
@@ -624,6 +637,13 @@
   <script src="js/pages/data-develop.js"></script>
   <script src="js/pages/code-search.js"></script>
   <script src="js/pages/project-mgr.js"></script>
+  <script src="js/components/log-view.js"></script>
+  <script src="js/pages/my-ticket.js"></script>
+  <script src="js/components/document-editor.js"></script>
+  <script src="js/pages/document-management.js"></script>
+  <script src="js/pages/operation-log.js"></script>
+  <script src="js/pages/sql-audit-log.js"></script>
+  <script src="js/pages/monitor-items.js"></script>
   <script src="js/pages/governance-overview.js"></script>
   <script src="js/pages/governance-plan.js"></script>
   <script src="js/pages/governance-task.js"></script>
@@ -631,8 +651,12 @@
   <script src="js/pages/standard-audit.js"></script>
   <script src="js/pages/dimension-management.js"></script>
   <script src="js/pages/data-quality-analysis.js"></script>
+  <script src="js/components/quality-version-store.js"></script>
+  <script src="js/components/quality-version-panel.js"></script>
+  <script src="js/components/quality-version-examples.js"></script>
   <script src="js/pages/data-quality-rule.js"></script>
   <script src="js/pages/quality-inspect-report.js"></script>
+  <script src="js/pages/quality-report-send.js"></script>
   <script src="js/pages/quality-inspect-task.js"></script>
   <script src="js/pages/service-api-dev.js"></script>
   <script src="js/pages/data-map-home.js"></script>

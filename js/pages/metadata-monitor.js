@@ -8,6 +8,8 @@ DP.pages.metadataMonitor = (function () {
   var state = {
     pageSize: 5,
     page: 1,
+    overviewStart: '2026-05-17', overviewEnd: '2026-06-17',
+    recordStart: '2026-05-17', recordEnd: '2026-06-17', recordKeyword: '',
     filters: {
       item: '变更项',
       type: '类型',
@@ -139,34 +141,10 @@ DP.pages.metadataMonitor = (function () {
     });
   }
 
-  function renderCalendar() {
-    var week = ['日', '一', '二', '三', '四', '五', '六'];
-    var may = ['26', '27', '28', '29', '30', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '1', '2', '3', '4', '5', '6'];
-    var june = ['31', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
-    function month(days, activeIndex, mutedBefore, rangeStart, rangeEnd) {
-      return '<div class="mmn-cal-month"><div class="mmn-cal-grid">' +
-        week.map(function (d) { return '<strong>' + d + '</strong>'; }).join('') +
-        days.map(function (d, index) {
-          var cls = [];
-          if (index < mutedBefore || index > 34) cls.push('muted');
-          if (index >= rangeStart && index <= rangeEnd) cls.push('range');
-          if (index === activeIndex) cls.push('active');
-          return '<span class="' + cls.join(' ') + '">' + d + '</span>';
-        }).join('') +
-      '</div></div>';
-    }
-    return '<div class="mmn-date-pop">' +
-      '<div class="mmn-cal-head">' +
-        '<div class="mmn-cal-title"><i class="bi bi-chevron-double-left"></i><i class="bi bi-chevron-left"></i><span>2026年&nbsp;&nbsp;5月</span><span></span></div>' +
-        '<div class="mmn-cal-title"><span></span><span>2026年&nbsp;&nbsp;6月</span><i class="bi bi-chevron-right"></i><i class="bi bi-chevron-double-right"></i></div>' +
-      '</div>' +
-      '<div class="mmn-cal-body">' + month(may, 21, 5, 21, 34) + month(june, 17, 1, 1, 20) + '</div>' +
-      '<div class="mmn-cal-footer"><span data-mmn-date-tip></span><button type="button" data-mmn-date-clear>清空</button><button type="button" data-mmn-date-ok>确定</button></div>' +
-    '</div>';
-  }
-
   function renderRows() {
-    return records.map(function (item) {
+    var rows = records.filter(function (item) { return (!state.recordStart || item.time.slice(0, 10) >= state.recordStart) && (!state.recordEnd || item.time.slice(0, 10) <= state.recordEnd) && (!state.recordKeyword || (item.item + ' ' + item.type + ' ' + item.source + ' ' + item.attr + ' ' + item.content).toLowerCase().indexOf(state.recordKeyword.toLowerCase()) >= 0); });
+    if (!rows.length) return '<tr><td colspan="8" class="mmn-date-empty">暂无符合条件的变更记录</td></tr>';
+    return rows.map(function (item) {
       return '<tr>' +
         '<td>' + item.no + '</td>' +
         '<td title="' + escapeHtml(item.item) + '">' + escapeHtml(item.item) + '</td>' +
@@ -186,11 +164,8 @@ DP.pages.metadataMonitor = (function () {
         '<div class="mmn-section-head">' +
           '<div class="mmn-title">元数据统计概况</div>' +
           '<div class="mmn-top-query">' +
-            '<div class="mmn-date-wrap" data-mmn-date-wrap>' +
-              '<input class="mmn-input mmn-date-top" data-mmn-date-input readonly value="2026-05-17 - 2026-06-17">' +
-              renderCalendar() +
-            '</div>' +
-            '<button class="btn btn-primary mmn-btn" type="button"><i class="bi bi-search"></i> 查询</button>' +
+            DP.datePicker.render({ mode: 'range', label: '统计时间', start: state.overviewStart, end: state.overviewEnd, startAttrs: { 'data-mmn-overview-date': 'start' }, endAttrs: { 'data-mmn-overview-date': 'end' } }) +
+            '<button class="btn btn-primary mmn-btn" type="button" data-mmn-query="overview"><i class="bi bi-search"></i> 查询</button>' +
           '</div>' +
         '</div>' +
         '<div class="mmn-overview-body">' +
@@ -212,12 +187,9 @@ DP.pages.metadataMonitor = (function () {
             renderSelect('type', state.filters.type, ['类型', '元数据', '数据源']) +
             renderSelect('attr', state.filters.attr, ['变更属性', '修改', '删除', '新增'], true) +
             '<span class="mmn-field-label">变更时间</span>' +
-            '<div class="mmn-date-wrap" data-mmn-date-wrap>' +
-              '<input class="mmn-input mmn-date-mid" data-mmn-date-input readonly value="2026-05-17 14:22:01 - 2026-06-17 14:22:01">' +
-              renderCalendar() +
-            '</div>' +
-            '<input class="mmn-input mmn-keyword" placeholder="关键字模糊查询">' +
-            '<button class="btn btn-primary mmn-btn" type="button"><i class="bi bi-search"></i> 查询</button>' +
+            DP.datePicker.render({ mode: 'range', label: '变更时间', start: state.recordStart, end: state.recordEnd, startAttrs: { 'data-mmn-record-date': 'start' }, endAttrs: { 'data-mmn-record-date': 'end' } }) +
+            '<input class="mmn-input mmn-keyword" data-mmn-keyword value="' + escapeHtml(state.recordKeyword) + '" placeholder="关键字模糊查询">' +
+            '<button class="btn btn-primary mmn-btn" type="button" data-mmn-query="records"><i class="bi bi-search"></i> 查询</button>' +
             '<button class="btn btn-primary mmn-btn" type="button"><i class="bi bi-download"></i> 导出</button>' +
           '</div>' +
         '</div>' +
@@ -225,7 +197,7 @@ DP.pages.metadataMonitor = (function () {
           '<table class="mmn-table">' +
             '<colgroup><col style="width:8%"><col style="width:19%"><col style="width:6.5%"><col style="width:14%"><col style="width:5%"><col style="width:25%"><col style="width:12.5%"><col style="width:10%"></colgroup>' +
             '<thead><tr><th>序号</th><th>变更项</th><th>类型</th><th>归属数据源</th><th>变更属性</th><th>变更内容</th><th>变更时间</th><th>操作</th></tr></thead>' +
-            '<tbody>' + renderRows() + '</tbody>' +
+            '<tbody data-mmn-record-rows>' + renderRows() + '</tbody>' +
           '</table>' +
         '</div>' +
         '<div class="mmn-pagination">' +
@@ -374,6 +346,14 @@ DP.pages.metadataMonitor = (function () {
       yAxis: { max: 7600 },
       series: [{ name: '元数据数量', data: [6800, 6800, 6800, 7100, 7120, 7100, 7250, 7250, 7252, 7255, 7260, 7260, 7245, 7285, 7285, 7300, 7302, 7302, 7304, 7308, 7310, 7312, 7314, 7317, 7318, 7320, 7322, 7324, 7325, 7327, 7330, 7332] }]
     };
+    var indices = option.xAxis.data.map(function (label, index) { return { day: '2026-' + label.replace('/', '-'), index: index }; }).filter(function (point) { return (!state.overviewStart || point.day >= state.overviewStart) && (!state.overviewEnd || point.day <= state.overviewEnd); });
+    option.series[0].data = indices.map(function (point) { return option.series[0].data[point.index]; });
+    option.xAxis.data = indices.map(function (point) { return option.xAxis.data[point.index]; });
+    var previous = window.echarts && window.echarts.getInstanceByDom(chartEl);
+    if (chartEl._mmnResize) window.removeEventListener('resize', chartEl._mmnResize);
+    if (previous) previous.dispose();
+    if (!indices.length) { chartEl.innerHTML = '<div class="mmn-date-empty">所选时间范围暂无统计数据</div>'; return; }
+    chartEl.innerHTML = '<div class="mmn-chart-legend">元数据数量</div><div class="mmn-chart-axis-label">数量</div><canvas class="mmn-chart" data-mmn-chart></canvas><div class="mmn-chart-tooltip" data-mmn-chart-tooltip></div>';
     if (window.echarts) {
       chartEl.innerHTML = '';
       var chart = window.echarts.init(chartEl);
@@ -419,14 +399,37 @@ DP.pages.metadataMonitor = (function () {
           data: option.series[0].data
         }]
       });
-      window.addEventListener('resize', function () { chart.resize(); });
+      chartEl._mmnResize = function () { if (chartEl.isConnected) chart.resize(); };
+      window.addEventListener('resize', chartEl._mmnResize);
       return;
     }
     var chart = createMetadataEcharts(chartEl, option);
     window.setTimeout(chart.resize, 0);
   }
 
+  function applyDateQuery(pageEl, kind) {
+    if (kind === 'overview') {
+      state.overviewStart = pageEl.querySelector('[data-mmn-overview-date="start"]').value;
+      state.overviewEnd = pageEl.querySelector('[data-mmn-overview-date="end"]').value;
+      initMetadataChart(pageEl);
+    } else {
+      state.recordStart = pageEl.querySelector('[data-mmn-record-date="start"]').value;
+      state.recordEnd = pageEl.querySelector('[data-mmn-record-date="end"]').value;
+      state.recordKeyword = pageEl.querySelector('[data-mmn-keyword]').value.trim();
+      pageEl.querySelector('[data-mmn-record-rows]').innerHTML = renderRows();
+      var rows = pageEl.querySelectorAll('[data-mmn-record-rows] [data-mmn-history]').length;
+      pageEl.querySelector('.mmn-pagination').innerHTML = '<span>共 ' + rows + ' 条变更记录</span>';
+    }
+  }
+
   function bindMain(pageEl) {
+    pageEl.addEventListener('change', function (event) {
+      if (event.target.matches('[data-mmn-overview-date]')) applyDateQuery(pageEl, 'overview');
+      if (event.target.matches('[data-mmn-record-date]')) applyDateQuery(pageEl, 'records');
+    });
+    pageEl.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' && event.target.matches('[data-mmn-keyword]')) { event.preventDefault(); applyDateQuery(pageEl, 'records'); }
+    });
     pageEl.addEventListener('click', function (event) {
       var sourcePicker = event.target.closest('[data-mmn-source-picker]');
       pageEl.querySelectorAll('.mmn-source-picker.open').forEach(function (item) {
@@ -478,20 +481,8 @@ DP.pages.metadataMonitor = (function () {
         select.classList.remove('open');
         return;
       }
-      var dateInput = event.target.closest('[data-mmn-date-input]');
-      var dateWrap = event.target.closest('[data-mmn-date-wrap]');
-      pageEl.querySelectorAll('.mmn-date-wrap.open').forEach(function (item) {
-        if (item !== dateWrap) item.classList.remove('open');
-      });
-      if (dateInput && dateWrap) {
-        dateWrap.classList.toggle('open');
-        return;
-      }
-      if (event.target.closest('[data-mmn-date-ok]') || event.target.closest('[data-mmn-date-clear]')) {
-        var wrap = event.target.closest('[data-mmn-date-wrap]');
-        if (wrap) wrap.classList.remove('open');
-        return;
-      }
+      var dateQuery = event.target.closest('[data-mmn-query]');
+      if (dateQuery) { applyDateQuery(pageEl, dateQuery.dataset.mmnQuery); return; }
       var history = event.target.closest('[data-mmn-history]');
       if (history) {
         showDetail(Number(history.getAttribute('data-mmn-history')) || 1);
@@ -499,9 +490,6 @@ DP.pages.metadataMonitor = (function () {
       }
       if (!event.target.closest('.mmn-select')) {
         pageEl.querySelectorAll('.mmn-select.open').forEach(function (item) { item.classList.remove('open'); });
-      }
-      if (!event.target.closest('[data-mmn-date-wrap]')) {
-        pageEl.querySelectorAll('.mmn-date-wrap.open').forEach(function (item) { item.classList.remove('open'); });
       }
       if (!event.target.closest('[data-mmn-source-picker]')) {
         pageEl.querySelectorAll('.mmn-source-picker.open').forEach(function (item) { item.classList.remove('open'); });

@@ -1,0 +1,44 @@
+/* 文档富文本公共组件。主要字号复用平台正文，工具按钮保持图标与文字。 */
+.dp-document-editor { position: relative; border: 1px solid #d9dfe7; border-radius: 4px; background: #fff; min-width: 0; color: var(--text-primary); }
+.dp-document-editor [hidden] { display: none !important; }
+.dre-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 4px; padding: 6px 8px; border-bottom: 1px solid #e4e8ee; background: #f7f9fc; border-radius: 4px 4px 0 0; }
+.dre-tool { display: inline-flex; align-items: center; gap: 5px; padding: 0 7px; height: 30px; border: none; border-radius: 3px; background: transparent; color: var(--text-secondary); font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.dre-tool:hover { color: var(--primary); background: var(--primary-light); }
+.dre-tool:disabled { opacity: .4; cursor: not-allowed; }
+.dre-tool:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.dre-content { min-height: 286px; padding: 16px 18px; font-size: 14px; line-height: 1.8; overflow-wrap: anywhere; outline: none; }
+.dre-content:empty::before { content: attr(data-placeholder); color: var(--text-light); pointer-events: none; }
+.dre-content p, .dre-content div { margin: 0 0 10px; }
+.dre-content h1 { font-size: 24px; }
+.dre-content h2 { font-size: 22px; }
+.dre-content h3 { font-size: 18px; }
+.dre-content h4 { font-size: 17px; }
+.dre-content h5 { font-size: 16px; }
+.dre-content h6 { font-size: 14px; }
+.dre-content h1, .dre-content h2, .dre-content h3, .dre-content h4, .dre-content h5, .dre-content h6 { margin: 14px 0 10px; line-height: 1.5; font-weight: 600; }
+.dre-content > :first-child { margin-top: 0; }
+.dre-content ul { list-style: disc; padding-left: 24px; margin: 8px 0 12px; }
+.dre-content ol { list-style: decimal; padding-left: 24px; margin: 8px 0 12px; }
+.dre-content li { list-style: inherit; margin: 3px 0; }
+.dre-content li input { accent-color: var(--primary); margin-right: 5px; }
+.dre-content a { color: var(--primary); text-decoration: underline; }
+.dre-content blockquote { margin: 12px 0; padding: 8px 14px; background: #f7f9fc; border-left: 3px solid #c8d7e8; color: var(--text-secondary); }
+.dre-content code { font: 13px/1.8 Consolas, 'Microsoft YaHei', monospace; padding: 1px 4px; border-radius: 3px; background: #eef2f6; }
+.dre-content pre { padding: 14px; margin: 12px 0; background: #f4f6f9; border: 1px solid #e4e8ee; border-radius: 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.dre-content pre code { background: transparent; padding: 0; }
+.dre-content hr { border: 0; border-top: 1px solid #e4e8ee; margin: 16px 0; }
+.dre-content table { width: 100%; border-collapse: collapse; margin: 12px 0; table-layout: fixed; font-size: 13px; }
+.dre-content th, .dre-content td { border: 1px solid #dce3ed; padding: 7px 10px; text-align: left; min-width: 40px; }
+.dre-content th { background: #f7f9fc; font-weight: 500; }
+.dre-popover { position: absolute; left: 8px; top: 42px; z-index: 35; width: min(342px, calc(100% - 16px)); padding: 12px; border: 1px solid #d9dfe7; border-radius: 4px; box-shadow: 0 6px 20px rgba(30,50,80,.14); background: #fff; }
+.dre-pop-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.dre-pop-head strong { font-size: 14px; font-weight: 500; }
+.dre-popover label { display: block; font-size: 13px; margin: 8px 0; }
+.dre-input { display: block; width: 100%; height: 32px; padding: 0 9px; margin-top: 6px; border: 1px solid #d9dfe7; border-radius: 4px; font: inherit; color: var(--text-primary); }
+.dre-input:focus { border-color: var(--primary); outline: none; }
+.dre-error { color: #cf1322; font-size: 12px; line-height: 1.6; }
+.dre-table-inputs { display: flex; gap: 12px; }
+.dre-table-inputs label { flex: 1; }
+.dre-emoji-options, .dre-heading-options { display: flex; flex-wrap: wrap; gap: 4px; }
+.dp-document-editor.is-readonly { border: none; }
+.dp-document-editor.is-readonly .dre-content { padding: 0; min-height: 0; }

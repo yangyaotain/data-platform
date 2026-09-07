@@ -10,6 +10,8 @@ DP.pages.qualityInspectReport = (function () {
   var templateEditorSavedRange = null;
   var templatePieCharts = [];
   var templatePieResizeHandler = null;
+  var deliveryContext = null;
+  var generationTimers = {};
 
   var state = {
     view: 'list',
@@ -1863,7 +1865,7 @@ DP.pages.qualityInspectReport = (function () {
       if (!config.nameEdited) config.name = 'OA系统数据质量检核报告';
       if (!config.descEdited) config.desc = '按月汇总 OA 系统组织、员工、岗位、角色、流程、考勤、资产等基础表的数据质量检核结果。';
       if (!config.cycle || !config.cycle.type) config.cycle = { type: '每月', day: '1号', time: '10:05:02' };
-      config.lastGeneratedTime = '2026-06-30 10:05:02';
+      if (!config.generatedInSession) config.lastGeneratedTime = '2026-06-30 10:05:02';
     }
     return config;
   }
@@ -1923,7 +1925,11 @@ DP.pages.qualityInspectReport = (function () {
   }
 
   function getSelectedReportConfig() {
-    return getReportConfigById(state.selectedConfigId);
+    var config = getReportConfigById(state.selectedConfigId);
+    if (config && deliveryContext) {
+      config = Object.assign({}, config, { lastGeneratedTime: deliveryContext.generatedTime || config.lastGeneratedTime });
+    }
+    return config;
   }
 
   function getEditableReportConfigById(id) {
@@ -2447,8 +2453,9 @@ DP.pages.qualityInspectReport = (function () {
     var displayName = getScheduleTaskName(item);
     var message = '确认立即执行任务调度 <b>' + escapeHtml(displayName) + '</b> 吗？执行后将提交一次即时稽查，列表状态更新为执行中。';
     function applyExecute() {
+      if (generationTimers[item.id]) return;
       item.lastExecutionStatus = '执行中';
-      item.lastGeneratedTime = formatDateTime(new Date());
+      simulateReportGeneration(item.id);
       renderAll();
       showToast('任务调度已提交执行');
     }
@@ -2461,6 +2468,41 @@ DP.pages.qualityInspectReport = (function () {
     } else if (window.confirm(message.replace(/<[^>]+>/g, ''))) {
       applyExecute();
     }
+  }
+
+  // 静态演示：报告生成成功后通知发送规则，不在提交执行时发送。
+  function simulateReportGeneration(configId, overrideKey) {
+    var baseId = getConfigBaseId(configId);
+    if (generationTimers[baseId]) return;
+    var pendingConfig = getEditableReportConfigById(baseId);
+    if (!pendingConfig) return;
+    pendingConfig.lastExecutionStatus = '执行中';
+    overrideKey = overrideKey || getScheduleRunOverrideKey(baseId, 'schedule-run-0');
+    state.scheduleRunOverrides[overrideKey] = { status: '执行中', startAt: formatDateTime(new Date()), endAt: '-', duration: '0秒' };
+    var job = { overrideKey: overrideKey, timer: null };
+    var originPage = pageEl;
+    generationTimers[baseId] = job;
+    job.timer = window.setTimeout(function () {
+      delete generationTimers[baseId];
+      var config = getEditableReportConfigById(baseId);
+      if (!config) return;
+      var generatedTime = formatDateTime(new Date());
+      config.generatedInSession = true;
+      config.lastExecutionStatus = '执行成功';
+      config.lastGeneratedTime = generatedTime;
+      if (overrideKey) state.scheduleRunOverrides[overrideKey] = Object.assign({}, state.scheduleRunOverrides[overrideKey], { status: '执行成功', endAt: generatedTime, duration: '2秒' });
+      var generationId = 'generated-' + baseId + '-' + Date.now();
+      reportHistories.unshift(historyReport(generationId, baseId, generatedTime, 0, 1));
+      if (DP.pages.qualityReportSend) {
+        getReportConfigRowsForReportList().filter(function (row) { return getConfigBaseId(row.id) === baseId; }).forEach(function (row) {
+          DP.pages.qualityReportSend.onReportGenerated({ id: row.id, name: row.name, generatedTime: generatedTime, generationId: generationId });
+        });
+      }
+      if (pageEl && pageEl === originPage && document.documentElement.contains(pageEl)) {
+        renderAll();
+        showToast('报告已生成，已触发匹配的发送规则');
+      }
+    }, 1800);
   }
 
   function getScheduleRecordSql(run) {
@@ -2608,10 +2650,17 @@ DP.pages.qualityInspectReport = (function () {
       });
     }
     rows.sort(function (a, b) { return b.lastExecutionTime.localeCompare(a.lastExecutionTime); });
+    if (deliveryContext && deliveryContext.generatedTime) {
+      rows = rows.map(function (item) { return Object.assign({}, item, { lastExecutionTime: deliveryContext.generatedTime }); });
+    }
     return rows;
   }
 
   function getSelectedReport() {
+    if (deliveryContext) {
+      var deliveryRows = getReportRows();
+      return deliveryRows.filter(function (item) { return item.id === state.selectedReportId; })[0] || deliveryRows[0] || reportRows[0];
+    }
     return reportRows.filter(function (item) { return item.id === state.selectedReportId; })[0] ||
       getReportRows()[0] ||
       reportRows[0];
@@ -6258,9 +6307,7 @@ DP.pages.qualityInspectReport = (function () {
           '<span class="qir-query-label">执行状态</span>' +
           '<select class="qir-query-select" data-qir-schedule-record-status aria-label="执行状态">' + renderExecutionStatusOptions(state.scheduleRecordStatus) + '</select>' +
           '<span class="qir-query-label qir-query-label-gap">开始时间</span>' +
-          '<input class="qir-schedule-date-input" type="date" data-qir-schedule-start-date value="' + escapeHtml(state.scheduleRecordStartDate) + '" aria-label="开始日期">' +
-          '<span class="qir-date-separator">至</span>' +
-          '<input class="qir-schedule-date-input" type="date" data-qir-schedule-end-date value="' + escapeHtml(state.scheduleRecordEndDate) + '" aria-label="结束日期">' +
+          DP.datePicker.render({ mode: 'range', label: '开始时间', start: state.scheduleRecordStartDate, end: state.scheduleRecordEndDate, startAttrs: { 'data-qir-schedule-start-date': '' }, endAttrs: { 'data-qir-schedule-end-date': '' } }) +
           '<button class="btn btn-primary" type="button" data-qir-action="query-schedule-records"><i class="bi bi-search"></i><span>查询</span></button>' +
         '</div>' +
       '</div>' +
@@ -6428,7 +6475,7 @@ DP.pages.qualityInspectReport = (function () {
   }
 
   function renderReportOverviewTab(config) {
-    var previewData = getTemplatePreviewData(config || reportConfigs[0]);
+    var previewData = getTemplatePreviewData(config || reportConfigs[0], deliveryContext ? getReportWordPreviewOverrides(config) : null);
     var toc = previewData.toc.replace('qir-preview-toc-item', 'qir-preview-toc-item active');
     return '<div class="qir-report-preview-embedded">' +
       '<aside class="qir-report-preview-toc">' +
@@ -6724,6 +6771,15 @@ DP.pages.qualityInspectReport = (function () {
     var runId = actionEl.getAttribute('data-run-id') || '';
     var run = getAllScheduleRecordRows().filter(function (item) { return item.id === runId; })[0];
     if (!run) return;
+    var activeGeneration = generationTimers[getConfigBaseId(run.configId)];
+    var runKey = getScheduleRunOverrideKey(run.configId, run.id);
+    if (status === '执行中' && activeGeneration) { showToast('报告正在生成，请等待本次执行完成'); return; }
+    if (status !== '执行中' && activeGeneration && (activeGeneration.overrideKey === runKey || (!activeGeneration.overrideKey && run.id === 'schedule-run-0'))) {
+      window.clearTimeout(activeGeneration.timer);
+      delete generationTimers[getConfigBaseId(run.configId)];
+      var stoppedConfig = getEditableReportConfigById(run.configId);
+      if (stoppedConfig) stoppedConfig.lastExecutionStatus = '执行失败';
+    }
     var nowText = formatDateTime(new Date());
     var override = {
       status: status,
@@ -6734,6 +6790,7 @@ DP.pages.qualityInspectReport = (function () {
       override.startAt = nowText;
     }
     state.scheduleRunOverrides[getScheduleRunOverrideKey(run.configId, run.id)] = override;
+    if (status === '执行中') simulateReportGeneration(run.configId, getScheduleRunOverrideKey(run.configId, run.id));
     state.selectedScheduleRunId = run.id;
     state.selectedScheduleRuleRunId = '';
     state.scheduleDetailPage = 1;
@@ -6746,6 +6803,15 @@ DP.pages.qualityInspectReport = (function () {
     var ruleRunId = actionEl.getAttribute('data-rule-run-id') || '';
     var run = getAllScheduleRecordRows().filter(function (item) { return item.id === runId; })[0] || getSelectedScheduleRecordRun();
     if (!ruleRunId || !run) return;
+    var baseId = getConfigBaseId(run.configId);
+    var job = generationTimers[baseId];
+    if (job && job.overrideKey === getScheduleRunOverrideKey(run.configId, run.id)) {
+      window.clearTimeout(job.timer);
+      delete generationTimers[baseId];
+      var config = getEditableReportConfigById(baseId);
+      if (config) config.lastExecutionStatus = '执行失败';
+      state.scheduleRunOverrides[job.overrideKey] = Object.assign({}, state.scheduleRunOverrides[job.overrideKey], { status: '执行失败', endAt: formatDateTime(new Date()) });
+    }
     state.scheduleRuleOverrides[getScheduleRuleOverrideKey(run.configId, ruleRunId)] = {
       status: '执行失败',
       endAt: formatDateTime(new Date())
@@ -7240,6 +7306,13 @@ DP.pages.qualityInspectReport = (function () {
           state.scheduleSqlModalOpen = false;
           renderAll();
         } else if (action === 'back-summary') {
+          if (deliveryContext && typeof deliveryContext.onBack === 'function') {
+            var returnToDelivery = deliveryContext.onBack;
+            deliveryContext = null;
+            disposeTemplatePieCharts();
+            returnToDelivery();
+            return;
+          }
           state.view = 'list';
           state.selectedConfigId = '';
           state.selectedReportId = '';
@@ -7262,7 +7335,7 @@ DP.pages.qualityInspectReport = (function () {
           renderAll();
         } else if (action === 'export-report') {
           var reportId = actionEl.getAttribute('data-id') || state.selectedReportId;
-          var exportTarget = reportRows.filter(function (item) { return item.id === reportId; })[0] || getSelectedReport();
+          var exportTarget = (deliveryContext ? getReportRows() : reportRows).filter(function (item) { return item.id === reportId; })[0] || getSelectedReport();
           exportReport(exportTarget);
         } else if (action === 'export-report-word') {
           exportReportWord();
@@ -7823,7 +7896,7 @@ DP.pages.qualityInspectReport = (function () {
     state.scheduleDetailStatus = '';
     state.scheduleDetailTaskKeyword = '';
     state.scheduleDetailTableKeyword = '';
-    state.scheduleRunOverrides = {};
+    state.scheduleRunOverrides = state.scheduleRunOverrides || {};
     state.selectedScheduleRunId = '';
     state.selectedScheduleRuleRunId = '';
     state.scheduleLogBackView = 'schedule-records';
@@ -7885,10 +7958,26 @@ DP.pages.qualityInspectReport = (function () {
 
   return {
     html: '<div class="page-quality-inspect-report"></div>',
+    getSendReportOptions: function () {
+      return getReportConfigRowsForReportList().map(function (item) {
+        return { id: item.id, name: item.name, generatedTime: item.lastGeneratedTime, taskName: getScheduleTaskName(item) };
+      });
+    },
+    openFromDelivery: function (record, onBack) {
+      if (!getReportConfigRowsForReportList().some(function (row) { return row.id === record.reportId; })) return false;
+      DP.contentArea.innerHTML = this.html;
+      this.init({ delivery: { reportId: record.reportId, generatedTime: record.generatedTime, onBack: onBack } });
+      return true;
+    },
     init: function (opts) {
       pageEl = document.querySelector('.page-quality-inspect-report');
       if (!pageEl) return;
       resetState(opts || {});
+      deliveryContext = opts && opts.delivery || null;
+      if (deliveryContext) {
+        state.selectedConfigId = deliveryContext.reportId;
+        state.view = 'report-view';
+      }
       normalizeOaQualityReportConfigs();
       bindEvents();
       renderAll();

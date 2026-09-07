@@ -36,11 +36,6 @@ DP.pages.standardCode = (function () {
     dataPageSize: 10,
     dataSelected: {},
     valueModalId: '',
-    datePickerOpen: false,
-    datePickerYear: 2026,
-    datePickerMonth: 6,
-    dateRangeStart: '',
-    dateRangeEnd: '',
     logId: '',
     ioFilters: {
       attr: '',
@@ -511,50 +506,6 @@ DP.pages.standardCode = (function () {
 
   function nowText() {
     return '2026-06-17 16:20:00';
-  }
-
-  function pad2(value) {
-    return String(value).padStart(2, '0');
-  }
-
-  function formatDate(date) {
-    return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
-  }
-
-  function parseDateRangeText(text) {
-    var dates = String(text || '').match(/\d{4}-\d{2}-\d{2}/g) || [];
-    return {
-      start: dates[0] || '',
-      end: dates[1] || ''
-    };
-  }
-
-  function formatDateRangeText(start, end) {
-    if (!start) return '';
-    if (!end) return start + ' 00:00:00 - ';
-    return start + ' 00:00:00 - ' + end + ' 23:59:59';
-  }
-
-  function syncDateRangeFromInput(value) {
-    var range = parseDateRangeText(value);
-    state.dateRangeStart = range.start;
-    state.dateRangeEnd = range.end;
-    var base = range.start || '2026-06-01';
-    state.datePickerYear = Number(base.slice(0, 4)) || 2026;
-    state.datePickerMonth = Number(base.slice(5, 7)) || 6;
-  }
-
-  function shiftDatePickerMonth(delta) {
-    var base = new Date(state.datePickerYear, state.datePickerMonth - 1 + delta, 1);
-    state.datePickerYear = base.getFullYear();
-    state.datePickerMonth = base.getMonth() + 1;
-  }
-
-  function renderCurrentDatePicker() {
-    var dateControl = pageEl.querySelector('.sc-date-control');
-    var oldPicker = dateControl ? dateControl.querySelector('.sc-date-picker') : null;
-    if (oldPicker) oldPicker.remove();
-    if (state.datePickerOpen && dateControl) dateControl.insertAdjacentHTML('beforeend', renderDatePicker());
   }
 
   function getRowById(id) {
@@ -1148,7 +1099,6 @@ DP.pages.standardCode = (function () {
     state.dataRowId = '';
     state.dataSelected = {};
     state.dataPage = 1;
-    state.datePickerOpen = false;
     renderMain();
   }
 
@@ -1186,9 +1136,6 @@ DP.pages.standardCode = (function () {
     if (modal) modal.remove();
     if (!keepState) {
       state.valueModalId = '';
-      state.datePickerOpen = false;
-      state.dateRangeStart = '';
-      state.dateRangeEnd = '';
     }
   }
 
@@ -1244,8 +1191,6 @@ DP.pages.standardCode = (function () {
       desc: ''
     };
     state.valueModalId = code || '';
-    state.datePickerOpen = false;
-    syncDateRangeFromInput(value.validDate);
     var modal = document.createElement('div');
     modal.className = 'bc-modal-mask sc-modal-mask';
     modal.setAttribute('data-sc-modal', 'value');
@@ -1256,7 +1201,7 @@ DP.pages.standardCode = (function () {
           renderValueFormRow('编码', '<input data-sc-value-field="code" type="text" value="' + escapeHtml(value.code) + '" placeholder="长度不超过50个字符">', '<i class="bi bi-check-circle-fill"></i><span>50个字符以内</span>') +
           renderValueFormRow('名称', '<input data-sc-value-field="name" type="text" value="' + escapeHtml(value.name) + '" placeholder="长度不超过50个字符">', '<i class="bi bi-check-circle-fill"></i><span>50个字符以内</span>') +
           renderValueFormRow('代码属性', '<select data-sc-value-field="property"><option' + (value.property === '国家标准' ? ' selected' : '') + '>国家标准</option><option' + (value.property === '自建标准' ? ' selected' : '') + '>自建标准</option><option' + (value.property === '行业标准' ? ' selected' : '') + '>行业标准</option><option' + (value.property === '企业实践' ? ' selected' : '') + '>企业实践</option><option' + (value.property === '企业标准' ? ' selected' : '') + '>企业标准</option><option' + (value.property === '国际标准' ? ' selected' : '') + '>国际标准</option></select>', '') +
-          renderValueFormRow('有效期', '<div class="sc-date-control"><input data-sc-value-field="validDate" type="text" value="' + escapeHtml(value.validDate) + '" data-sc-action="toggle-date" readonly>' + renderDatePicker() + '</div>', '') +
+          renderValueFormRow('有效期', DP.datePicker.render({ mode: 'range', label: '有效期', output: 'datetime', value: value.validDate, combinedAttrs: { 'data-sc-value-field': 'validDate' } }), '') +
           renderValueFormRow('描述', '<textarea data-sc-value-field="desc" placeholder="长度不超过100个字符!">' + escapeHtml(value.desc) + '</textarea>', '<i class="bi bi-check-circle-fill"></i><span>100个字符以内</span>', true) +
         '</div>' +
         '<div class="bc-modal-footer sc-value-footer"><button class="btn btn-primary" type="button" data-sc-action="save-value"><i class="bi bi-check-lg"></i><span>保存</span></button><button class="btn btn-outline" type="button" data-sc-action="close-modal"><i class="bi bi-x-lg"></i><span>关闭</span></button></div>' +
@@ -1270,42 +1215,6 @@ DP.pages.standardCode = (function () {
       '<div class="sc-value-control">' + control + '</div>' +
       '<div class="sc-value-hint">' + (hint || '') + '</div>' +
     '</div>';
-  }
-
-  function renderDatePicker() {
-    if (!state.datePickerOpen) return '';
-    var firstMonth = new Date(state.datePickerYear, state.datePickerMonth - 1, 1);
-    var secondMonth = new Date(state.datePickerYear, state.datePickerMonth, 1);
-    return '<div class="sc-date-picker">' +
-      '<div class="sc-date-head"><button type="button" data-sc-action="date-prev"><i class="bi bi-chevron-double-left"></i></button><button type="button" data-sc-action="date-prev"><i class="bi bi-chevron-left"></i></button><strong>' + firstMonth.getFullYear() + '年&nbsp;&nbsp;' + (firstMonth.getMonth() + 1) + '月</strong><strong>' + secondMonth.getFullYear() + '年&nbsp;&nbsp;' + (secondMonth.getMonth() + 1) + '月</strong><button type="button" data-sc-action="date-next"><i class="bi bi-chevron-right"></i></button><button type="button" data-sc-action="date-next"><i class="bi bi-chevron-double-right"></i></button></div>' +
-      '<div class="sc-date-months">' + renderMonth(firstMonth.getFullYear(), firstMonth.getMonth() + 1) + renderMonth(secondMonth.getFullYear(), secondMonth.getMonth() + 1) + '</div>' +
-      '<div class="sc-date-foot"><span>' + (state.dateRangeStart ? '开始：' + state.dateRangeStart + (state.dateRangeEnd ? '　结束：' + state.dateRangeEnd : '　请选择结束日期') : '请选择开始日期') + '</span><div><button type="button" data-sc-action="date-clear">清空</button><button type="button" data-sc-action="date-ok">确定</button></div></div>' +
-    '</div>';
-  }
-
-  function renderMonth(year, month) {
-    var week = ['日', '一', '二', '三', '四', '五', '六'];
-    var first = new Date(year, month - 1, 1);
-    var startDay = first.getDay();
-    var cells = [];
-    for (var i = 0; i < 42; i++) {
-      var dayDate = new Date(year, month - 1, i - startDay + 1);
-      cells.push({
-        day: dayDate.getDate(),
-        date: formatDate(dayDate),
-        muted: dayDate.getMonth() !== month - 1
-      });
-    }
-    return '<div class="sc-date-month"><div class="sc-date-week">' + week.map(function (d) { return '<span>' + d + '</span>'; }).join('') + '</div><div class="sc-date-grid">' +
-      cells.map(function (cell) {
-        var classes = [];
-        if (cell.muted) classes.push('muted');
-        if (cell.date === state.dateRangeStart) classes.push('active range-start');
-        if (cell.date === state.dateRangeEnd) classes.push('active range-end');
-        if (state.dateRangeStart && state.dateRangeEnd && cell.date > state.dateRangeStart && cell.date < state.dateRangeEnd) classes.push('in-range');
-        return '<button class="' + classes.join(' ') + '" type="button" data-sc-action="choose-date" data-date="' + cell.date + '">' + cell.day + '</button>';
-      }).join('') +
-    '</div></div>';
   }
 
   function saveValue() {
@@ -1460,48 +1369,6 @@ DP.pages.standardCode = (function () {
       openImportModal('data');
     } else if (action === 'export-data') {
       showToast('当前代码值已导出');
-    } else if (action === 'toggle-date') {
-      state.datePickerOpen = !state.datePickerOpen;
-      var currentDateInput = pageEl.querySelector('[data-sc-value-field="validDate"]');
-      if (currentDateInput) syncDateRangeFromInput(currentDateInput.value);
-      renderCurrentDatePicker();
-    } else if (action === 'choose-date') {
-      var inputDate = pageEl.querySelector('[data-sc-value-field="validDate"]');
-      var chosenDate = actionEl.getAttribute('data-date') || '';
-      if (!state.dateRangeStart || state.dateRangeEnd) {
-        state.dateRangeStart = chosenDate;
-        state.dateRangeEnd = '';
-      } else {
-        state.dateRangeEnd = chosenDate;
-        if (state.dateRangeEnd < state.dateRangeStart) {
-          var oldStart = state.dateRangeStart;
-          state.dateRangeStart = state.dateRangeEnd;
-          state.dateRangeEnd = oldStart;
-        }
-      }
-      if (inputDate) inputDate.value = formatDateRangeText(state.dateRangeStart, state.dateRangeEnd);
-      renderCurrentDatePicker();
-    } else if (action === 'date-clear') {
-      var clearDate = pageEl.querySelector('[data-sc-value-field="validDate"]');
-      if (clearDate) clearDate.value = '';
-      state.dateRangeStart = '';
-      state.dateRangeEnd = '';
-      renderCurrentDatePicker();
-    } else if (action === 'date-ok') {
-      var okDate = pageEl.querySelector('[data-sc-value-field="validDate"]');
-      if (okDate && state.dateRangeStart && !state.dateRangeEnd) {
-        state.dateRangeEnd = state.dateRangeStart;
-        okDate.value = formatDateRangeText(state.dateRangeStart, state.dateRangeEnd);
-      }
-      state.datePickerOpen = false;
-      var dateModal = pageEl.querySelector('[data-sc-modal="value"]');
-      if (dateModal) {
-        var picker = dateModal.querySelector('.sc-date-picker');
-        if (picker) picker.remove();
-      }
-    } else if (action === 'date-prev' || action === 'date-next') {
-      shiftDatePickerMonth(action === 'date-prev' ? -1 : 1);
-      renderCurrentDatePicker();
     } else if (action === 'close-modal') {
       closeModal();
     } else if (action === 'save-import') {
@@ -1702,11 +1569,6 @@ DP.pages.standardCode = (function () {
     state.dataPageSize = 10;
     state.dataSelected = {};
     state.valueModalId = '';
-    state.datePickerOpen = false;
-    state.datePickerYear = 2026;
-    state.datePickerMonth = 6;
-    state.dateRangeStart = '';
-    state.dateRangeEnd = '';
     state.logId = '';
     state.ioFilters = { attr: '', status: '', keyword: '' };
   }

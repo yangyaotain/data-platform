@@ -6,6 +6,7 @@ DP.pages = DP.pages || {};
 
 DP.pages.dataQualityRule = (function () {
   var pageEl = null;
+  var versions = DP.qualityVersions;
 
   var state = {
     view: 'list',
@@ -385,9 +386,10 @@ DP.pages.dataQualityRule = (function () {
   }
 
   function createDraft(item) {
-    var draftRuleType = item && ruleTypes.indexOf(item.ruleType) >= 0 ? item.ruleType : '标准稽查（固定检查）';
+    var draftRuleType = item ? item.ruleType : '标准稽查（固定检查）';
     return {
       id: item ? item.id : '',
+      changeSummary: '',
       name: item ? item.name : '',
       dbType: item ? item.dbType : 'Mysql5',
       standard: item ? item.standard : '有效性',
@@ -420,11 +422,13 @@ DP.pages.dataQualityRule = (function () {
 
   function captureFormDraft() {
     if (!pageEl || state.view !== 'form' || !state.formDraft) return;
+    var saveMode = pageEl.querySelector('[data-dqr-save-mode]:checked');
+    if (saveMode) state.saveMode = saveMode.value;
     pageEl.querySelectorAll('[data-dqr-field]').forEach(function (control) {
       state.formDraft[control.getAttribute('data-dqr-field')] = control.value.trim();
     });
     var sql = getPlainEditorText();
-    if (sql) state.formDraft.sql = sql.replace(/\u00a0/g, ' ');
+    state.formDraft.sql = sql.replace(/\u00a0/g, ' ');
     pageEl.querySelectorAll('[data-dqr-param-index]').forEach(function (rowEl) {
       var index = Number(rowEl.getAttribute('data-dqr-param-index'));
       var item = state.formDraft.params[index];
@@ -459,18 +463,20 @@ DP.pages.dataQualityRule = (function () {
   function renderTableRows() {
     var rows = getVisibleRows();
     if (!rows.length) {
-      return '<tr class="dqr-empty-row"><td colspan="8">暂无匹配质量规则</td></tr>';
+      return '<tr class="dqr-empty-row"><td colspan="9">暂无匹配质量规则</td></tr>';
     }
     return rows.map(function (item) {
       return '<tr>' +
         '<td><input type="checkbox" data-dqr-row-check="' + escapeHtml(item.id) + '"' + (state.selectedIds[item.id] ? ' checked' : '') + ' aria-label="选择质量规则"></td>' +
         '<td title="' + escapeHtml(item.name) + '">' + escapeHtml(item.name) + '</td>' +
+        '<td><span class="qv-badge current">' + escapeHtml(item.currentVersion) + '</span></td>' +
         '<td>' + escapeHtml(item.standard) + '</td>' +
         '<td>' + escapeHtml(item.dbType) + '</td>' +
         '<td title="' + escapeHtml(item.ruleType) + '">' + escapeHtml(item.ruleType) + '</td>' +
         '<td>' + escapeHtml(item.creator) + '</td>' +
         '<td>' + escapeHtml(item.modifiedAt) + '</td>' +
         '<td><div class="dqr-icon-actions">' +
+          '<button type="button" data-dqr-action="versions" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-clock-history"></i><span>版本管理</span></button>' +
           '<button type="button" data-dqr-action="edit" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-pencil-square"></i><span>编辑</span></button>' +
           '<button class="danger" type="button" data-dqr-action="delete-row" data-id="' + escapeHtml(item.id) + '"><i class="bi bi-trash3"></i><span>删除</span></button>' +
         '</div></td>' +
@@ -485,12 +491,12 @@ DP.pages.dataQualityRule = (function () {
     return '<div class="dqr-table-wrap">' +
       '<table class="ds-table dqr-table">' +
         '<colgroup>' +
-          '<col class="dqr-w-check"><col class="dqr-w-name"><col class="dqr-w-standard"><col class="dqr-w-db">' +
+          '<col class="dqr-w-check"><col class="dqr-w-name"><col class="dqr-w-version"><col class="dqr-w-standard"><col class="dqr-w-db">' +
           '<col class="dqr-w-type"><col class="dqr-w-creator"><col class="dqr-w-time"><col class="dqr-w-action">' +
         '</colgroup>' +
         '<thead><tr>' +
           '<th class="col-ck"><input type="checkbox" data-dqr-check-all' + (allChecked ? ' checked' : '') + ' aria-label="全选质量规则"></th>' +
-          '<th>规则名称</th><th>评价标准</th><th>数据库类型</th><th>规则类型</th><th>创建人</th><th>修改时间</th><th>操作</th>' +
+          '<th>规则名称</th><th>当前版本</th><th>评价标准</th><th>数据库类型</th><th>规则类型</th><th>创建人</th><th>修改时间</th><th>操作</th>' +
         '</tr></thead>' +
         '<tbody>' + renderTableRows() + '</tbody>' +
       '</table>' +
@@ -605,7 +611,7 @@ DP.pages.dataQualityRule = (function () {
     var fixedRule = isFixedRuleType(draft.ruleType);
     return '<div class="dqr-form-page">' +
       '<div class="dqr-form-head">' +
-        '<div class="dqr-form-title"><i class="bi bi-list"></i><span>新建/编辑</span></div>' +
+        '<div class="dqr-form-title"><i class="bi bi-list"></i><span>' + (state.formMode === 'edit' ? '编辑质量规则' : '新建质量规则') + '</span><span class="qv-badge current">' + escapeHtml(state.formVersion || '首次保存 V1.0') + '</span></div>' +
         '<button class="btn btn-primary" type="button" data-dqr-action="back-list"><i class="bi bi-arrow-left"></i><span>返回</span></button>' +
       '</div>' +
       '<div class="dqr-form-body">' +
@@ -613,7 +619,7 @@ DP.pages.dataQualityRule = (function () {
         renderField('数据库类型', '<select data-dqr-field="dbType">' + renderOptions(databaseTypes, draft.dbType) + '</select>', true, '数据库类型') +
         renderField('评价标准', '<select data-dqr-field="standard">' + renderOptions(standards, draft.standard) + '</select>', true, '评价标准') +
         renderField('业务分层', renderLayerPicker(), true, '业务分层') +
-        renderField('规则类型', '<select data-dqr-field="ruleType">' + renderOptions(ruleTypes, draft.ruleType) + '</select>', true, '<a>示例模板下载</a>') +
+        renderField('规则类型', '<select data-dqr-field="ruleType">' + renderOptions(draft.ruleType === '系统规则' ? ruleTypes.concat('系统规则') : ruleTypes, draft.ruleType) + '</select>', true, '<a>示例模板下载</a>') +
         '<div class="dqr-form-row dqr-form-row-sql">' +
           '<label><span>*</span>规则SQL</label>' +
           '<div class="dqr-sql-zone">' +
@@ -627,6 +633,8 @@ DP.pages.dataQualityRule = (function () {
         '</div>' +
         '<div class="dqr-sql-tip"><div class="dqr-sql-tip-content"><i class="bi bi-info-circle-fill"></i><span>' + escapeHtml(getSqlTipText()) + '</span></div></div>' +
         renderField('描述', '<textarea data-dqr-field="desc" placeholder="100个字符以内">' + escapeHtml(draft.desc) + '</textarea>', false, '100个字符以内；') +
+        (state.formMode === 'edit' ? renderField('保存方式', DP.qualityVersionPanel.saveOptions('dqr', state.formVersion, state.nextVersion, state.saveMode), true, '<span data-dqr-save-hint role="status" aria-live="polite">' + escapeHtml(DP.qualityVersionPanel.saveHint(state.formVersion, state.latestVersion, state.nextVersion, state.saveMode)) + '</span>') : '') +
+        renderField('变更说明', '<textarea data-dqr-field="changeSummary" maxlength="200" placeholder="说明本次保存内容或创建新版本的原因，200字以内">' + escapeHtml(draft.changeSummary) + '</textarea>', state.formMode === 'edit', state.formMode === 'edit' ? '保存配置或新建版本时填写变更说明' : '首次保存生成 V1.0') +
         '<div class="dqr-form-actions">' +
           '<button class="btn btn-primary" type="button" data-dqr-action="save-form"><i class="bi bi-check-lg"></i><span>保存</span></button>' +
           '<button class="btn btn-outline" type="button" data-dqr-action="back-list"><i class="bi bi-x-lg"></i><span>取消</span></button>' +
@@ -653,16 +661,18 @@ DP.pages.dataQualityRule = (function () {
     renderMain();
   }
 
-  function showToast(message) {
+  function showToast(message, duration) {
     var old = document.querySelector('.dqr-toast');
     if (old) old.remove();
     var toast = document.createElement('div');
     toast.className = 'dqr-toast';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
     toast.innerHTML = '<i class="bi bi-check-circle"></i><span>' + escapeHtml(message) + '</span>';
     document.body.appendChild(toast);
     window.setTimeout(function () {
       if (toast.parentNode) toast.remove();
-    }, 1800);
+    }, duration || 1800);
   }
 
   function confirmAndRun(message, icon, callback) {
@@ -679,7 +689,9 @@ DP.pages.dataQualityRule = (function () {
       return;
     }
     confirmAndRun('确认删除选中的 <b>' + ids.length + '</b> 条质量规则吗？', 'danger', function () {
-      ruleRows = ruleRows.filter(function (item) { return ids.indexOf(item.id) < 0; });
+      var result = versions.operate('rules', ids, 'delete');
+      if (result.error) return showToast(result.error);
+      ruleRows = versions.rows('rules');
       state.selectedIds = {};
       renderAll();
       showToast('质量规则已删除');
@@ -687,11 +699,18 @@ DP.pages.dataQualityRule = (function () {
   }
 
   function openForm(mode, id) {
+    ruleRows = versions.rows('rules');
     var item = mode === 'edit' ? getRowById(id) : null;
+    if (mode === 'edit' && !item) return showToast('该规则已不存在');
     state.view = 'form';
     state.formMode = mode;
     state.formId = id || '';
     state.formDraft = createDraft(item);
+    state.formRevision = item ? item.revision : null;
+    state.formVersion = item ? item.currentVersion : '';
+    state.latestVersion = item ? versions.latestVersion(item) : '';
+    state.nextVersion = item ? versions.nextVersion(item) : '';
+    state.saveMode = 'current';
     state.layerOpen = false;
     state.layerKeyword = '';
     state.layerTreeOpen = {
@@ -721,34 +740,20 @@ DP.pages.dataQualityRule = (function () {
       showToast('请填写必填项');
       return;
     }
-    if (state.formMode === 'edit') {
-      var current = getRowById(state.formId);
-      if (current) {
-        current.name = draft.name;
-        current.group = draft.group;
-        current.standard = draft.standard;
-        current.dbType = draft.dbType;
-        current.ruleType = draft.ruleType;
-        current.catalog = draft.catalog;
-        current.schema = draft.schema;
-        current.creator = draft.creator || current.creator || '演示-测试';
-        current.desc = draft.desc || '';
-        current.sql = draft.sql;
-        current.params = draft.params;
-        current.modifiedAt = formatDateTime(new Date());
-      }
-    } else {
-      ruleRows.unshift(row('qr-' + Date.now(), draft.name, draft.standard, draft.dbType, draft.ruleType, draft.creator || '演示-测试', formatDateTime(new Date()), draft.group, draft.desc || '', {
-        catalog: draft.catalog,
-        schema: draft.schema,
-        sql: draft.sql,
-        params: draft.params
-      }));
-      state.page = 1;
-    }
+    var isNew = state.formMode !== 'edit';
+    var id = isNew ? 'qr-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7) : state.formId;
+    var result = versions.save('rules', id, snapshotRule(draft), {
+      revision: state.formRevision, summary: draft.changeSummary, mode: state.saveMode,
+      seed: isNew ? { id: id, creator: draft.creator || '演示-测试', modifiedAt: versions.now() } : null
+    });
+    if (result.error) return showToast(result.error);
+    var savedAsNew = !isNew && state.saveMode === 'new';
+    var savedMessage = result.unchanged ? '配置未变化，无需保存' : (isNew ? '已创建初始版本 ' : (savedAsNew ? '保存成功，已生成新版本 ' : '已保存当前版本 ')) + result.item.currentVersion + (savedAsNew ? '，并设为当前版本' : '');
+    ruleRows = versions.rows('rules');
+    if (isNew) state.page = 1;
     state.selectedIds = {};
     closeForm();
-    showToast('质量规则已保存');
+    showToast(savedMessage, savedAsNew ? 4000 : 1800);
   }
 
   function syncGutter() {
@@ -819,7 +824,9 @@ DP.pages.dataQualityRule = (function () {
     var id = actionEl.getAttribute('data-id') || '';
     if (state.view === 'form') captureFormDraft();
 
-    if (action === 'toggle-tree') {
+    if (action === 'versions') {
+      DP.qualityVersionPanel.open({ host: pageEl, kind: 'rules', id: id, toast: showToast, onClose: function () { ruleRows = versions.rows('rules'); renderAll(); } });
+    } else if (action === 'toggle-tree') {
       var key = actionEl.getAttribute('data-key') || '';
       state.treeOpen[key] = !state.treeOpen[key];
       var tree = pageEl.querySelector('[data-dqr-tree]');
@@ -910,6 +917,7 @@ DP.pages.dataQualityRule = (function () {
     pageEl.addEventListener('change', function (e) {
       if (e.target.matches('[data-dqr-filter]')) {
         state.filters[e.target.getAttribute('data-dqr-filter')] = e.target.value;
+        state.filters.keyword = pageEl.querySelector('#dqrKeywordInput').value.trim();
         state.page = 1;
         state.selectedIds = {};
         renderMain();
@@ -935,6 +943,12 @@ DP.pages.dataQualityRule = (function () {
         state.page = 1;
         state.selectedIds = {};
         renderMain();
+        return;
+      }
+      if (e.target.matches('[data-dqr-save-mode]')) {
+        state.saveMode = e.target.value;
+        var saveHint = pageEl.querySelector('[data-dqr-save-hint]');
+        if (saveHint) saveHint.textContent = DP.qualityVersionPanel.saveHint(state.formVersion, state.latestVersion, state.nextVersion, state.saveMode);
         return;
       }
       if (e.target.matches('[data-dqr-field]') && state.formDraft) {
@@ -1036,11 +1050,28 @@ DP.pages.dataQualityRule = (function () {
     '<section class="dqr-main-panel" data-dqr-main></section>' +
   '</div>';
 
+  function snapshotRule(item) {
+    var config = {};
+    ['name', 'standard', 'dbType', 'ruleType', 'group', 'desc', 'catalog', 'schema', 'sql', 'params'].forEach(function (key) { config[key] = versions.clone(item[key]); });
+    config.groupPath = getTreePath(item.group);
+    return config;
+  }
+
+  ruleRows = versions.register('rules', ruleRows, {
+    snapshot: snapshotRule,
+    apply: function (item, config) { Object.keys(config).forEach(function (key) { item[key] = config[key]; }); }
+  });
+  versions.mergeSamples('rules', DP.qualityVersionExamples.rules());
+  ruleRows = versions.rows('rules');
+
   return {
+    getRules: function () { ruleRows = versions.rows('rules'); return versions.clone(ruleRows); },
+    getRuleTree: function () { return versions.clone(ruleTree); },
     html: html,
     init: function () {
       pageEl = document.querySelector('.page-data-quality-rule');
       if (!pageEl) return;
+      ruleRows = versions.rows('rules');
       resetState();
       bindEvents();
       renderAll();

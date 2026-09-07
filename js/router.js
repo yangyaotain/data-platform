@@ -50,6 +50,21 @@ DP.showPage = function (menuKey, opts) {
   } else if (menuKey === 'project-mgr') {
     c.innerHTML = DP.pages.projectMgr.html;
     DP.pages.projectMgr.init();
+  } else if (menuKey === 'my-ticket' || menuKey === '我的工单') {
+    c.innerHTML = DP.pages.myTicket.html;
+    DP.pages.myTicket.init();
+  } else if (menuKey === 'doc-mgr' || menuKey === '文档管理') {
+    c.innerHTML = DP.pages.documentManagement.html;
+    DP.pages.documentManagement.init();
+  } else if (menuKey === 'console-operation-log') {
+    c.innerHTML = DP.pages.operationLog.html;
+    DP.pages.operationLog.init();
+  } else if (menuKey === 'console-sql-audit-log') {
+    c.innerHTML = DP.pages.sqlAuditLog.html;
+    DP.pages.sqlAuditLog.init();
+  } else if (menuKey === 'monitor-items' || menuKey === '监控事项') {
+    c.innerHTML = DP.pages.monitorItems.html;
+    DP.pages.monitorItems.init();
   } else if (menuKey === '数据开发') {
     c.innerHTML = DP.pages.dataDevelop.html;
     DP.pages.dataDevelop.init(opts || {});
@@ -86,6 +101,9 @@ DP.showPage = function (menuKey, opts) {
       section: 'report',
       configKeyword: opts && opts.configKeyword
     });
+  } else if (menuKey === 'quality-report-send' || menuKey === '报告发送') {
+    c.innerHTML = DP.pages.qualityReportSend.html;
+    DP.pages.qualityReportSend.init(opts || {});
   } else if (menuKey === 'quality-inspect-schedule' || menuKey === '任务调度') {
     c.innerHTML = DP.pages.qualityInspectReport.html;
     DP.pages.qualityInspectReport.init({

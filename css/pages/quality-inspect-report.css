@@ -1000,12 +1000,6 @@
   justify-content: flex-end;
 }
 
-.qir-schedule-record-query .qir-schedule-date-input {
-  width: 150px;
-  flex: 0 0 150px;
-  border-radius: 0;
-}
-
 .qir-schedule-record-query .qir-query-select {
   width: 118px;
   flex: 0 0 118px;

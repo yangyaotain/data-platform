@@ -1,0 +1,58 @@
+/* 数据质量两页共用版本组件，沿用项目按钮、表格和字号。 */
+.qv-host { position: relative; }
+.qv-save-options { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; min-height: 34px; }
+.qv-save-option { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; font-size: 13px; color: var(--text-primary); }
+.qv-save-options .qv-save-option span { color: var(--text-primary); margin: 0; }
+.qv-save-options .qv-save-option input[type="radio"] { width: 16px; height: 16px; min-height: 0; margin: 0; padding: 0; flex: 0 0 16px; accent-color: var(--primary); cursor: pointer; }
+.qv-save-options input[type="radio"]:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.qv-panel { position: absolute; inset: 12px; z-index: 30; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #fff; border: 1px solid #e4e8ee; color: var(--text-primary); font-size: 13px; }
+.qv-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid #e4e8ee; flex-shrink: 0; }
+.qv-head h2 { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; }
+.qv-head h2 i { color: var(--primary); }
+.qv-head p { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 8px; color: var(--text-secondary); overflow-wrap: anywhere; }
+.qv-body { flex: 1; min-height: 0; overflow: auto; padding: 16px 20px; }
+.qv-badge { display: inline-block; padding: 3px 8px; background: #f2f4f7; color: #667085; font-size: 12px; border-radius: 4px; white-space: nowrap; }
+.qv-badge.current { color: var(--primary); background: var(--primary-light); }
+.qv-toolbar { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+.qv-toolbar label, .qv-query { display: flex; align-items: center; gap: 8px; }
+.qv-toolbar select, .qv-toolbar input { height: 34px; padding: 0 10px; border: 1px solid #d9dfe6; border-radius: 3px; font: inherit; background: #fff; color: inherit; }
+.qv-toolbar input { width: 245px; }
+.qv-panel input:focus, .qv-panel textarea:focus, .qv-panel select:focus { outline: 1px solid var(--primary); }
+.qv-table-scroll { overflow-x: auto; }
+.qv-history-table { width: 100%; min-width: 850px; }
+.qv-history-table th, .qv-history-table td { font-size: 13px; padding: 12px; }
+.qv-history-table th { white-space: nowrap; }
+.qv-history-table td { white-space: nowrap; }
+.qv-history-table .qv-summary-cell { white-space: normal; min-width: 200px; max-width: 420px; overflow-wrap: anywhere; }
+.qv-actions { display: flex; gap: 8px; }
+.qv-panel .btn { font-family: inherit; font-size: 13px; white-space: nowrap; }
+.qv-panel .btn:disabled { opacity: .45; cursor: not-allowed; }
+.qv-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; color: var(--text-secondary); }
+.qv-footer > div { display: flex; gap: 8px; }
+.qv-empty { padding: 36px !important; text-align: center; color: var(--text-light); }
+.qv-section { margin: 0 0 20px; }
+.qv-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+.qv-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; border: 1px solid #e4e8ee; border-radius: 4px; padding: 6px 16px; background: #fafbfc; }
+.qv-fields > div { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 12px; padding: 10px 0; line-height: 1.6; }
+.qv-fields dt { color: var(--text-secondary); }
+.qv-fields dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.qv-sql { margin: 0; padding: 16px; border: 1px solid #d9dfe6; border-radius: 4px; background: #f8fafc; overflow: auto; line-height: 1.7; font-family: Consolas, 'Microsoft YaHei', monospace; font-size: 13px; max-height: 400px; }
+.qv-detail-table { width: 100%; min-width: 600px; }
+.qv-detail-table td { white-space: normal; overflow-wrap: anywhere; }
+.qv-reference { border: 1px solid #e4e8ee; border-radius: 4px; padding: 12px 16px; margin-bottom: 16px; }
+.qv-reference summary { color: var(--primary); cursor: pointer; line-height: 1.7; overflow-wrap: anywhere; }
+.qv-reference[open] > summary { margin-bottom: 16px; }
+.qv-modal-mask { position: absolute; inset: 0; z-index: 10; background: rgba(15,23,42,.35); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.qv-modal { width: 640px; max-width: 100%; max-height: 100%; overflow: auto; background: #fff; border-radius: 6px; box-shadow: 0 12px 40px rgba(15,23,42,.18); }
+.qv-modal header, .qv-modal footer { padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 1px solid #e4e8ee; }
+.qv-modal h3 { font-size: 17px; }
+.qv-modal footer { justify-content: flex-end; border-bottom: 0; border-top: 1px solid #e4e8ee; }
+.qv-modal footer button:first-child { background: var(--primary); color: #fff; border-color: var(--primary); }
+.qv-modal-body { padding: 20px; }
+.qv-modal .qv-fields { grid-template-columns: 1fr; }
+.qv-note { background: var(--primary-light); padding: 12px; border-radius: 4px; line-height: 1.7; font-size: 14px; margin: 0 0 16px; }
+.qv-reason { display: block; }
+.qv-reason em { color: #e5484d; font-style: normal; }
+.qv-reason textarea { display: block; margin-top: 8px; width: 100%; min-height: 90px; resize: vertical; padding: 10px; font: inherit; border: 1px solid #d9dfe6; border-radius: 3px; }
+.qv-error { color: #d92d20; font-size: 13px; line-height: 1.6; margin-top: 8px; }
+@media (max-width: 1100px) { .qv-fields { grid-template-columns: 1fr; } .qv-head { padding: 12px; } .qv-body { padding: 12px; } }

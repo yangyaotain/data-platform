@@ -10,6 +10,7 @@
   background: #fff;
   color: #2f3f53;
 }
+.sr-empty { padding: 28px 12px; text-align: center; color: var(--text-light); }
 
 .sr-filter-bar {
   min-height: 58px;
@@ -43,8 +44,7 @@
   width: 340px;
 }
 
-.sr-source-trigger,
-.sr-date-input {
+.sr-source-trigger {
   height: 42px;
   border: 1px solid #dfe5ed;
   background: #fff;
@@ -79,16 +79,9 @@
 }
 
 .sr-source-picker.open .sr-source-trigger,
-.sr-source-trigger:focus,
-.sr-date-input:focus {
+.sr-source-trigger:focus {
   border-color: #5c9dff;
   box-shadow: 0 0 0 2px rgba(0, 120, 255, 0.12);
-  outline: none;
-}
-
-.sr-date-input {
-  width: 342px;
-  padding: 0 10px;
   outline: none;
 }
 
