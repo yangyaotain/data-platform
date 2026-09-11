@@ -79,7 +79,9 @@
 .nav-divider { width: 0; height: 0; background: transparent; margin: 0 32px; flex-shrink: 0; }
 
 /* 导航菜单 */
-.main-nav { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; }
+.main-nav { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.35) transparent; }
+.main-nav .nav-item { flex-shrink: 0; }
+.requirements-entry { gap: 5px; }
 .nav-item {
   display: flex; align-items: center;
   height: 34px; padding: 0 14px;

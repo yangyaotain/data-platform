@@ -19,6 +19,7 @@ DP.navNames = {
   datamap: '数据地图',
   panorama: '全景视图',
   help: '帮助文档',
+  requirements: '需求说明',
 };
 
 // 菜单组与顶部导航的映射
@@ -35,6 +36,7 @@ DP.menuGroupMap = {
   datamap: 'menuDatamap',
   panorama: 'menuPanorama',
   help: 'menuHelp',
+  requirements: 'menuRequirements',
 };
 
 // 菜单组附带的额外组件（如项目选择器）

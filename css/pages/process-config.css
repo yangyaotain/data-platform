@@ -1,0 +1,47 @@
+/* 控制台 / 流程配置：复用公共表格、输入控件和项目审批开关。 */
+.page-process-config { height: calc(100% - 20px); min-height: 360px; min-width: 0; margin: 10px; padding: 16px 16px 0; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--sidebar-border); border-radius: 4px; background: #fff; color: var(--text-secondary); font-size: 13px; }
+.page-process-config button, .page-process-config input { font-family: inherit; }
+.page-process-config button:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.pc-table-wrap { flex: 1; min-height: 0; min-width: 0; overflow: auto; border: 1px solid var(--sidebar-border); }
+.pc-table.ds-table { width: 100%; min-width: 1020px; table-layout: fixed; }
+.pc-table.ds-table th { position: sticky; top: 0; z-index: 2; height: 42px; padding: 10px 16px; background: #f7f9fc; color: var(--text-primary); border-bottom: 1px solid var(--sidebar-border); font-size: 13px; font-weight: 500; text-align: left; }
+.pc-table.ds-table td { height: 52px; padding: 9px 16px; border-bottom: 1px solid #edf0f4; font-size: 13px; vertical-align: middle; }
+.pc-table.ds-table tbody tr:nth-child(even) { background: #fff; }
+.pc-table.ds-table tbody tr:hover { background: var(--sidebar-hover); }
+.pc-table.ds-table tbody tr.pc-module-row { background: #fafbfd; }
+.pc-table.ds-table tbody tr.pc-module-row:hover { background: var(--sidebar-hover); }
+.pc-table.ds-table tbody tr.pc-group-row td { height: 44px; padding-top: 5px; padding-bottom: 5px; }
+.pc-table.ds-table tbody tr:last-child td { border-bottom: 0; }
+.pc-group { display: flex; align-items: center; gap: 9px; width: 100%; min-width: 0; min-height: 32px; padding: 0 0 0 calc(var(--pc-depth, 0) * 20px); border: 0; background: transparent; color: var(--text-secondary); font: inherit; text-align: left; cursor: pointer; }
+.pc-group > i { flex-shrink: 0; color: #8096b1; font-size: 12px; }
+.pc-module-row .pc-group { color: var(--text-primary); font-weight: 500; }
+.pc-group > span { overflow-wrap: anywhere; }
+.pc-feature-name { display: block; padding-left: calc(21px + var(--pc-depth, 0) * 20px); line-height: 1.6; overflow-wrap: anywhere; }
+.pc-switch.pm-switch { display: block; margin: 0; }
+.pc-switch input:focus-visible + .pm-switch-slider { outline: 2px solid var(--primary); outline-offset: 3px; }
+.pc-select.lm-control { display: flex; align-items: center; gap: 7px; width: 100%; height: 32px; text-align: left; font-size: 13px; cursor: pointer; }
+.pc-select > span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pc-select > i { flex-shrink: 0; font-size: 12px; color: #8096b1; }
+.pc-select:hover, .pc-select[aria-expanded="true"] { border-color: var(--primary); }
+.pc-select.is-placeholder { color: var(--text-light); }
+.pc-select.is-missing { border-color: #ffa39e; color: #cf1322; }
+.pc-description { color: var(--text-light); line-height: 1.6; overflow-wrap: anywhere; }
+.pc-description.is-missing { color: #cf1322; }
+.pc-notice { padding: 10px 0; min-height: 38px; max-height: 88px; overflow: auto; flex-shrink: 0; color: var(--primary); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.pc-notice.is-error { color: #cf1322; }
+.pc-picker { position: fixed; display: flex; flex-direction: column; z-index: 2200; padding-top: 10px; border: 1px solid #d9dfe7; border-radius: 4px; box-shadow: 0 6px 20px rgba(30,50,80,.14); background: #fff; color: var(--text-secondary); }
+.pc-picker-search { position: relative; margin: 0 10px 8px; flex-shrink: 0; }
+.pc-picker-search > .lm-control { width: 100%; padding-left: 29px; font-size: 13px; }
+.pc-picker-search > i { position: absolute; top: 8px; left: 10px; color: var(--text-light); font-size: 12px; pointer-events: none; }
+.pc-options { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 6px; }
+.pc-choice-tree, .pc-choice-tree ul { list-style: none; padding: 0; margin: 0; }
+.pc-choice-group, .pc-choice { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 34px; padding: 7px 12px 7px calc(12px + var(--pc-depth, 0) * 16px); background: transparent; border: 0; color: inherit; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.pc-choice-group > i, .pc-choice > i { flex-shrink: 0; font-size: 12px; color: #8096b1; }
+.pc-choice-group > span, .pc-choice > span { flex: 1; overflow-wrap: anywhere; min-width: 0; }
+.pc-choice-group > small { color: var(--text-light); font-size: 12px; padding-right: 2px; }
+.pc-choice-group:hover, .pc-choice:hover { background: var(--sidebar-hover); }
+.pc-choice.selected { background: var(--primary-light); color: var(--primary); }
+.pc-choice.selected > i { color: var(--primary); }
+.pc-picker-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 36px 18px; color: var(--text-light); text-align: center; font-size: 13px; line-height: 1.7; }
+.pc-picker-empty > i { font-size: 24px; color: #a7b7c8; }
+@media (max-width: 1100px) { .page-process-config { padding: 12px 12px 0; } }

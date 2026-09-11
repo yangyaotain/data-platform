@@ -1,0 +1,15 @@
+/* 监控项说明沿用公共导航与主题，以简短业务说明呈现。 */
+#menuRequirements .menu-link { font-size: 13px; gap: 8px; padding: 0 10px; }
+#menuRequirements .sub-menu a { font-size: 13px; }
+.page-requirements { padding: 16px; color: var(--text-secondary); font-size: 13px; line-height: 1.8; }
+.rd-document { max-width: 1180px; margin: 0 auto; padding: 24px 32px 32px; background: #fff; border: 1px solid var(--sidebar-border); border-radius: 4px; }
+.rd-document > h1 { margin: 0 0 12px; color: var(--text-primary); font-size: 22px; font-weight: 600; line-height: 1.5; }
+.rd-document p { margin: 0 0 4px; overflow-wrap: anywhere; }
+.rd-document strong { color: var(--text-primary); font-weight: 500; }
+.rd-section { margin-top: 24px; }
+.rd-section h2 { margin: 0 0 8px; color: var(--text-primary); font-size: 16px; font-weight: 600; line-height: 1.6; }
+.rd-subtitle { color: var(--text-primary); font-weight: 500; }
+.rd-rules { margin-bottom: 8px; }
+.rd-section .rd-message { margin-top: 6px; }
+@media (max-width: 1100px) { .rd-document { padding: 24px; } }
+@media (max-width: 800px) { .page-requirements { padding: 10px; } .rd-document { padding: 18px; } }

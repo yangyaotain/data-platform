@@ -12,6 +12,7 @@ window.DP = window.DP || {};
 DP.showPage = function (menuKey, opts) {
   var c = DP.contentArea;
   if (!c) return;
+  if (DP.pages.requirements) DP.pages.requirements.destroy();
 
   document.body.classList.toggle('datamap-standalone', menuKey === 'datamap-home' || menuKey === '数据地图');
   if (DP.setProjectSelectorMode) {
@@ -21,6 +22,27 @@ DP.showPage = function (menuKey, opts) {
   if (menuKey === 'datasource') {
     c.innerHTML = DP.pages.datasource.html;
     DP.pages.datasource.init();
+  } else if (menuKey === 'business-layer' || menuKey === 'biz-category' || menuKey === '业务分层' || menuKey === '业务分类') {
+    c.innerHTML = DP.pages.businessLayer.html;
+    DP.pages.businessLayer.init();
+  } else if (menuKey === 'big-data-account' || menuKey === '大数据账号') {
+    c.innerHTML = DP.pages.bigDataService.html;
+    DP.pages.bigDataService.init('account');
+  } else if (menuKey === 'big-data-cluster' || menuKey === '集群配置') {
+    c.innerHTML = DP.pages.bigDataService.html;
+    DP.pages.bigDataService.init('cluster');
+  } else if (menuKey === 'data-modeling-plan' || menuKey === '数仓规划') {
+    c.innerHTML = DP.pages.dataModeling.html;
+    DP.pages.dataModeling.init('plan', opts);
+  } else if (menuKey === 'data-modeling-model') {
+    c.innerHTML = DP.pages.dataModeling.html;
+    DP.pages.dataModeling.init('model', opts);
+  } else if (menuKey === 'data-modeling-materialization' || menuKey === '物化管理') {
+    c.innerHTML = DP.pages.dataModeling.html;
+    DP.pages.dataModeling.init('material', opts);
+  } else if (menuKey === 'data-modeling-reverse' || menuKey === '逆向建模') {
+    c.innerHTML = DP.pages.dataModeling.html;
+    DP.pages.dataModeling.init('reverse', opts);
   } else if (menuKey === 'datamap-home' || menuKey === '数据地图') {
     c.innerHTML = DP.pages.dataMapHome.html;
     DP.pages.dataMapHome.init();
@@ -56,15 +78,33 @@ DP.showPage = function (menuKey, opts) {
   } else if (menuKey === 'doc-mgr' || menuKey === '文档管理') {
     c.innerHTML = DP.pages.documentManagement.html;
     DP.pages.documentManagement.init();
+  } else if (menuKey === 'flow-mgr' || menuKey === '流程管理') {
+    c.innerHTML = DP.pages.processManagement.html;
+    DP.pages.processManagement.init();
+  } else if (menuKey === 'flow-config' || menuKey === '流程配置') {
+    c.innerHTML = DP.pages.processConfig.html;
+    DP.pages.processConfig.init();
   } else if (menuKey === 'console-operation-log') {
     c.innerHTML = DP.pages.operationLog.html;
     DP.pages.operationLog.init();
   } else if (menuKey === 'console-sql-audit-log') {
     c.innerHTML = DP.pages.sqlAuditLog.html;
     DP.pages.sqlAuditLog.init();
+  } else if (typeof menuKey === 'string' && menuKey.indexOf('requirements-') === 0) {
+    c.innerHTML = DP.pages.requirements.html;
+    DP.pages.requirements.init(menuKey.slice('requirements-'.length));
   } else if (menuKey === 'monitor-items' || menuKey === '监控事项') {
     c.innerHTML = DP.pages.monitorItems.html;
     DP.pages.monitorItems.init();
+  } else if (menuKey === 'notification-rules' || menuKey === '通知规则') {
+    c.innerHTML = DP.pages.notificationRules.html;
+    DP.pages.notificationRules.init();
+  } else if (menuKey === 'notification-center' || menuKey === '通知中心') {
+    c.innerHTML = DP.pages.notificationCenter.html;
+    DP.pages.notificationCenter.init();
+  } else if (menuKey === 'monitor-center' || menuKey === '监控中心') {
+    c.innerHTML = DP.pages.monitorCenter.html;
+    DP.pages.monitorCenter.init();
   } else if (menuKey === '数据开发') {
     c.innerHTML = DP.pages.dataDevelop.html;
     DP.pages.dataDevelop.init(opts || {});
@@ -138,6 +178,7 @@ DP.showPage = function (menuKey, opts) {
 DP.showPlaceholder = function (title) {
   var c = DP.contentArea;
   if (!c) return;
+  if (DP.pages.requirements) DP.pages.requirements.destroy();
   c.innerHTML =
     '<div class="content-placeholder">' +
       '<div class="placeholder-icon"><i class="bi bi-easel"></i></div>' +

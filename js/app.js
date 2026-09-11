@@ -170,6 +170,9 @@ document.addEventListener('DOMContentLoaded', function () {
     item.addEventListener('click', function () {
       var page = item.dataset.page;
 
+      // 原生链接在新标签页打开需求说明，当前页保留表单与导航状态。
+      if (page === 'requirements') return;
+
       if (page === 'datamap') {
         var baseUrl = location.href.replace(/#.*$/, '');
         var params = new URLSearchParams();

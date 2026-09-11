@@ -75,6 +75,14 @@
 .mi-type-option > span { overflow-wrap: anywhere; }
 .mi-type-option:hover, .mi-type-option.is-active { color: var(--primary); background: var(--sidebar-hover); }
 .mi-option-empty { padding: 12px 8px; text-align: center; color: var(--text-light); }
+.mi-multi-option { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 3px; cursor: pointer; line-height: 20px; }
+.mi-multi-option:hover { background: var(--sidebar-hover); color: var(--primary); }
+.mi-multi-option input { flex: none; }
+.mi-multi-option span { min-width: 0; overflow-wrap: anywhere; }
+.mi-number-unit { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; min-width: 0; }
+.mi-number-unit > input, .mi-number-unit > .mi-range-value { flex: 1 1 130px; width: 130px; min-width: 0; }
+.mi-number-unit > .mi-range-value { flex-basis: 190px; }
+.mi-number-unit > select { flex: 0 1 106px; width: 106px; }
 .mi-rules-field > .mi-control { width: min(var(--mi-wide-width), 100%); }
 .mi-rules-field > .mi-label { padding-top: 19px; }
 #miRules { --mi-branch-color: #8dbdff; min-width: 0; }
@@ -97,6 +105,8 @@
 /* 同组各行使用相同列宽，子组随边框缩进，不强制跨层级拉齐。 */
 .mi-rule-row { display: grid; grid-template-columns: minmax(140px, 1fr) 120px 10px minmax(160px, 1.4fr) 184px; align-items: center; column-gap: 10px; min-height: 32px; min-width: 0; }
 .mi-rule-row > select { width: 100%; }
+.mi-fixed-operator { display: flex; align-items: center; justify-content: center; min-height: 32px; padding: 5px 6px; border: 1px solid #dcdfe6; border-radius: 4px; background: #f7f8fa; line-height: 20px; }
+.mi-rule-hint { grid-column: 1 / -1; padding-top: 4px; color: var(--text-light); font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
 .mi-rule-row > .mi-type-picker { width: 100%; min-width: 0; }
 .mi-rule-branch:has(.mi-type-picker[open]), .mi-rule-group:has(.mi-type-picker[open]) { z-index: 10; }
 .mi-rule-frame:has(.mi-type-picker[open]) { position: relative; z-index: 10; }
@@ -112,6 +122,8 @@
 .mi-periodic-value > select, .mi-periodic-value > .mi-type-picker { flex: 1 1 90px; min-width: 90px; }
 .mi-periodic-value > input[type="number"] { flex: 1 1 66px; width: 66px; max-width: 110px; }
 .mi-periodic-value > input[type="time"] { flex: 1 1 146px; width: 146px; max-width: 100%; }
+.mi-access-window { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; min-width: 0; }
+.mi-access-window > input[type="time"] { flex: 1 1 126px; width: 126px; max-width: 100%; }
 .mi-db-picker .mi-type-pop { min-width: 260px; }
 .mi-db-folder > summary { border: 0; padding: 6px 4px; height: 30px; justify-content: flex-start; font-size: 13px; }
 .mi-db-folder > summary > span { flex: 1; }
@@ -125,7 +137,8 @@
 .mi-rule-actions .mi-link:hover { background: #e8f5ef; }
 .mi-rule-actions .mi-danger:hover { background: #fff0ef; }
 .mi-rule-actions i { font-size: 14px; }
-.mi-rule-add { margin-top: 12px; }
+.mi-rule-add { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.mi-form-note { color: var(--text-light); font-size: 12px; line-height: 20px; }
 .mi-rule-remove-group { min-height: 28px; }
 .mi-message-controls { display: flex; flex-direction: column; gap: 10px; }
 .mi-message-controls > select, .mi-message-controls > .mi-type-picker { width: min(var(--mi-control-width), 100%); }
