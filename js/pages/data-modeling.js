@@ -33,6 +33,21 @@ DP.pages.dataModeling = (function () {
   var tableTypeByPlanType = { BDS: '业务表', ODS: '贴源表', DIM: '维度表', DWD: '明细表', DWS: '汇总表', ADS: '应用表', DOP: '输出表', OTHER: '其他表' };
   var updateTypes = ['按小时全量（hf）', '按小时增量（hi）', '按天全量（df）', '按天增量（di）', '按周全量（wf）', '按周增量（wi）', '按月全量（mf）', '按月增量（mi）'];
   var domains = ['交易域', '客户域', '供应链域', '财务域'];
+  var reverseTableSubtypes = {
+    '维度表': ['普通维度表', '枚举维度表', '层级维度表']
+  };
+  var reverseSourceTree = [
+    { id: 'quality', name: '数据质量-报告', children: [
+      { name: 'StarRocks分析库', code: 'quality_starrocks', type: 'StarRocks' },
+      { name: 'MySQL质量报告库', code: 'quality_mysql', type: 'MySQL' }
+    ] },
+    { id: 'business', name: '业务系统', children: [
+      { name: '订单交易库', code: 'trade_mysql', type: 'MySQL' },
+      { name: '会员运营库', code: 'member_postgresql', type: 'PostgreSQL' },
+      { name: '供应链业务库', code: 'scm_mysql8', type: 'MySQL8' },
+      { name: '客户服务库', code: 'service_sqlserver', type: 'SqlServer' }
+    ] }
+  ];
   var materialSourceTree = [
     { id: 'business', name: '业务系统', children: [
       { name: '订单交易库', code: 'trade_mysql', type: 'MySQL' },
@@ -170,9 +185,9 @@ DP.pages.dataModeling = (function () {
         { id: 'MR005', source: 'DWD明细库', project: '供应链分析项目', environment: '开发', mode: '全量发布', status: '执行成功', total: 2, success: 2, failed: 0, remark: '库存主题模型首次发布', time: '2026-09-07 17:45:39' }
       ],
       reverseJobs: [
-        { id: 'J001', name: '订单交易模型逆向同步', status: '运行中', source: '订单交易库', layer: '业务库层/订单交易系统', tableType: '业务表', domain: '交易域', executeType: '增量更新', matchLogic: '不区分大小写', rule: '业务表同名匹配', frequency: '每天 02:30:00', operator: '陈嘉', updatedAt: '2026-09-08 09:14:36', runs: 18, success: 86, failed: 0 },
-        { id: 'J002', name: '客户主题模型逆向同步', status: '已停止', source: '会员运营库', layer: '业务库层/会员运营系统', tableType: '业务表', domain: '客户域', executeType: '全量覆盖', matchLogic: '不区分大小写', rule: '业务表同名匹配', frequency: '每周 周一 03:00:00', operator: '林晨', updatedAt: '2026-09-07 16:29:58', runs: 6, success: 32, failed: 1 },
-        { id: 'J003', name: '供应链模型逆向同步', status: '运行中', source: '供应链业务库', layer: '业务库层/供应链协同系统', tableType: '业务表', domain: '供应链域', executeType: '增量更新', matchLogic: '区分大小写', rule: '业务表同名匹配', frequency: '每天 04:10:00', operator: '周宁', updatedAt: '2026-09-08 08:50:12', runs: 12, success: 54, failed: 0 }
+        { id: 'J001', name: '订单交易模型逆向同步', status: '运行中', source: '订单交易库', layer: '业务库层/订单交易系统', tableType: '业务表', tableSubtype: '', domain: '交易域', executeType: '增量更新', matchLogic: '不区分大小写', rules: ['custom'], rule: '自定义(系统规则)', frequency: '每天 02:30:00', operator: '陈嘉', updatedAt: '2026-09-08 09:14:36', runs: 18, success: 86, failed: 0 },
+        { id: 'J002', name: '客户主题模型逆向同步', status: '已停止', source: '会员运营库', layer: '业务库层/会员运营系统', tableType: '业务表', tableSubtype: '', domain: '客户域', executeType: '全量覆盖', matchLogic: '不区分大小写', rules: ['custom'], rule: '自定义(系统规则)', frequency: '每周 周一 03:00:00', operator: '林晨', updatedAt: '2026-09-07 16:29:58', runs: 6, success: 32, failed: 1 },
+        { id: 'J003', name: '供应链模型逆向同步', status: '运行中', source: '供应链业务库', layer: '业务库层/供应链协同系统', tableType: '业务表', tableSubtype: '', domain: '供应链域', executeType: '增量更新', matchLogic: '区分大小写', rules: ['custom'], rule: '自定义(系统规则)', frequency: '每天 04:10:00', operator: '周宁', updatedAt: '2026-09-08 08:50:12', runs: 12, success: 54, failed: 0 }
       ],
       pendingMaterialIds: []
     };
@@ -604,6 +619,64 @@ DP.pages.dataModeling = (function () {
   }
   function renderMaterial() { return state.materialLogModelId ? renderMaterialLog() : state.materialDetailId ? renderMaterialDetail() : state.materialForm ? renderMaterialForm() : renderMaterialList(); }
 
+  function reverseRuleOptions() {
+    return [{ id: 'custom', name: '自定义(系统规则)', template: '${自定义}' }].concat(store.rules.filter(function (rule) { return rule.enabled; }).map(function (rule) {
+      return { id: rule.id, name: rule.name, template: rule.template };
+    }));
+  }
+  function reverseRuleById(id) { return findById(reverseRuleOptions(), id); }
+  function renderReverseSourceTree() {
+    var keyword = String(state.reverseSourceKeyword || '').trim().toLowerCase();
+    var groups = reverseSourceTree.map(function (group) {
+      var groupMatched = !keyword || group.name.toLowerCase().indexOf(keyword) >= 0;
+      var children = group.children.filter(function (source) { return groupMatched || (source.name + ' ' + source.code + ' ' + source.type).toLowerCase().indexOf(keyword) >= 0; });
+      if (!children.length) return '';
+      return '<details class="dm-material-source-group" open><summary><i class="bi bi-chevron-right"></i><i class="bi bi-folder2"></i><span>' + esc(group.name) + '</span><small>' + children.length + '</small></summary><div class="dm-material-source-children">' + children.map(function (source) {
+        return '<button type="button" class="dm-material-source-option' + (state.modal.draft.source === source.name ? ' active' : '') + '" data-dm-action="select-reverse-source" data-value="' + esc(source.name) + '"><i class="bi bi-database"></i><span><strong>' + esc(source.name) + '</strong><small>' + esc(source.code + ' · ' + source.type) + '</small></span></button>';
+      }).join('') + '</div></details>';
+    }).join('');
+    return groups || '<div class="dm-model-plan-empty"><i class="bi bi-search"></i><span>没有匹配的数据源</span></div>';
+  }
+  function renderReverseSourcePicker(draft) {
+    return '<div class="dm-reverse-picker"><button type="button" class="dm-model-plan-trigger" data-dm-action="toggle-reverse-source" aria-expanded="' + state.reverseSourceOpen + '"><span>' + esc(draft.source || '请选择数据源') + '</span><i class="bi bi-chevron-down"></i></button>' + (state.reverseSourceOpen ? '<div class="dm-reverse-picker-panel"><div class="dm-model-plan-search"><i class="bi bi-search"></i><input type="search" data-dm-reverse-source-keyword value="' + esc(state.reverseSourceKeyword) + '" placeholder="搜索数据源名称、编码或类型"></div><div class="dm-material-source-tree" data-dm-reverse-source-tree>' + renderReverseSourceTree() + '</div></div>' : '') + '</div>';
+  }
+  function renderReversePlanTree() {
+    var keyword = String(state.reversePlanKeyword || '').trim().toLowerCase();
+    var groups = groupMeta.map(function (group) {
+      var groupMatched = !keyword || (group.name + ' ' + group.id).toLowerCase().indexOf(keyword) >= 0;
+      var plans = store.plans.filter(function (plan) { return plan.group === group.id && (groupMatched || [plan.name, plan.englishName, plan.code, plan.modelType].join(' ').toLowerCase().indexOf(keyword) >= 0); });
+      if (!plans.length) return '';
+      return '<div class="dm-model-plan-group"><div class="dm-model-plan-group-title"><i class="bi bi-folder2-open"></i><span>' + esc(group.name) + '</span><small>' + plans.length + '</small></div><div class="dm-model-plan-children">' + plans.map(function (plan) {
+        return '<button type="button" class="dm-model-plan-option' + (state.modal.draft.planId === plan.id ? ' active' : '') + '" data-dm-action="select-reverse-plan" data-id="' + plan.id + '"><i class="bi bi-diagram-2"></i><span><strong>' + esc(plan.name) + '</strong><small>' + esc(plan.code) + '</small></span><em>' + esc(plan.modelType) + '</em></button>';
+      }).join('') + '</div></div>';
+    }).join('');
+    return groups || '<div class="dm-model-plan-empty"><i class="bi bi-search"></i><span>未找到匹配的数仓分层</span></div>';
+  }
+  function renderReversePlanPicker(draft) {
+    return '<div class="dm-reverse-picker"><button type="button" class="dm-model-plan-trigger" data-dm-action="toggle-reverse-plan" aria-expanded="' + state.reversePlanOpen + '"><span>' + esc(draft.layer || '请选择') + '</span><i class="bi bi-chevron-down"></i></button>' + (state.reversePlanOpen ? '<div class="dm-reverse-picker-panel"><div class="dm-model-plan-search"><i class="bi bi-search"></i><input type="search" data-dm-reverse-plan-keyword value="' + esc(state.reversePlanKeyword) + '" placeholder="搜索分层名称或编码"></div><div class="dm-model-plan-tree" data-dm-reverse-plan-tree>' + renderReversePlanTree() + '</div></div>' : '') + '</div>';
+  }
+  function renderReverseDomainPicker(draft) {
+    var keyword = String(state.reverseDomainKeyword || '').trim().toLowerCase();
+    var values = domains.filter(function (domain) { return !keyword || domain.toLowerCase().indexOf(keyword) >= 0; });
+    return '<div class="dm-reverse-picker"><button type="button" class="dm-model-plan-trigger" data-dm-action="toggle-reverse-domain" aria-expanded="' + state.reverseDomainOpen + '"><span>' + esc(draft.domain || '请选择') + '</span><i class="bi bi-chevron-down"></i></button>' + (state.reverseDomainOpen ? '<div class="dm-reverse-picker-panel compact"><div class="dm-model-plan-search"><i class="bi bi-search"></i><input type="search" data-dm-reverse-domain-keyword value="' + esc(state.reverseDomainKeyword) + '" placeholder="搜索数据域"></div><div class="dm-reverse-domain-tree">' + (values.length ? values.map(function (domain) { return '<button type="button" class="dm-reverse-domain-option' + (draft.domain === domain ? ' active' : '') + '" data-dm-action="select-reverse-domain" data-value="' + esc(domain) + '"><i class="bi bi-diagram-3"></i><span>' + esc(domain) + '</span></button>'; }).join('') : '<div class="dm-model-plan-empty"><i class="bi bi-search"></i><span>未找到匹配的数据域</span></div>') + '</div></div>' : '') + '</div>';
+  }
+  function renderReverseRuleRows(draft) {
+    var options = reverseRuleOptions();
+    return (draft.rules || ['']).map(function (ruleId, index) {
+      var rule = reverseRuleById(ruleId);
+      return '<div class="dm-reverse-rule-row"><select class="dm-control" data-dm-reverse-rule="' + index + '">' + option('', '请选择规则', ruleId) + options.map(function (item) { return option(item.id, item.name, ruleId); }).join('') + '</select><input class="dm-control" type="text" value="' + esc(rule ? rule.template : '') + '" placeholder="选择规则后展示模板" disabled><button type="button" class="dm-rule-icon" data-dm-action="remove-reverse-rule" data-index="' + index + '" aria-label="删除匹配规则"' + ((draft.rules || []).length === 1 ? ' disabled' : '') + '><i class="bi bi-dash-circle"></i></button></div>';
+    }).join('') + '<button type="button" class="dm-rule-add" data-dm-action="add-reverse-rule"><i class="bi bi-plus-circle"></i><span>添加规则</span></button>';
+  }
+  function renderReverseFrequency(draft) {
+    var type = draft.rateType || '每周';
+    var extra = '';
+    if (type === '每周') extra = selectDraft('modal', 'rateDay', draft.rateDay || '周一', ['周一', '周二', '周三', '周四', '周五', '周六', '周日'], '请选择星期');
+    else if (type === '每月') extra = selectDraft('modal', 'rateDay', draft.rateDay || '1日', Array.from({ length: 31 }, function (_, index) { return (index + 1) + '日'; }), '请选择日期');
+    if (type === 'cron表达式') return '<div class="dm-frequency cron">' + selectDraft('modal', 'rateType', type, ['每天', '每周', '每月', 'cron表达式', '执行一次'], '请选择') + inputDraft('modal', 'cronExpr', draft.cronExpr || '', '请输入 cron 表达式') + '</div>';
+    if (type === '执行一次') return '<div class="dm-frequency once">' + selectDraft('modal', 'rateType', type, ['每天', '每周', '每月', 'cron表达式', '执行一次'], '请选择') + '<input class="dm-control" type="datetime-local" step="1" data-dm-draft="modal.onceTime" value="' + esc(draft.onceTime || '') + '"></div>';
+    return '<div class="dm-frequency">' + selectDraft('modal', 'rateType', type, ['每天', '每周', '每月', 'cron表达式', '执行一次'], '请选择') + extra + '<input class="dm-control" type="time" step="1" data-dm-draft="modal.rateTime" value="' + esc(draft.rateTime || '') + '"></div>';
+  }
+
   function filteredJobs() {
     var f = state.reverseFilters, keyword = state.reverseKeyword.toLowerCase();
     return store.reverseJobs.filter(function (job) { return (!f.executeType || job.executeType === f.executeType) && (!f.status || job.status === f.status) && (!keyword || (job.name + ' ' + job.source + ' ' + job.domain).toLowerCase().indexOf(keyword) >= 0); });
@@ -611,14 +684,14 @@ DP.pages.dataModeling = (function () {
   function metric(label, value, tone) { return '<div class="dm-metric"><span>' + esc(label) + '</span><strong class="' + (tone || '') + '">' + esc(value) + '</strong></div>'; }
   function renderReverseList() {
     var jobs = filteredJobs(), f = state.reverseFilters;
-    return pageHeader('arrow-left-right', '逆向建模') + '<div class="dm-toolbar"><div>' + button('new-reverse', 'plus-lg', '新建', '', 'btn btn-primary') + '</div><div class="dm-reverse-filters"><label>执行方式' + selectControl('reverse-filter="executeType"', f.executeType, ['增量更新', '全量覆盖'], '全部方式') + '</label><label>状态' + selectControl('reverse-filter="status"', f.status, ['运行中', '已停止'], '全部状态') + '</label><input class="dm-control" type="search" data-dm-reverse-keyword value="' + esc(state.reverseKeywordDraft) + '" placeholder="名称关键词">' + button('reverse-query', 'search', '查询', '', 'btn btn-primary') + button('reverse-reset', 'arrow-counterclockwise', '重置') + '</div></div><div class="dm-job-list">' +
-      (jobs.length ? jobs.map(function (job) { return '<article class="dm-job-card"><header><div><input type="checkbox" aria-label="选择' + esc(job.name) + '"><h3><i class="bi bi-arrow-left-right"></i>' + esc(job.name) + '</h3>' + statusTag(job.status) + '</div><div>' + button('toggle-job', job.status === '运行中' ? 'stop-circle' : 'play-circle', job.status === '运行中' ? '停止' : '启动', 'data-id="' + job.id + '"', 'btn ' + (job.status === '运行中' ? 'btn-outline' : 'btn-primary')) + button('reverse-detail', 'file-earmark-text', '查看详情', 'data-id="' + job.id + '"') + button('edit-reverse', 'pencil-square', '编辑', 'data-id="' + job.id + '"') + button('delete-reverse', 'trash3', '删除', 'data-id="' + job.id + '"', 'btn btn-outline danger') + '</div></header><div class="dm-job-body"><div class="dm-job-metrics">' + metric('执行总次数', job.runs + ' 次') + metric('建模成功', job.success + ' 个', 'success') + metric('建模失败', job.failed + ' 个', 'danger') + metric('业务表', (job.success + job.failed) + ' 个', 'primary') + '</div><dl><div><dt>数仓分层</dt><dd>' + esc(job.layer) + '</dd></div><div><dt>数据域</dt><dd>' + esc(job.domain) + '</dd></div><div><dt>执行方式</dt><dd>' + esc(job.executeType) + '</dd></div><div><dt>执行频率</dt><dd>' + esc(job.frequency) + '</dd></div><div><dt>操作者</dt><dd>' + esc(job.operator) + '</dd></div><div><dt>修改时间</dt><dd>' + esc(job.updatedAt) + '</dd></div></dl></div></article>'; }).join('') : '<div class="dm-empty panel"><i class="bi bi-inbox"></i><span>暂无符合条件的逆向建模任务</span></div>') + '</div>' + renderPagination(jobs.length, 1, 1, 'noop');
+    return pageHeader('arrow-left-right', '逆向建模') + '<div class="dm-toolbar dm-reverse-toolbar"><div class="dm-reverse-create">' + button('new-reverse', 'plus-lg', '新建', '', 'btn btn-primary') + '</div><div class="dm-reverse-filters"><label><span>执行方式</span>' + selectControl('reverse-filter="executeType"', f.executeType, ['增量更新', '全量覆盖'], '请选择执行方式') + '</label><label><span>状态</span>' + selectControl('reverse-filter="status"', f.status, [['运行中', '启动'], ['已停止', '停止']], '请选择状态') + '</label><input class="dm-control" type="search" data-dm-reverse-keyword value="' + esc(state.reverseKeywordDraft) + '" placeholder="名称关键字">' + button('reverse-query', 'search', '查询', '', 'btn btn-primary') + button('reverse-reset', 'arrow-counterclockwise', '重置') + '</div></div><div class="dm-job-list">' +
+      (jobs.length ? jobs.map(function (job) { return '<article class="dm-job-card"><header><div><h3><i class="bi bi-arrow-left-right"></i>' + esc(job.name) + '</h3>' + statusTag(job.status) + '</div><div>' + button('toggle-job', job.status === '运行中' ? 'stop-circle' : 'play-circle', job.status === '运行中' ? '停止' : '启动', 'data-id="' + job.id + '"', 'btn ' + (job.status === '运行中' ? 'btn-outline' : 'btn-primary')) + button('reverse-detail', 'file-earmark-text', '查看详情', 'data-id="' + job.id + '"') + button('edit-reverse', 'pencil-square', '编辑', 'data-id="' + job.id + '"') + button('delete-reverse', 'trash3', '删除', 'data-id="' + job.id + '"', 'btn btn-outline danger') + '</div></header><div class="dm-job-body"><div class="dm-job-metrics">' + metric('执行总次数', job.runs + ' 次') + metric('建模成功', job.success + ' 个', 'success') + metric('建模失败', job.failed + ' 个', 'danger') + metric(job.tableType || '业务表', (job.success + job.failed) + ' 个', 'primary') + '</div><dl><div><dt>数仓分层</dt><dd title="' + esc(job.layer) + '">' + esc(job.layer) + '</dd></div><div><dt>数据域</dt><dd>' + esc(job.domain) + '</dd></div><div><dt>执行方式</dt><dd>' + esc(job.executeType) + '</dd></div><div><dt>执行频率</dt><dd>' + esc(job.frequency) + '</dd></div><div><dt>操作者</dt><dd>' + esc(job.operator) + '</dd></div><div><dt>修改时间</dt><dd>' + esc(job.updatedAt) + '</dd></div></dl></div></article>'; }).join('') : '<div class="dm-empty panel"><i class="bi bi-inbox"></i><span>暂无符合条件的逆向建模任务</span></div>') + '</div>' + renderPagination(jobs.length, 1, 1, 'noop');
   }
   function jobRecords(job) {
     var dates = ['2026-09-08', '2026-09-07', '2026-09-06'];
     return dates.map(function (date, index) {
       var failed = index === 1 && job.failed ? 1 : 0, success = Math.max(1, Math.round(job.success / 3) - failed);
-      return { id: job.id + '-L' + index, start: date + ' 02:' + String(30 + index * 5).padStart(2, '0') + ':01', end: date + ' 02:' + String(31 + index * 5).padStart(2, '0') + ':' + (18 + index * 7), duration: (index + 1) * 18 + '秒' + (245 + index * 81) + '毫秒', result: failed ? '部分失败' : '执行成功', success: success, failed: failed };
+      return { id: job.id + '-L' + index, start: date + ' 02:' + String(30 + index * 5).padStart(2, '0') + ':01', end: date + ' 02:' + String(31 + index * 5).padStart(2, '0') + ':' + (18 + index * 7), duration: (index + 1) * 18 + '秒' + (245 + index * 81) + '毫秒', result: failed ? '建模失败' : '建模成功', success: success, failed: failed };
     });
   }
   function filteredJobRecords(job) {
@@ -629,30 +702,57 @@ DP.pages.dataModeling = (function () {
     var job = findById(store.reverseJobs, state.reverseDetailId), rows = filteredJobRecords(job);
     var dates = DP.datePicker ? DP.datePicker.render({ mode: 'range', label: '执行时间', output: 'datetime', start: state.reverseDetailFilters.from, end: state.reverseDetailFilters.to, startAttrs: { 'data-dm-reverse-date': 'from' }, endAttrs: { 'data-dm-reverse-date': 'to' } }) : '';
     dates += button('reverse-detail-query', 'search', '查询', '', 'btn btn-primary') + button('reverse-detail-reset', 'arrow-counterclockwise', '重置');
-    return pageHeader('file-earmark-text', job.name, button('back-reverse-detail', 'arrow-left', '返回')) + '<section class="dm-job-summary"><div class="dm-job-metrics">' + metric('执行总次数', job.runs + ' 次') + metric('建模成功', job.success + ' 个', 'success') + metric('建模失败', job.failed + ' 个', 'danger') + metric('业务表', (job.success + job.failed) + ' 个', 'primary') + '</div><dl><div><dt>数仓分层</dt><dd>' + esc(job.layer) + '</dd></div><div><dt>数据域</dt><dd>' + esc(job.domain) + '</dd></div><div><dt>执行方式</dt><dd>' + esc(job.executeType) + '</dd></div><div><dt>执行频率</dt><dd>' + esc(job.frequency) + '</dd></div><div><dt>操作者</dt><dd>' + esc(job.operator) + '</dd></div><div><dt>修改时间</dt><dd>' + esc(job.updatedAt) + '</dd></div></dl></section><section class="dm-section"><div class="dm-section-title"><h3><i class="bi bi-journal-text"></i>执行记录</h3></div><div class="dm-inline-query dm-record-query"><label>执行结果' + selectControl('reverse-detail-filter="result"', state.reverseDetailFilters.result, ['执行成功', '部分失败'], '全部结果') + '</label>' + dates + button('export-records', 'download', '导出') + '</div><div class="dm-table-wrap"><table class="ds-table"><thead><tr><th>开始时间</th><th>结束时间</th><th>执行时长</th><th>执行结果</th><th>操作</th></tr></thead><tbody>' +
-      (rows.length ? rows.map(function (row) { return '<tr><td>' + esc(row.start) + '</td><td>' + esc(row.end) + '</td><td>' + esc(row.duration) + '</td><td>' + statusTag(row.result) + '<span class="dm-record-result">建模成功：' + row.success + ' 个　建模失败：' + row.failed + ' 个</span></td><td>' + button('record-checklist', 'list-check', '查看清单', 'data-id="' + row.id + '" data-job="' + job.id + '"', 'dm-link-btn') + '</td></tr>'; }).join('') : '<tr><td colspan="5"><div class="dm-empty"><i class="bi bi-inbox"></i><span>暂无符合条件的执行记录</span></div></td></tr>') + '</tbody></table></div>' + renderPagination(rows.length, 1, 1, 'noop') + '</section>';
+    return pageHeader('file-earmark-text', job.name, statusTag(job.status) + button('back-reverse-detail', 'arrow-left', '返回')) + '<section class="dm-job-summary"><div class="dm-job-metrics">' + metric('执行总次数', job.runs + ' 次') + metric('建模成功', job.success + ' 个', 'success') + metric('建模失败', job.failed + ' 个', 'danger') + metric(job.tableType || '业务表', (job.success + job.failed) + ' 个', 'primary') + '</div><dl><div><dt>数仓分层</dt><dd>' + esc(job.layer) + '</dd></div><div><dt>数据域</dt><dd>' + esc(job.domain) + '</dd></div><div><dt>执行方式</dt><dd>' + esc(job.executeType) + '</dd></div><div><dt>执行频率</dt><dd>' + esc(job.frequency) + '</dd></div><div><dt>操作者</dt><dd>' + esc(job.operator) + '</dd></div><div><dt>修改时间</dt><dd>' + esc(job.updatedAt) + '</dd></div></dl></section><section class="dm-section"><div class="dm-section-title"><h3><i class="bi bi-journal-text"></i>执行记录</h3></div><div class="dm-inline-query dm-record-query"><label><span>执行结果</span>' + selectControl('reverse-detail-filter="result"', state.reverseDetailFilters.result, ['建模成功', '建模失败'], '请选择执行结果') + '</label>' + dates + button('export-records', 'download', '导出') + '</div><div class="dm-table-wrap"><table class="ds-table dm-reverse-record-table"><thead><tr><th>开始时间</th><th>结束时间</th><th>执行时长</th><th>执行结果</th><th>操作</th></tr></thead><tbody>' +
+      (rows.length ? rows.map(function (row) { return '<tr><td>' + esc(row.start) + '</td><td>' + esc(row.end) + '</td><td>' + esc(row.duration) + '</td><td><div class="dm-record-result"><span>建模成功：<b>' + row.success + ' 个</b></span><span>建模失败：<b>' + row.failed + ' 个</b></span><span>' + esc(job.tableType || '业务表') + ' <b>' + (row.success + row.failed) + ' 个</b></span></div></td><td>' + button('record-checklist', 'list-check', '查看清单', 'data-id="' + row.id + '" data-job="' + job.id + '"', 'dm-link-btn') + '</td></tr>'; }).join('') : '<tr><td colspan="5"><div class="dm-empty"><i class="bi bi-inbox"></i><span>暂无符合条件的执行记录</span></div></td></tr>') + '</tbody></table></div>' + renderPagination(rows.length, 1, 1, 'noop') + '</section>';
   }
   function renderReverse() { return state.reverseDetailId ? renderReverseDetail() : renderReverseList(); }
+  function reverseChecklistRows(job) {
+    var sourceRows = job.domain === '客户域' ? [
+      ['crm_member_account', '会员账户', '会员账户主数据'], ['crm_member_level', '会员等级', '会员等级定义'], ['crm_member_address', '会员地址', '会员常用地址'], ['crm_member_tag', '会员标签', '会员运营标签'], ['crm_member_points', '会员积分', '会员积分流水']
+    ] : job.domain === '供应链域' ? [
+      ['scm_inventory_flow', '库存流水', '仓库库存变更明细'], ['scm_supplier', '供应商', '供应商主数据'], ['scm_purchase_order', '采购订单', '采购业务单据'], ['scm_warehouse', '仓库信息', '仓库基础信息'], ['scm_product_stock', '商品库存', '商品实时库存']
+    ] : [
+      ['ods_trade_order', '交易订单', '订单交易主表'], ['ods_trade_order_item', '订单明细', '订单商品明细'], ['ods_trade_payment', '支付记录', '订单支付流水'], ['ods_trade_refund', '退款申请', '订单退款申请'], ['ods_trade_delivery', '履约记录', '订单配送履约']
+    ];
+    return sourceRows.concat(sourceRows.map(function (row, index) { return [row[0] + '_his', row[1] + '历史', row[2] + '历史归档']; })).map(function (row, index) {
+      return { name: row[0], alias: row[1], remark: row[2], rule: '${自定义}', attribute: '表', tableType: job.tableType || '业务表', status: index === 8 && job.failed ? '建模失败' : '建模成功' };
+    });
+  }
+  function filteredReverseChecklist(job) {
+    var keyword = String(state.modal.keyword || '').trim().toLowerCase(), status = state.modal.status || '';
+    return reverseChecklistRows(job).filter(function (row) { return (!status || row.status === status) && (!keyword || (row.name + ' ' + row.alias + ' ' + row.remark).toLowerCase().indexOf(keyword) >= 0); });
+  }
 
   function renderOverlay() {
     if (!state.modal) return '';
     if (state.modal.kind === 'model-picker') {
       var choices = store.models.filter(function (model) { return state.materialForm.modelIds.indexOf(model.id) < 0; });
-      return '<div class="dm-modal-mask" data-dm-action="close-modal"><section class="dm-modal" role="dialog" aria-modal="true"><header><h3>添加待物化模型</h3>' + button('close-modal', 'x-lg', '关闭', '', 'dm-icon-text-btn') + '</header><div class="dm-modal-body"><div class="dm-inline-query"><input class="dm-control" type="search" data-dm-picker-keyword value="' + esc(state.modal.keyword) + '" placeholder="搜索英文名称或别名"></div><div class="dm-table-wrap"><table class="ds-table"><thead><tr><th class="col-ck"></th><th>英文名称</th><th>别名</th><th>数仓分层</th><th>版本</th><th>物化状态</th></tr></thead><tbody>' + choices.filter(function (model) { var keyword = state.modal.keyword.toLowerCase(); return !keyword || (model.name + ' ' + model.alias).toLowerCase().indexOf(keyword) >= 0; }).map(function (model) { return '<tr><td class="col-ck"><input type="checkbox" data-dm-picker-check="' + model.id + '"' + (state.modal.selected.has(model.id) ? ' checked' : '') + '></td><td>' + esc(model.name) + '</td><td>' + esc(model.alias) + '</td><td>' + esc(model.layer) + '</td><td>' + esc(model.version) + '</td><td>' + statusTag(model.materialized ? '已物化' : '未物化') + '</td></tr>'; }).join('') + '</tbody></table></div></div><footer>' + button('close-modal', 'x-lg', '取消') + button('apply-model-picker', 'check-lg', '添加', '', 'btn btn-primary') + '</footer></section></div>';
+      return '<div class="dm-modal-mask" data-dm-modal-mask><section class="dm-modal" role="dialog" aria-modal="true"><header><h3>添加待物化模型</h3>' + button('close-modal', 'x-lg', '关闭', '', 'dm-icon-text-btn') + '</header><div class="dm-modal-body"><div class="dm-inline-query"><input class="dm-control" type="search" data-dm-picker-keyword value="' + esc(state.modal.keyword) + '" placeholder="搜索英文名称或别名"></div><div class="dm-table-wrap"><table class="ds-table"><thead><tr><th class="col-ck"></th><th>英文名称</th><th>别名</th><th>数仓分层</th><th>版本</th><th>物化状态</th></tr></thead><tbody>' + choices.filter(function (model) { var keyword = state.modal.keyword.toLowerCase(); return !keyword || (model.name + ' ' + model.alias).toLowerCase().indexOf(keyword) >= 0; }).map(function (model) { return '<tr><td class="col-ck"><input type="checkbox" data-dm-picker-check="' + model.id + '"' + (state.modal.selected.has(model.id) ? ' checked' : '') + '></td><td>' + esc(model.name) + '</td><td>' + esc(model.alias) + '</td><td>' + esc(model.layer) + '</td><td>' + esc(model.version) + '</td><td>' + statusTag(model.materialized ? '已物化' : '未物化') + '</td></tr>'; }).join('') + '</tbody></table></div></div><footer>' + button('close-modal', 'x-lg', '取消') + button('apply-model-picker', 'check-lg', '添加', '', 'btn btn-primary') + '</footer></section></div>';
     }
     if (state.modal.kind === 'reverse-form') {
       var draftJob = state.modal.draft;
-      return '<div class="dm-modal-mask" data-dm-action="close-modal"><section class="dm-modal reverse" role="dialog" aria-modal="true"><header><h3>' + (draftJob.id ? '编辑逆向建模' : '新建逆向建模') + '</h3>' + button('close-modal', 'x-lg', '关闭', '', 'dm-icon-text-btn') + '</header><div class="dm-modal-body dm-form-grid single">' +
-        field('名称', inputDraft('modal', 'name', draftJob.name, '请输入任务名称', 'maxlength="100"'), true, true) + field('数据源', selectDraft('modal', 'source', draftJob.source, ['订单交易库', '会员运营库', '供应链业务库', 'ODS贴源库'], '请选择数据源'), true, true) + field('数仓分层', modelPlanOptions(draftJob.layer).replace('data-dm-draft="model.layer"', 'data-dm-draft="modal.layer"'), true, true) + field('表类型', selectDraft('modal', 'tableType', draftJob.tableType, tableTypes, '请选择'), true, true) + field('数据域', selectDraft('modal', 'domain', draftJob.domain, domains, '请选择'), true, true) + field('执行方式', '<div class="dm-radio-line"><label><input type="radio" name="executeType" data-dm-draft="modal.executeType" value="增量更新"' + (draftJob.executeType === '增量更新' ? ' checked' : '') + '>增量更新</label><label><input type="radio" name="executeType" data-dm-draft="modal.executeType" value="全量覆盖"' + (draftJob.executeType === '全量覆盖' ? ' checked' : '') + '>全量覆盖</label></div>', true, true) + field('匹配逻辑', '<div class="dm-radio-line"><label><input type="radio" name="matchLogic" data-dm-draft="modal.matchLogic" value="不区分大小写"' + (draftJob.matchLogic === '不区分大小写' ? ' checked' : '') + '>不区分大小写</label><label><input type="radio" name="matchLogic" data-dm-draft="modal.matchLogic" value="区分大小写"' + (draftJob.matchLogic === '区分大小写' ? ' checked' : '') + '>区分大小写</label></div>', true, true) + field('表名匹配规则', selectDraft('modal', 'rule', draftJob.rule, ['业务表同名匹配', '去除数据源前缀', '按命名规范匹配'], '请选择规则'), true, true) + field('执行频率', '<div class="dm-frequency">' + selectDraft('modal', 'rateType', draftJob.rateType, ['每天', '每周', '每月'], '请选择') + '<input class="dm-control" type="time" step="1" data-dm-draft="modal.rateTime" value="' + esc(draftJob.rateTime) + '"></div>', true, true) +
+      var subtypeOptions = reverseTableSubtypes[draftJob.tableType] || [];
+      var tableTypeControls = '<div class="dm-reverse-table-types">' + selectDraft('modal', 'tableType', draftJob.tableType, draftJob.tableType ? [draftJob.tableType] : [], '请选择', 'disabled aria-disabled="true"') + selectDraft('modal', 'tableSubtype', draftJob.tableSubtype || '', subtypeOptions, '请选择', subtypeOptions.length ? '' : 'disabled aria-disabled="true"') + '</div>';
+      return '<div class="dm-modal-mask" data-dm-modal-mask><section class="dm-modal reverse" role="dialog" aria-modal="true"><header><h3>' + (draftJob.id ? '编辑' : '新建') + '</h3>' + button('close-modal', 'x-lg', '关闭', '', 'dm-icon-text-btn') + '</header><div class="dm-modal-body dm-form-grid single">' +
+        field('名称', inputDraft('modal', 'name', draftJob.name, '100个字符以内', 'maxlength="100"'), true, true) +
+        field('数据源', renderReverseSourcePicker(draftJob), true, true) +
+        field('数仓分层', renderReversePlanPicker(draftJob), true, true) +
+        field('表类型', tableTypeControls, true, true) +
+        field('数据域', renderReverseDomainPicker(draftJob), true, true) +
+        field('执行方式', '<div class="dm-radio-line"><label><input type="radio" name="executeType" data-dm-draft="modal.executeType" value="增量更新"' + (draftJob.executeType === '增量更新' ? ' checked' : '') + '>增量更新</label><label><input type="radio" name="executeType" data-dm-draft="modal.executeType" value="全量覆盖"' + (draftJob.executeType === '全量覆盖' ? ' checked' : '') + '>全量覆盖</label></div>', true, true) +
+        field('匹配逻辑', '<div class="dm-radio-line"><label><input type="radio" name="matchLogic" data-dm-draft="modal.matchLogic" value="不区分大小写"' + (draftJob.matchLogic === '不区分大小写' ? ' checked' : '') + '>不区分大小写</label><label><input type="radio" name="matchLogic" data-dm-draft="modal.matchLogic" value="区分大小写"' + (draftJob.matchLogic === '区分大小写' ? ' checked' : '') + '>区分大小写</label></div>', true, true) +
+        field('表名匹配规则', '<div class="dm-reverse-rules">' + renderReverseRuleRows(draftJob) + '</div>', true, true) +
+        field('执行频率', renderReverseFrequency(draftJob), true, true) +
         '</div><footer>' + button('close-modal', 'x-lg', '取消') + button('save-reverse', 'floppy', '保存', '', 'btn btn-primary') + '</footer></section></div>';
     }
     if (state.modal.kind === 'model-detail') {
       var model = findById(store.models, state.modal.id);
-      return '<div class="dm-modal-mask" data-dm-action="close-modal"><section class="dm-modal" role="dialog" aria-modal="true"><header><h3>物化详情</h3>' + button('close-modal', 'x-lg', '关闭', '', 'dm-icon-text-btn') + '</header><div class="dm-modal-body"><div class="dm-detail-grid"><div><span>模型</span><strong>' + esc(model.alias) + '</strong></div><div><span>英文名称</span><strong>' + esc(model.name) + '</strong></div><div><span>数仓分层</span><strong>' + esc(model.layer) + '</strong></div><div><span>当前版本</span><strong>' + esc(model.version) + '</strong></div><div><span>数据源</span><strong>' + esc(model.dbType === 'Hive' ? 'ODS贴源库' : model.dbType === 'Clickhouse' ? 'ADS应用库' : 'DWD明细库') + '</strong></div><div><span>物化状态</span>' + statusTag('已物化') + '</div></div></div><footer>' + button('close-modal', 'check-lg', '关闭', '', 'btn btn-primary') + '</footer></section></div>';
+      return '<div class="dm-modal-mask" data-dm-modal-mask><section class="dm-modal" role="dialog" aria-modal="true"><header><h3>物化详情</h3>' + button('close-modal', 'x-lg', '关闭', '', 'dm-icon-text-btn') + '</header><div class="dm-modal-body"><div class="dm-detail-grid"><div><span>模型</span><strong>' + esc(model.alias) + '</strong></div><div><span>英文名称</span><strong>' + esc(model.name) + '</strong></div><div><span>数仓分层</span><strong>' + esc(model.layer) + '</strong></div><div><span>当前版本</span><strong>' + esc(model.version) + '</strong></div><div><span>数据源</span><strong>' + esc(model.dbType === 'Hive' ? 'ODS贴源库' : model.dbType === 'Clickhouse' ? 'ADS应用库' : 'DWD明细库') + '</strong></div><div><span>物化状态</span>' + statusTag('已物化') + '</div></div></div><footer>' + button('close-modal', 'check-lg', '关闭', '', 'btn btn-primary') + '</footer></section></div>';
     }
     if (state.modal.kind === 'checklist') {
       var selectedJob = findById(store.reverseJobs, state.modal.jobId);
-      return '<div class="dm-modal-mask" data-dm-action="close-modal"><section class="dm-modal" role="dialog" aria-modal="true"><header><h3>逆向建模清单</h3>' + button('close-modal', 'x-lg', '关闭', '', 'dm-icon-text-btn') + '</header><div class="dm-modal-body"><div class="dm-table-wrap"><table class="ds-table"><thead><tr><th>业务表</th><th>模型名称</th><th>数仓分层</th><th>执行结果</th></tr></thead><tbody>' + ['order_main', 'order_detail', 'payment_record', 'refund_apply'].map(function (name, index) { return '<tr><td>' + name + '</td><td>' + (selectedJob.domain === '交易域' ? 'dwd_trade_' : 'dwd_subject_') + name + '_di</td><td>' + esc(selectedJob.layer) + '</td><td>' + statusTag(index === 3 && selectedJob.failed ? '失败' : '成功') + '</td></tr>'; }).join('') + '</tbody></table></div></div><footer>' + button('close-modal', 'check-lg', '关闭', '', 'btn btn-primary') + '</footer></section></div>';
+      var checklistRows = filteredReverseChecklist(selectedJob);
+      return '<div class="dm-modal-mask" data-dm-modal-mask><section class="dm-modal dm-checklist-modal" role="dialog" aria-modal="true"><header><h3>查看清单</h3>' + button('close-modal', 'x-lg', '关闭', '', 'dm-icon-text-btn') + '</header><div class="dm-modal-body"><div class="dm-inline-query dm-checklist-query"><label><span>状态</span>' + selectControl('checklist-status', state.modal.status || '', ['建模成功', '建模失败'], '请选择状态') + '</label><input class="dm-control" type="search" data-dm-checklist-keyword value="' + esc(state.modal.keywordDraft || '') + '" placeholder="英文名/别名/备注关键字查询">' + button('checklist-query', 'search', '查询', '', 'btn btn-primary') + button('export-checklist', 'download', '导出') + '</div><div class="dm-table-wrap"><table class="ds-table dm-checklist-table"><thead><tr><th>英文名称</th><th>匹配规则</th><th>别名</th><th>属性</th><th>表类型</th><th>备注</th><th>状态</th><th>操作</th></tr></thead><tbody>' + (checklistRows.length ? checklistRows.map(function (row) { return '<tr><td><strong>' + esc(row.name) + '</strong></td><td><code>' + esc(row.rule) + '</code></td><td>' + esc(row.alias) + '</td><td>' + esc(row.attribute) + '</td><td>' + esc(row.tableType) + '</td><td title="' + esc(row.remark) + '">' + esc(row.remark) + '</td><td>' + statusTag(row.status) + '</td><td></td></tr>'; }).join('') : '<tr><td colspan="8"><div class="dm-empty"><i class="bi bi-inbox"></i><span>暂无符合条件的建模清单</span></div></td></tr>') + '</tbody></table></div>' + renderPagination(checklistRows.length, 1, 1, 'noop') + '</div></section></div>';
     }
     return '';
   }
@@ -670,6 +770,11 @@ DP.pages.dataModeling = (function () {
       render();
     }
     if (scope === 'model' && key === 'ruleId') { var rule = findById(store.rules, value); state.modelForm.ruleContent = rule ? rule.template : ''; render(); }
+    if (scope === 'modal' && key === 'rateType' && state.modal && state.modal.kind === 'reverse-form') {
+      if (value === '每周') target.rateDay = /^周/.test(target.rateDay || '') ? target.rateDay : '周一';
+      if (value === '每月') target.rateDay = /日$/.test(target.rateDay || '') ? target.rateDay : '1日';
+      renderOverlayOnly();
+    }
   }
   function openPlan(mode, id) {
     var existing = id ? findById(store.plans, id) : null;
@@ -747,14 +852,22 @@ DP.pages.dataModeling = (function () {
   }
   function openReverseForm(id) {
     var existing = id ? findById(store.reverseJobs, id) : null;
-    state.modal = { kind: 'reverse-form', draft: existing ? Object.assign(clone(existing), { rateType: existing.frequency.indexOf('每周') === 0 ? '每周' : existing.frequency.indexOf('每月') === 0 ? '每月' : '每天', rateTime: (existing.frequency.match(/\d{2}:\d{2}:\d{2}/) || ['02:30:00'])[0] }) : { id: '', name: '', status: '已停止', source: '', layer: '', tableType: '业务表', domain: '', executeType: '增量更新', matchLogic: '不区分大小写', rule: '', rateType: '每天', rateTime: '02:30:00', operator: '演示用户', updatedAt: '2026-09-08 10:00:00', runs: 0, success: 0, failed: 0 } };
+    var existingPlan = existing ? planByPath(existing.layer) : null;
+    var rateType = existing && /^(每天|每周|每月|cron表达式|执行一次)/.test(existing.frequency) ? existing.frequency.match(/^(每天|每周|每月|cron表达式|执行一次)/)[0] : '每周';
+    var rateDay = existing && (existing.frequency.match(/周[一二三四五六日]/) || existing.frequency.match(/\d{1,2}日/));
+    var existingRules = existing && Array.isArray(existing.rules) && existing.rules.length ? existing.rules.slice() : ['custom'];
+    state.reverseSourceOpen = false; state.reverseSourceKeyword = ''; state.reversePlanOpen = false; state.reversePlanKeyword = ''; state.reverseDomainOpen = false; state.reverseDomainKeyword = '';
+    state.modal = { kind: 'reverse-form', draft: existing ? Object.assign(clone(existing), { planId: existingPlan ? existingPlan.id : '', tableSubtype: existing.tableSubtype || '', rules: existingRules, rateType: rateType, rateDay: rateDay ? rateDay[0] : (rateType === '每月' ? '1日' : '周一'), rateTime: (existing.frequency.match(/\d{2}:\d{2}:\d{2}/) || ['02:30:00'])[0], cronExpr: rateType === 'cron表达式' ? existing.frequency.replace(/^cron表达式\s*/, '') : '', onceTime: '' }) : { id: '', name: '', status: '已停止', source: '', planId: '', layer: '', tableType: '', tableSubtype: '', domain: '', executeType: '增量更新', matchLogic: '不区分大小写', rules: [''], rule: '', rateType: '每周', rateDay: '周一', rateTime: '', cronExpr: '', onceTime: '', operator: '演示用户', updatedAt: '2026-09-08 10:00:00', runs: 0, success: 0, failed: 0 } };
     renderOverlayOnly();
   }
   function saveReverse() {
     var draft = state.modal.draft;
-    if (!draft.name.trim() || !draft.source || !draft.layer || !draft.tableType || !draft.domain || !draft.executeType || !draft.rule || !draft.rateType || !draft.rateTime) return toast('请完整填写逆向建模配置。', 'warning');
-    draft.frequency = draft.rateType + ' ' + draft.rateTime;
-    delete draft.rateType; delete draft.rateTime;
+    var rateComplete = draft.rateType === 'cron表达式' ? draft.cronExpr.trim() : draft.rateType === '执行一次' ? draft.onceTime : draft.rateTime;
+    if (!draft.name.trim() || !draft.source || !draft.layer || !draft.tableType || !draft.domain || !draft.executeType || !draft.rules.length || draft.rules.some(function (ruleId) { return !ruleId; }) || !draft.rateType || !rateComplete) return toast('请完整填写逆向建模配置。', 'warning');
+    if (draft.tableType === '维度表' && !draft.tableSubtype) return toast('请选择维度表子类型。', 'warning');
+    draft.rule = draft.rules.map(function (ruleId) { var rule = reverseRuleById(ruleId); return rule ? rule.name : ''; }).filter(Boolean).join('、');
+    draft.frequency = draft.rateType === 'cron表达式' ? 'cron表达式 ' + draft.cronExpr : draft.rateType === '执行一次' ? '执行一次 ' + draft.onceTime.replace('T', ' ') : draft.rateType + (draft.rateType === '每周' || draft.rateType === '每月' ? ' ' + draft.rateDay : '') + ' ' + draft.rateTime;
+    delete draft.rateType; delete draft.rateDay; delete draft.rateTime; delete draft.cronExpr; delete draft.onceTime; delete draft.planId;
     if (!draft.id) { draft.id = 'J' + Date.now(); store.reverseJobs.unshift(clone(draft)); }
     else store.reverseJobs[store.reverseJobs.findIndex(function (item) { return item.id === draft.id; })] = clone(draft);
     persist(); state.modal = null; render(); toast('逆向建模任务已保存。');
@@ -764,6 +877,12 @@ DP.pages.dataModeling = (function () {
     var csv = '\ufeff开始时间,结束时间,执行时长,执行结果,建模成功,建模失败\r\n' + rows.map(function (row) { return [row.start, row.end, row.duration, row.result, row.success, row.failed].join(','); }).join('\r\n');
     var url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     var link = document.createElement('a'); link.href = url; link.download = '逆向建模执行记录.csv'; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); toast('执行记录已导出。');
+  }
+  function exportReverseChecklist() {
+    var job = findById(store.reverseJobs, state.modal.jobId), rows = filteredReverseChecklist(job);
+    var csv = '\ufeff英文名称,匹配规则,别名,属性,表类型,备注,状态\r\n' + rows.map(function (row) { return [row.name, row.rule, row.alias, row.attribute, row.tableType, row.remark, row.status].map(function (value) { return '"' + String(value || '').replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n');
+    var url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    var link = document.createElement('a'); link.href = url; link.download = '逆向建模清单.csv'; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); toast('建模清单已导出。');
   }
   function resetModelFilters() {
     state.modelFilters = { version: '', method: '', material: '', attribute: '', dbType: '', tableType: '' }; state.modelKeyword = ''; state.modelKeywordDraft = ''; state.modelPage = 1; render();
@@ -775,7 +894,10 @@ DP.pages.dataModeling = (function () {
       var closeFloating = false;
       if (state.standardPickerIndex >= 0 && !event.target.closest('.dm-standard-panel')) { state.standardPickerIndex = -1; state.standardKeyword = ''; closeFloating = true; }
       if (state.materialSourceOpen && !event.target.closest('.dm-material-source-panel')) { state.materialSourceOpen = false; state.materialSourceKeyword = ''; closeFloating = true; }
-      if (closeFloating) render();
+      if (state.reverseSourceOpen && !event.target.closest('.dm-reverse-picker-panel')) { state.reverseSourceOpen = false; state.reverseSourceKeyword = ''; closeFloating = true; }
+      if (state.reversePlanOpen && !event.target.closest('.dm-reverse-picker-panel')) { state.reversePlanOpen = false; state.reversePlanKeyword = ''; closeFloating = true; }
+      if (state.reverseDomainOpen && !event.target.closest('.dm-reverse-picker-panel')) { state.reverseDomainOpen = false; state.reverseDomainKeyword = ''; closeFloating = true; }
+      if (closeFloating) state.modal && state.modal.kind === 'reverse-form' ? renderOverlayOnly() : render();
       return;
     }
     if (actionEl.disabled) return;
@@ -846,6 +968,14 @@ DP.pages.dataModeling = (function () {
     else if (action === 'remove-pending') { if (!state.pendingSelected.size) return toast('请先选择需要移除的模型。', 'warning'); state.materialForm.modelIds = state.materialForm.modelIds.filter(function (modelId) { return !state.pendingSelected.has(modelId); }); store.pendingMaterialIds = store.pendingMaterialIds.filter(function (modelId) { return !state.pendingSelected.has(modelId); }); state.pendingSelected.clear(); persist(); render(); }
     else if (action === 'new-reverse') openReverseForm();
     else if (action === 'edit-reverse') openReverseForm(id);
+    else if (action === 'toggle-reverse-source') { state.reverseSourceOpen = !state.reverseSourceOpen; state.reversePlanOpen = false; state.reverseDomainOpen = false; state.reverseSourceKeyword = ''; renderOverlayOnly(); if (state.reverseSourceOpen) { var reverseSourceSearch = root.querySelector('[data-dm-reverse-source-keyword]'); if (reverseSourceSearch) reverseSourceSearch.focus(); } }
+    else if (action === 'select-reverse-source') { state.modal.draft.source = actionEl.dataset.value || ''; state.reverseSourceOpen = false; state.reverseSourceKeyword = ''; renderOverlayOnly(); }
+    else if (action === 'toggle-reverse-plan') { state.reversePlanOpen = !state.reversePlanOpen; state.reverseSourceOpen = false; state.reverseDomainOpen = false; state.reversePlanKeyword = ''; renderOverlayOnly(); if (state.reversePlanOpen) { var reversePlanSearch = root.querySelector('[data-dm-reverse-plan-keyword]'); if (reversePlanSearch) reversePlanSearch.focus(); } }
+    else if (action === 'select-reverse-plan') { var reversePlan = findById(store.plans, id); if (reversePlan) { state.modal.draft.planId = reversePlan.id; state.modal.draft.layer = planPath(reversePlan); state.modal.draft.tableType = linkedTableType(reversePlan); state.modal.draft.tableSubtype = ''; state.reversePlanOpen = false; state.reversePlanKeyword = ''; renderOverlayOnly(); } }
+    else if (action === 'toggle-reverse-domain') { state.reverseDomainOpen = !state.reverseDomainOpen; state.reverseSourceOpen = false; state.reversePlanOpen = false; state.reverseDomainKeyword = ''; renderOverlayOnly(); if (state.reverseDomainOpen) { var reverseDomainSearch = root.querySelector('[data-dm-reverse-domain-keyword]'); if (reverseDomainSearch) reverseDomainSearch.focus(); } }
+    else if (action === 'select-reverse-domain') { state.modal.draft.domain = actionEl.dataset.value || ''; state.reverseDomainOpen = false; state.reverseDomainKeyword = ''; renderOverlayOnly(); }
+    else if (action === 'add-reverse-rule') { state.modal.draft.rules.push(''); renderOverlayOnly(); }
+    else if (action === 'remove-reverse-rule') { state.modal.draft.rules.splice(Number(actionEl.dataset.index), 1); if (!state.modal.draft.rules.length) state.modal.draft.rules.push(''); renderOverlayOnly(); }
     else if (action === 'save-reverse') saveReverse();
     else if (action === 'toggle-job') { var job = findById(store.reverseJobs, id); job.status = job.status === '运行中' ? '已停止' : '运行中'; persist(); render(); toast('任务已' + (job.status === '运行中' ? '启动。' : '停止。')); }
     else if (action === 'delete-reverse') deleteWithConfirm('确认删除逆向建模任务“' + esc(findById(store.reverseJobs, id).name) + '”？', function () { store.reverseJobs = store.reverseJobs.filter(function (jobItem) { return jobItem.id !== id; }); persist(); if (root.isConnected) render(); });
@@ -856,7 +986,9 @@ DP.pages.dataModeling = (function () {
     else if (action === 'reverse-detail-query') { render(); toast('执行记录已查询。'); }
     else if (action === 'reverse-detail-reset') { state.reverseDetailFilters = { result: '', from: '', to: '' }; render(); }
     else if (action === 'export-records') exportRecords();
-    else if (action === 'record-checklist') { state.modal = { kind: 'checklist', jobId: actionEl.dataset.job, recordId: id }; renderOverlayOnly(); }
+    else if (action === 'record-checklist') { state.modal = { kind: 'checklist', jobId: actionEl.dataset.job, recordId: id, status: '', keywordDraft: '', keyword: '' }; renderOverlayOnly(); }
+    else if (action === 'checklist-query') { state.modal.keyword = String(state.modal.keywordDraft || '').trim(); renderOverlayOnly(); }
+    else if (action === 'export-checklist') exportReverseChecklist();
   }
   function onInput(event) {
     var el = event.target;
@@ -868,6 +1000,10 @@ DP.pages.dataModeling = (function () {
     else if (el.matches('[data-dm-tree-keyword]')) { state.treeKeyword = el.value; var target = root.querySelector('[data-dm-tree]'); if (target) target.innerHTML = renderModelTree(); }
     else if (el.matches('[data-dm-model-plan-keyword]')) { state.modelPlanKeyword = el.value; var modelPlanTree = root.querySelector('[data-dm-model-plan-tree]'); if (modelPlanTree) modelPlanTree.innerHTML = renderModelPlanTree(); }
     else if (el.matches('[data-dm-material-source-keyword]')) { state.materialSourceKeyword = el.value; var materialSourceTreeTarget = root.querySelector('[data-dm-material-source-tree]'); if (materialSourceTreeTarget) materialSourceTreeTarget.innerHTML = renderMaterialSourceTree(); }
+    else if (el.matches('[data-dm-reverse-source-keyword]')) { state.reverseSourceKeyword = el.value; var reverseSourceTreeTarget = root.querySelector('[data-dm-reverse-source-tree]'); if (reverseSourceTreeTarget) reverseSourceTreeTarget.innerHTML = renderReverseSourceTree(); }
+    else if (el.matches('[data-dm-reverse-plan-keyword]')) { state.reversePlanKeyword = el.value; var reversePlanTreeTarget = root.querySelector('[data-dm-reverse-plan-tree]'); if (reversePlanTreeTarget) reversePlanTreeTarget.innerHTML = renderReversePlanTree(); }
+    else if (el.matches('[data-dm-reverse-domain-keyword]')) { state.reverseDomainKeyword = el.value; renderOverlayOnly(); var reverseDomainKeyword = root.querySelector('[data-dm-reverse-domain-keyword]'); if (reverseDomainKeyword) { reverseDomainKeyword.focus(); reverseDomainKeyword.setSelectionRange(reverseDomainKeyword.value.length, reverseDomainKeyword.value.length); } }
+    else if (el.matches('[data-dm-checklist-keyword]') && state.modal && state.modal.kind === 'checklist') state.modal.keywordDraft = el.value;
     else if (el.matches('[data-dm-standard-keyword]')) { state.standardKeyword = el.value; var standardOptions = root.querySelector('[data-dm-standard-options]'); if (standardOptions) standardOptions.innerHTML = renderStandardOptions(Number(el.dataset.index)); }
     else if (el.matches('[data-dm-sql-content]') && state.modelForm) { state.modelForm.sql = el.innerText || el.textContent || ''; var sqlGutter = root.querySelector('[data-dm-sql-gutter]'); if (sqlGutter) sqlGutter.innerHTML = sqlLineNumbers(state.modelForm.sql); }
     else if (el.matches('[data-dm-dataset-keyword]')) {
@@ -895,6 +1031,8 @@ DP.pages.dataModeling = (function () {
     else if (el.matches('[data-dm-reverse-filter]')) { state.reverseFilters[el.dataset.dmReverseFilter] = el.value; render(); }
     else if (el.matches('[data-dm-reverse-detail-filter]')) { state.reverseDetailFilters[el.dataset.dmReverseDetailFilter] = el.value; render(); }
     else if (el.matches('[data-dm-reverse-date]')) { var picker = el.closest('[data-dp-date-picker]'); state.reverseDetailFilters.from = picker.querySelector('[data-dp-date-value="start"]').value; state.reverseDetailFilters.to = picker.querySelector('[data-dp-date-value="end"]').value; render(); }
+    else if (el.matches('[data-dm-reverse-rule]') && state.modal && state.modal.kind === 'reverse-form') { state.modal.draft.rules[Number(el.dataset.dmReverseRule)] = el.value; renderOverlayOnly(); }
+    else if (el.matches('[data-dm-checklist-status]') && state.modal && state.modal.kind === 'checklist') { state.modal.status = el.value; renderOverlayOnly(); }
     else if (el.matches('[data-dm-sql-theme]')) { state.sqlTheme = el.value === 'light' ? 'light' : 'dark'; var themeEditor = el.closest('[data-dm-sql-editor]'); if (themeEditor) { themeEditor.classList.toggle('theme-light', state.sqlTheme === 'light'); themeEditor.classList.toggle('theme-dark', state.sqlTheme !== 'light'); } }
     else if (el.matches('[data-dm-sql-font]')) { state.sqlFont = el.value || '14px'; var fontEditor = el.closest('[data-dm-sql-editor]'); if (fontEditor) fontEditor.style.fontSize = state.sqlFont; }
     else if (el.matches('[data-dm-dataset-field]') && state.modelForm) { var datasetFieldValue = (state.modelForm.datasetFields || [])[Number(el.dataset.index)]; if (datasetFieldValue) datasetFieldValue[el.dataset.dmDatasetField] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? Number(el.value) : el.value; }
@@ -909,6 +1047,7 @@ DP.pages.dataModeling = (function () {
     if (event.target.matches('[data-dm-model-keyword]')) { event.preventDefault(); state.modelKeyword = state.modelKeywordDraft.trim(); state.modelPage = 1; render(); }
     else if (event.target.matches('[data-dm-material-detail-keyword]')) { event.preventDefault(); state.materialDetailKeyword = state.materialDetailKeywordDraft.trim(); render(); }
     else if (event.target.matches('[data-dm-reverse-keyword]')) { event.preventDefault(); state.reverseKeyword = state.reverseKeywordDraft.trim(); render(); }
+    else if (event.target.matches('[data-dm-checklist-keyword]') && state.modal && state.modal.kind === 'checklist') { event.preventDefault(); state.modal.keyword = String(state.modal.keywordDraft || '').trim(); renderOverlayOnly(); }
     else if (event.target.matches('[data-dm-rule-keyword]')) { event.preventDefault(); state.ruleKeyword = state.ruleKeywordDraft.trim(); render(); }
   }
   function onDblClick(event) {
@@ -934,7 +1073,7 @@ DP.pages.dataModeling = (function () {
       view: view || 'plan', planForm: null, modal: null, ruleEdit: null, ruleKeywordDraft: '', ruleKeyword: '',
       treeKeyword: '', modelLayer: '', modelCreateOpen: false, modelPage: 1, modelKeywordDraft: '', modelKeyword: '', modelFilters: { version: '', method: '', material: '', attribute: '', dbType: '', tableType: '' }, modelForm: null, modelPlanOpen: false, modelPlanKeyword: '', standardPickerIndex: -1, standardKeyword: '', standardPickerPosition: null, sqlTheme: 'dark', sqlFont: '14px', sqlSearchOpen: false, datasetPreview: false, datasetKeyword: '', datasetTab: 'preview',
       materialFilters: { source: '', project: '', environment: '', mode: '', status: '' }, materialForm: null, materialSourceOpen: false, materialSourceKeyword: '', pendingSelected: new Set(), materialDetailId: '', materialDetailStatus: '', materialDetailKeywordDraft: '', materialDetailKeyword: '', materialLogModelId: '', materialLogTab: 'execution',
-      reverseFilters: { executeType: '', status: '' }, reverseKeywordDraft: '', reverseKeyword: '', reverseDetailId: '', reverseDetailFilters: { result: '', from: '', to: '' }
+      reverseFilters: { executeType: '', status: '' }, reverseKeywordDraft: '', reverseKeyword: '', reverseDetailId: '', reverseDetailFilters: { result: '', from: '', to: '' }, reverseSourceOpen: false, reverseSourceKeyword: '', reversePlanOpen: false, reversePlanKeyword: '', reverseDomainOpen: false, reverseDomainKeyword: ''
     };
     root.addEventListener('click', onClick); root.addEventListener('dblclick', onDblClick); root.addEventListener('input', onInput); root.addEventListener('change', onChange); root.addEventListener('keydown', onKeydown);
     if (state.view === 'material' && opts && opts.mode === 'create') openMaterialForm(opts.modelIds || store.pendingMaterialIds || []); else render();

@@ -17,6 +17,11 @@
   <link rel="stylesheet" href="css/pages/business-layer.css">
   <link rel="stylesheet" href="css/pages/big-data-service.css">
   <link rel="stylesheet" href="css/pages/data-modeling.css">
+  <link rel="stylesheet" href="css/pages/data-permission.css">
+  <link rel="stylesheet" href="css/pages/data-class-grade.css">
+  <link rel="stylesheet" href="css/pages/data-security.css">
+  <link rel="stylesheet" href="css/pages/lineage.css">
+  <link rel="stylesheet" href="css/pages/system-management.css">
   <link rel="stylesheet" href="css/pages/business-code.css">
   <link rel="stylesheet" href="css/pages/data-standard.css">
   <link rel="stylesheet" href="css/pages/standard-code.css">
@@ -25,6 +30,10 @@
   <link rel="stylesheet" href="css/pages/sync-record.css">
   <link rel="stylesheet" href="css/pages/meta-search.css">
   <link rel="stylesheet" href="css/pages/data-develop.css">
+  <link rel="stylesheet" href="css/pages/schedule-management.css">
+  <link rel="stylesheet" href="css/pages/development-config.css">
+  <link rel="stylesheet" href="css/pages/file-center.css">
+  <link rel="stylesheet" href="css/pages/development-recycle.css">
   <link rel="stylesheet" href="css/pages/code-search.css">
   <link rel="stylesheet" href="css/pages/project-mgr.css">
   <link rel="stylesheet" href="css/pages/log-management.css">
@@ -487,46 +496,35 @@
             </ul>
           </li>
           <li class="menu-item has-sub">
-            <a class="menu-link" href="javascript:;"><i class="bi bi-layers"></i><span>分级分类管理</span><i class="bi bi-chevron-down arrow"></i></a>
+            <a class="menu-link" href="javascript:;"><i class="bi bi-layers"></i><span>分级分类</span><i class="bi bi-chevron-down arrow"></i></a>
             <ul class="sub-menu">
-              <li><a href="javascript:;"><i class="bi bi-tags"></i><span>分类管理</span></a></li>
-              <li><a href="javascript:;"><i class="bi bi-bar-chart-steps"></i><span>分级管理</span></a></li>
+              <li><a data-menu="class-management" href="javascript:;"><i class="bi bi-tags"></i><span>分类管理</span></a></li>
+              <li><a data-menu="grade-management" href="javascript:;"><i class="bi bi-bar-chart-steps"></i><span>分级管理</span></a></li>
             </ul>
           </li>
           <li class="menu-item has-sub">
             <a class="menu-link" href="javascript:;"><i class="bi bi-bar-chart-steps"></i><span>数据权限</span><i class="bi bi-chevron-down arrow"></i></a>
             <ul class="sub-menu">
-              <li><a href="javascript:;"><i class="bi bi-shield-lock"></i><span>权限配置</span></a></li>
-              <li><a href="javascript:;"><i class="bi bi-diagram-2"></i><span>分权分域</span></a></li>
+              <li><a data-menu="data-permission-config" href="javascript:;"><i class="bi bi-shield-lock"></i><span>权限配置</span></a></li>
+              <li><a data-menu="data-permission-domain" href="javascript:;"><i class="bi bi-diagram-2"></i><span>分权分域</span></a></li>
             </ul>
           </li>
           <li class="menu-item has-sub">
             <a class="menu-link" href="javascript:;"><i class="bi bi-shield"></i><span>数据安全</span><i class="bi bi-chevron-down arrow"></i></a>
             <ul class="sub-menu">
-              <li><a href="javascript:;"><i class="bi bi-eye-slash"></i><span>脱敏规则</span></a></li>
-              <li><a href="javascript:;"><i class="bi bi-key"></i><span>加密规则</span></a></li>
-              <li><a href="javascript:;"><i class="bi bi-shield-lock"></i><span>安全管理</span></a></li>
-              <li><a href="javascript:;"><i class="bi bi-search"></i><span>智能识别</span></a></li>
+              <li><a data-menu="security-mask-rule" href="javascript:;"><i class="bi bi-eye-slash"></i><span>脱敏规则</span></a></li>
+              <li><a data-menu="security-crypto-rule" href="javascript:;"><i class="bi bi-key"></i><span>加密规则</span></a></li>
+              <li><a data-menu="security-management" href="javascript:;"><i class="bi bi-shield-lock"></i><span>安全管理</span></a></li>
             </ul>
           </li>
           <li class="menu-item">
             <a class="menu-link" data-menu="lineage" href="javascript:;"><i class="bi bi-diagram-2"></i><span>血缘关系</span></a>
           </li>
           <li class="menu-item has-sub">
-            <a class="menu-link" href="javascript:;"><i class="bi bi-heart-pulse"></i><span>生命周期</span><i class="bi bi-chevron-down arrow"></i></a>
-            <ul class="sub-menu">
-              <li><a href="javascript:;"><i class="bi bi-heart-pulse"></i><span>生命周期</span></a></li>
-              <li><a href="javascript:;"><i class="bi bi-activity"></i><span>数据监控</span></a></li>
-              <li><a href="javascript:;"><i class="bi bi-archive"></i><span>数据归档</span></a></li>
-              <li><a href="javascript:;"><i class="bi bi-trash3"></i><span>数据销毁</span></a></li>
-            </ul>
-          </li>
-          <li class="menu-item has-sub">
             <a class="menu-link" href="javascript:;"><i class="bi bi-gear"></i><span>系统管理</span><i class="bi bi-chevron-down arrow"></i></a>
             <ul class="sub-menu">
-              <li><a href="javascript:;"><i class="bi bi-gear"></i><span>配置管理</span></a></li>
-              <li><a href="javascript:;"><i class="bi bi-trash3"></i><span>回收站</span></a></li>
-              <li><a href="javascript:;"><i class="bi bi-sliders"></i><span>治理配置</span></a></li>
+              <li><a data-menu="system-data-source-type" href="javascript:;"><i class="bi bi-card-list"></i><span>配置管理</span></a></li>
+              <li><a data-menu="system-recycle-bin" href="javascript:;"><i class="bi bi-trash3"></i><span>回收站</span></a></li>
             </ul>
           </li>
         </ul>
@@ -647,6 +645,11 @@
   <script src="js/pages/business-layer.js"></script>
   <script src="js/pages/big-data-service.js"></script>
   <script src="js/pages/data-modeling.js"></script>
+  <script src="js/pages/data-permission.js"></script>
+  <script src="js/pages/data-class-grade.js"></script>
+  <script src="js/pages/data-security.js"></script>
+  <script src="js/pages/lineage.js"></script>
+  <script src="js/pages/system-management.js"></script>
   <script src="js/pages/business-code.js"></script>
   <script src="js/pages/data-standard.js"></script>
   <script src="js/pages/standard-code.js"></script>
@@ -656,6 +659,10 @@
   <script src="js/pages/meta-search-home.js"></script>
   <script src="js/pages/meta-search-result.js"></script>
   <script src="js/pages/data-develop.js"></script>
+  <script src="js/pages/schedule-management.js"></script>
+  <script src="js/pages/development-config.js"></script>
+  <script src="js/pages/file-center.js"></script>
+  <script src="js/pages/development-recycle.js"></script>
   <script src="js/pages/code-search.js"></script>
   <script src="js/pages/project-mgr.js"></script>
   <script src="js/components/log-view.js"></script>

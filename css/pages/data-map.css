@@ -536,7 +536,7 @@ body.datamap-standalone .content-area::-webkit-scrollbar-thumb {
   color: #1680ff;
 }
 
-.dm-toast {
+.page-data-map .dm-toast {
   position: fixed;
   left: 50%;
   bottom: 36px;
@@ -555,7 +555,7 @@ body.datamap-standalone .content-area::-webkit-scrollbar-thumb {
   transition: opacity .18s ease, transform .18s ease;
 }
 
-.dm-toast.show {
+.page-data-map .dm-toast.show {
   opacity: 1;
   transform: translate(-50%, 0);
 }

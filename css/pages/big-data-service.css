@@ -96,6 +96,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: nowrap;
   gap: 12px;
   min-height: 50px;
   padding: 9px 16px;
@@ -111,7 +112,7 @@
   font-weight: 500;
 }
 .bds-toolbar-title i { color: var(--primary); }
-.bds-toolbar-actions { display: flex; align-items: center; gap: 8px; }
+.bds-toolbar-actions { display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; }
 .page-big-data-service .btn { height: 32px; border-radius: 4px; font-size: 13px; }
 .bds-status {
   min-height: 0;
@@ -124,8 +125,9 @@
 .bds-detail-grid,
 .bds-form-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px 34px;
+  grid-template-columns: minmax(0, 620px);
+  align-content: start;
+  gap: 18px;
   padding: 26px 28px;
 }
 .bds-field {
@@ -135,7 +137,7 @@
   align-items: start;
   min-width: 0;
 }
-.bds-field.wide { grid-column: 1 / -1; }
+.bds-field.wide { grid-column: 1; }
 .bds-field > label {
   color: #7d8998;
   line-height: 32px;
@@ -284,6 +286,6 @@
 @media (max-width: 1180px) {
   .bds-shell { grid-template-columns: 250px minmax(720px, 1fr); overflow-x: auto; }
   .bds-detail-grid,
-  .bds-form-grid { gap: 16px 20px; padding: 22px 18px; }
+  .bds-form-grid { grid-template-columns: minmax(0, 620px); gap: 16px; padding: 22px 18px; }
   .bds-field { grid-template-columns: 102px minmax(0, 1fr); }
 }

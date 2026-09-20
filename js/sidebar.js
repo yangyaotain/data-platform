@@ -135,7 +135,7 @@ DP.initSidebar = function () {
         DP.setActiveMenu(link);
         var menuKey = link.dataset.menu || '';
         var menuText = link.querySelector('span') ? link.querySelector('span').textContent : '';
-        if (menuKey === 'datasource' || menuKey === 'project-mgr' || menuKey === 'svc-api-dev') {
+        if (menuKey === 'datasource' || menuKey === 'project-mgr' || menuKey === 'svc-api-dev' || menuKey === 'dev-recycle') {
           DP.showPage(menuKey);
         } else {
           DP.showPage(menuText);

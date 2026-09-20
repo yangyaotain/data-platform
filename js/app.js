@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var menuText = getNodeText(link);
     if (!link) return fallbackKey || '';
     if (link.closest('.sub-menu')) return menuKey || menuText || fallbackKey;
-    if (menuKey === 'datasource' || menuKey === 'project-mgr' || menuKey === 'svc-api-dev') return menuKey;
+    if (menuKey === 'datasource' || menuKey === 'project-mgr' || menuKey === 'svc-api-dev' || menuKey === 'dev-recycle') return menuKey;
     return menuText || menuKey || fallbackKey;
   }
 

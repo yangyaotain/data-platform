@@ -43,6 +43,36 @@ DP.showPage = function (menuKey, opts) {
   } else if (menuKey === 'data-modeling-reverse' || menuKey === '逆向建模') {
     c.innerHTML = DP.pages.dataModeling.html;
     DP.pages.dataModeling.init('reverse', opts);
+  } else if (menuKey === 'data-permission-config' || menuKey === '权限配置') {
+    c.innerHTML = DP.pages.dataPermission.html;
+    DP.pages.dataPermission.init('permission');
+  } else if (menuKey === 'data-permission-domain' || menuKey === '分权分域') {
+    c.innerHTML = DP.pages.dataPermission.html;
+    DP.pages.dataPermission.init('domain');
+  } else if (menuKey === 'class-management' || menuKey === '分类管理') {
+    c.innerHTML = DP.pages.dataClassGrade.html;
+    DP.pages.dataClassGrade.init('class');
+  } else if (menuKey === 'grade-management' || menuKey === '分级管理') {
+    c.innerHTML = DP.pages.dataClassGrade.html;
+    DP.pages.dataClassGrade.init('grade');
+  } else if (menuKey === 'security-mask-rule' || menuKey === '脱敏规则') {
+    c.innerHTML = DP.pages.dataSecurity.html;
+    DP.pages.dataSecurity.init('mask');
+  } else if (menuKey === 'security-crypto-rule' || menuKey === '加密规则') {
+    c.innerHTML = DP.pages.dataSecurity.html;
+    DP.pages.dataSecurity.init('crypto');
+  } else if (menuKey === 'security-management' || menuKey === '安全管理') {
+    c.innerHTML = DP.pages.dataSecurity.html;
+    DP.pages.dataSecurity.init('management');
+  } else if (menuKey === 'lineage' || menuKey === '血缘关系') {
+    c.innerHTML = DP.pages.lineage.html;
+    DP.pages.lineage.init();
+  } else if (menuKey === 'system-data-source-type' || menuKey === '配置管理') {
+    c.innerHTML = DP.pages.systemManagement.html;
+    DP.pages.systemManagement.init('source-type');
+  } else if (menuKey === 'system-recycle-bin' || menuKey === '回收站') {
+    c.innerHTML = DP.pages.systemManagement.html;
+    DP.pages.systemManagement.init('recycle-bin');
   } else if (menuKey === 'datamap-home' || menuKey === '数据地图') {
     c.innerHTML = DP.pages.dataMapHome.html;
     DP.pages.dataMapHome.init();
@@ -108,6 +138,18 @@ DP.showPage = function (menuKey, opts) {
   } else if (menuKey === '数据开发') {
     c.innerHTML = DP.pages.dataDevelop.html;
     DP.pages.dataDevelop.init(opts || {});
+  } else if (menuKey === 'dev-schedule' || menuKey === '调度管理') {
+    c.innerHTML = DP.pages.scheduleManagement.html;
+    DP.pages.scheduleManagement.init(opts || {});
+  } else if (menuKey === 'dev-config' || menuKey === '开发配置') {
+    c.innerHTML = DP.pages.developmentConfig.html;
+    DP.pages.developmentConfig.init(opts || {});
+  } else if (menuKey === 'dev-file' || menuKey === '文件中心') {
+    c.innerHTML = DP.pages.fileCenter.html;
+    DP.pages.fileCenter.init(opts || {});
+  } else if (menuKey === 'dev-recycle') {
+    c.innerHTML = DP.pages.developmentRecycle.html;
+    DP.pages.developmentRecycle.init(opts || {});
   } else if (menuKey === 'dev-code-search' || menuKey === '代码检索') {
     c.innerHTML = DP.pages.codeSearch.html;
     DP.pages.codeSearch.init(opts || {});
