@@ -211,6 +211,10 @@ document.addEventListener('DOMContentLoaded', function () {
         var devLink = document.querySelector('[data-menu="dev-develop"]');
         if (devLink) devLink.classList.add('active');
         DP.showPage('数据开发');
+      } else if (page === 'explore') {
+        var exploreLink = document.querySelector('[data-menu="explore-main"]');
+        if (exploreLink) exploreLink.classList.add('active');
+        DP.showPage('数据探索');
       } else if (page === 'service') {
         var serviceApiDevLink = document.querySelector('[data-menu="svc-api-dev"]');
         if (serviceApiDevLink) serviceApiDevLink.classList.add('active');

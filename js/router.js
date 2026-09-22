@@ -138,6 +138,9 @@ DP.showPage = function (menuKey, opts) {
   } else if (menuKey === '数据开发') {
     c.innerHTML = DP.pages.dataDevelop.html;
     DP.pages.dataDevelop.init(opts || {});
+  } else if (menuKey === 'explore-main' || menuKey === '数据探索') {
+    c.innerHTML = DP.pages.dataExplore.html;
+    DP.pages.dataExplore.init(opts || {});
   } else if (menuKey === 'dev-schedule' || menuKey === '调度管理') {
     c.innerHTML = DP.pages.scheduleManagement.html;
     DP.pages.scheduleManagement.init(opts || {});
@@ -198,6 +201,30 @@ DP.showPage = function (menuKey, opts) {
   } else if (menuKey === 'svc-api-dev' || menuKey === '接口开发') {
     c.innerHTML = DP.pages.serviceApiDev.html;
     DP.pages.serviceApiDev.init();
+  } else if (menuKey === 'svc-api-reg' || menuKey === '接口注册') {
+    c.innerHTML = DP.pages.serviceApiRegistration.html;
+    DP.pages.serviceApiRegistration.init();
+  } else if (menuKey === 'svc-dataset' || menuKey === '数据集') {
+    c.innerHTML = DP.pages.serviceDataset.html;
+    DP.pages.serviceDataset.init();
+  } else if (menuKey === 'svc-table-res' || menuKey === '库表资源') {
+    c.innerHTML = DP.pages.serviceTableResource.html;
+    DP.pages.serviceTableResource.init();
+  } else if (menuKey === 'svc-api-arrange' || menuKey === 'API编排') {
+    c.innerHTML = DP.pages.serviceApiArrange.html;
+    DP.pages.serviceApiArrange.init();
+  } else if (menuKey === 'svc-system-class') {
+    c.innerHTML = DP.pages.serviceSystemManagement.html;
+    DP.pages.serviceSystemManagement.init('class');
+  } else if (menuKey === 'svc-system-domain') {
+    c.innerHTML = DP.pages.serviceSystemManagement.html;
+    DP.pages.serviceSystemManagement.init('domain');
+  } else if (menuKey === 'svc-system-model') {
+    c.innerHTML = DP.pages.serviceSystemManagement.html;
+    DP.pages.serviceSystemManagement.init('model');
+  } else if (menuKey === 'svc-system-sdk') {
+    c.innerHTML = DP.pages.serviceSystemManagement.html;
+    DP.pages.serviceSystemManagement.init('sdk');
   } else if (menuKey === '元数据搜索' || menuKey === '元数据搜索结果') {
     c.innerHTML = DP.pages.metaSearchResult.html;
     DP.pages.metaSearchResult.init(opts);

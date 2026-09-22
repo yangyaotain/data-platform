@@ -113,7 +113,7 @@ DP.pages.serviceApiDev = (function () {
   function renderRow(row, index) {
     var action = row.publishStatus === '开发'
       ? '<button class="svc-row-action danger" data-svc-action="delete" data-index="' + index + '"><i class="bi bi-trash3"></i><span>删除</span></button>'
-      : '<button class="svc-row-action" data-svc-action="test" data-index="' + index + '"><i class="bi bi-link-45deg"></i><span>测试</span></button>';
+      : '<button class="svc-row-action" data-svc-action="test" data-index="' + index + '"><i class="bi bi-link-45deg"></i><span>接口测试</span></button>';
     return '' +
       '<tr>' +
         '<td class="svc-check-col"><input type="checkbox" class="svc-row-check"></td>' +
@@ -201,6 +201,7 @@ DP.pages.serviceApiDev = (function () {
     var code = opts.code || '';
     var title = opts.title || '';
     var language = opts.language || 'sql';
+    var editable = opts.editable !== false;
     return '' +
       '<div class="dp-sql-editor svc-sql-editor theme-dark" data-svc-public-editor style="font-size:14px;">' +
         '<div class="dp-sql-editor-toolbar">' +
@@ -223,7 +224,7 @@ DP.pages.serviceApiDev = (function () {
         '</div>' +
         '<div class="dp-sql-editor-wrap">' +
           '<div class="dp-sql-editor-gutter">' + lineNumbers(code) + '</div>' +
-          '<div class="dp-sql-editor-content" contenteditable="true" spellcheck="false">' + highlightCode(code, language) + '</div>' +
+          '<div class="dp-sql-editor-content" contenteditable="' + editable + '" spellcheck="false">' + highlightCode(code, language) + '</div>' +
         '</div>' +
       '</div>';
   }
@@ -737,34 +738,36 @@ DP.pages.serviceApiDev = (function () {
     });
   }
 
-  function openTestModal(row) {
-    var mask = document.createElement('div');
-    mask.className = 'svc-modal-mask';
-    mask.innerHTML = '' +
-      '<div class="svc-modal test-modal">' +
-        '<div class="svc-modal-head">' +
-          '<h3>接口测试</h3>' +
-          '<button class="svc-modal-close" data-svc-modal-close><i class="bi bi-x-lg"></i></button>' +
-        '</div>' +
-        '<div class="svc-test-summary">' +
-          '<div><span>接口名称</span><strong>' + escapeHtml(row.name) + '</strong></div>' +
-          '<div><span>请求方式</span><strong>GET</strong></div>' +
-          '<div><span>版本</span><strong>' + escapeHtml(row.version) + '</strong></div>' +
-        '</div>' +
-        '<div class="svc-modal-body">' +
-          '<div class="svc-test-line"><label>请求地址</label><input readonly value="/api/service/' + escapeHtml(row.enName) + '"></div>' +
-          '<div class="svc-test-line"><label>请求参数</label><textarea>{"page":1,"pageSize":10}</textarea></div>' +
-          '<div class="svc-response-box"><div class="svc-response-title">响应结果</div><pre>{\n  "code": 200,\n  "message": "success",\n  "data": [{ "total": 128, "name": "' + escapeHtml(row.enName) + '" }]\n}</pre></div>' +
-        '</div>' +
-        '<div class="svc-modal-footer">' +
-          '<button class="btn btn-outline" data-svc-modal-close><i class="bi bi-x-circle"></i> 关闭</button>' +
-          '<button class="btn btn-primary" data-svc-run-test><i class="bi bi-play-circle"></i> 执行测试</button>' +
-        '</div>' +
+  function openTestPage(row) {
+    var listPanel = pageEl.querySelector(':scope > .svc-list-panel');
+    if (!listPanel) return;
+    listPanel.style.display = 'none';
+    var testPage = document.createElement('section');
+    testPage.className = 'svc-list-panel svc-reg-test-page svc-dev-test-page';
+    testPage.setAttribute('data-svc-test-page', '');
+    testPage.innerHTML = '' +
+      '<div class="svc-reg-test-header"><h3><i class="bi bi-paperclip"></i> 接口测试</h3><button class="btn btn-outline" type="button" data-svc-test-back><i class="bi bi-arrow-left"></i> 返回</button></div>' +
+      '<div class="svc-reg-test-scroll">' +
+        '<div class="svc-reg-test-summary"><div><span>数据名称：</span><strong>' + escapeHtml(row.name) + '</strong></div><div><span>传输协议：</span><strong>HTTP</strong></div><div><span>请求方式：</span><strong>POST</strong></div><div><span>数据格式：</span><strong>JSON</strong></div><div><span>接口类型：</span><strong>REST</strong></div><div><span>接口地址：</span><strong>/576/' + escapeHtml(row.enName) + '</strong></div></div>' +
+        '<h3 class="svc-section-title">请求参数</h3>' +
+        '<div class="svc-param-tabs"><button class="active" type="button">Query参数</button></div>' +
+        '<table class="svc-param-table svc-dev-test-params"><thead><tr><th>参数名</th><th>必填</th><th>数据类型</th><th>默认值</th><th>参数说明</th></tr></thead><tbody><tr><td>limit</td><td>是</td><td>string</td><td><input value="10" aria-label="默认值"></td><td>最大返回记录数</td></tr></tbody></table>' +
+        '<button class="btn btn-primary svc-reg-send" type="button" data-svc-send-test><i class="bi bi-send"></i> 发送请求</button>' +
+        '<h3 class="svc-section-title">返回数据</h3>' +
+        '<div data-svc-test-response>' + renderCodeEditor({ language: 'json', code: '', editable: false }) + '</div>' +
       '</div>';
-    pageEl.appendChild(mask);
-    bindModalClose(mask);
-    mask.querySelector('[data-svc-run-test]').addEventListener('click', function () {
-      showToast('接口测试执行成功', 'success');
+    pageEl.appendChild(testPage);
+    bindEditorActionButtons(testPage);
+    testPage.querySelector('[data-svc-test-back]').addEventListener('click', function () {
+      testPage.remove();
+      listPanel.style.display = '';
+    });
+    testPage.querySelector('[data-svc-send-test]').addEventListener('click', function () {
+      var response = '{\n  "code": 200,\n  "msg": "success",\n  "data": {\n    "total": 128,\n    "records": [{ "name": "' + escapeHtml(row.enName) + '", "status": "有效" }]\n  }\n}';
+      var editor = testPage.querySelector('[data-svc-test-response] .dp-sql-editor');
+      editor.querySelector('.dp-sql-editor-gutter').innerHTML = lineNumbers(response);
+      editor.querySelector('.dp-sql-editor-content').textContent = response;
+      showToast('请求发送成功', 'success');
     });
   }
 
@@ -823,7 +826,7 @@ DP.pages.serviceApiDev = (function () {
       var action = btn.dataset.svcAction;
       var row = getFilteredRows()[Number(btn.dataset.index)];
       if (action === 'edit') renderEditorPage(row, false);
-      if (action === 'test') openTestModal(row);
+      if (action === 'test') openTestPage(row);
       if (action === 'delete') {
         DP.confirm('确认删除接口【' + escapeHtml(row.name) + '】吗？', {
           icon: 'danger',
@@ -866,7 +869,7 @@ DP.pages.serviceApiDev = (function () {
 
   return {
     html: '' +
-      '<div class="page-service-api-dev">' +
+      '<div class="page-service-api-dev page-service-api-development">' +
         '<aside class="svc-catalog-panel">' +
           '<div class="svc-catalog-title"><i class="bi bi-list"></i><span>数据目录</span></div>' +
           '<div class="svc-catalog-search"><i class="bi bi-search"></i><input data-svc-catalog-search placeholder="请输入"></div>' +

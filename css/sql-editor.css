@@ -79,6 +79,37 @@
   flex-shrink: 0;
 }
 
+.dp-sql-editor-toolbar-leading,
+.dp-sql-editor-toolbar-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dp-sql-editor-toolbar-leading {
+  margin-right: auto;
+}
+
+.dp-sql-editor-toolbar-tools {
+  justify-content: flex-end;
+}
+
+.dp-sql-editor.is-fullscreen {
+  position: fixed;
+  inset: var(--top-nav-height) 0 0 0;
+  z-index: 1600;
+  border: 0;
+  border-radius: 0;
+}
+
+.dp-sql-editor-match-count {
+  color: var(--dp-sql-muted);
+  font-family: -apple-system, BlinkMacSystemFont, 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .dp-sql-editor .dp-sql-editor-select,
 .dp-sql-editor .dp-sql-editor-btn {
   height: 28px;
