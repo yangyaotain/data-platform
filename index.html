@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/components/date-picker.css">
   <link rel="stylesheet" href="css/components/document-editor.css">
+  <link rel="stylesheet" href="css/components/log-viewer.css">
   <link rel="stylesheet" href="css/sql-editor.css">
   <link rel="stylesheet" href="css/pages/datasource.css">
   <link rel="stylesheet" href="css/pages/technical-metadata.css">
@@ -30,6 +31,7 @@
   <link rel="stylesheet" href="css/pages/sync-record.css">
   <link rel="stylesheet" href="css/pages/meta-search.css">
   <link rel="stylesheet" href="css/pages/data-develop.css">
+  <link rel="stylesheet" href="css/components/development-canvas.css">
   <link rel="stylesheet" href="css/pages/data-explore.css">
   <link rel="stylesheet" href="css/pages/schedule-management.css">
   <link rel="stylesheet" href="css/pages/development-config.css">
@@ -44,6 +46,12 @@
   <link rel="stylesheet" href="css/pages/process-config.css">
   <link rel="stylesheet" href="css/pages/monitor-items.css">
   <link rel="stylesheet" href="css/pages/monitor-center.css">
+  <link rel="stylesheet" href="css/pages/platform-overview.css">
+  <link rel="stylesheet" href="css/pages/monitor-overview.css">
+  <link rel="stylesheet" href="css/pages/api-overview.css">
+  <link rel="stylesheet" href="css/pages/collection-monitor.css">
+  <link rel="stylesheet" href="css/pages/batch-processing.css">
+  <link rel="stylesheet" href="css/pages/monitor-config-management.css">
   <link rel="stylesheet" href="css/pages/notification-rules.css">
   <link rel="stylesheet" href="css/pages/requirements.css">
   <link rel="stylesheet" href="css/pages/ai-assistant.css">
@@ -333,16 +341,16 @@
           <li class="menu-item has-sub">
             <a class="menu-link" href="javascript:;"><i class="bi bi-house-door"></i><span>运维概况</span><i class="bi bi-chevron-down arrow"></i></a>
             <ul class="sub-menu">
-              <li><a href="javascript:;"><i class="bi bi-speedometer2"></i><span>平台概况</span></a></li>
-              <li><a href="javascript:;"><i class="bi bi-activity"></i><span>监控概览</span></a></li>
-              <li><a href="javascript:;"><i class="bi bi-plug"></i><span>API概览</span></a></li>
+              <li><a data-menu="platform-overview" href="javascript:;"><i class="bi bi-speedometer2"></i><span>平台概况</span></a></li>
+              <li><a data-menu="monitor-overview" href="javascript:;"><i class="bi bi-activity"></i><span>监控概览</span></a></li>
+              <li><a data-menu="api-overview" href="javascript:;"><i class="bi bi-plug"></i><span>API概览</span></a></li>
             </ul>
           </li>
           <li class="menu-item has-sub">
             <a class="menu-link" href="javascript:;"><i class="bi bi-tools"></i><span>运维管理</span><i class="bi bi-chevron-down arrow"></i></a>
             <ul class="sub-menu">
-              <li><a href="javascript:;"><i class="bi bi-broadcast"></i><span>采集监控</span></a></li>
-              <li><a href="javascript:;"><i class="bi bi-stack"></i><span>批量处理</span></a></li>
+              <li><a data-menu="collection-monitor" href="javascript:;"><i class="bi bi-broadcast"></i><span>采集监控</span></a></li>
+              <li><a data-menu="batch-processing" href="javascript:;"><i class="bi bi-stack"></i><span>批量处理</span></a></li>
               <li><a href="javascript:;"><i class="bi bi-arrow-repeat"></i><span>流式处理</span></a></li>
               <li><a href="javascript:;"><i class="bi bi-wrench-adjustable"></i><span>修复记录</span></a></li>
               <li><a href="javascript:;"><i class="bi bi-graph-up-arrow"></i><span>API监控</span></a></li>
@@ -367,8 +375,7 @@
           <li class="menu-item has-sub">
             <a class="menu-link" href="javascript:;"><i class="bi bi-gear"></i><span>系统管理</span><i class="bi bi-chevron-down arrow"></i></a>
             <ul class="sub-menu">
-              <li><a href="javascript:;"><i class="bi bi-journal-text"></i><span>操作日志</span></a></li>
-              <li><a href="javascript:;"><i class="bi bi-gear"></i><span>配置管理</span></a></li>
+              <li><a data-menu="monitor-config-management" href="javascript:;"><i class="bi bi-gear"></i><span>配置管理</span></a></li>
             </ul>
           </li>
         </ul>
@@ -640,6 +647,8 @@
   <script src="js/config.js"></script>
   <script src="js/components/date-picker.js"></script>
   <script src="js/components/sql-editor.js"></script>
+  <script src="js/components/log-viewer.js"></script>
+  <script src="js/components/development-canvas.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
   <script src="js/components/table-detail-view.js"></script>
   <script src="js/pages/datasource.js"></script>
@@ -679,6 +688,12 @@
   <script src="js/pages/sql-audit-log.js"></script>
   <script src="js/pages/monitor-items.js"></script>
   <script src="js/pages/monitor-center.js"></script>
+  <script src="js/pages/platform-overview.js"></script>
+  <script src="js/pages/monitor-overview.js"></script>
+  <script src="js/pages/api-overview.js"></script>
+  <script src="js/pages/collection-monitor.js"></script>
+  <script src="js/pages/batch-processing.js"></script>
+  <script src="js/pages/monitor-config-management.js"></script>
   <script src="js/pages/notification-rules.js"></script>
   <script src="js/pages/requirements.js"></script>
   <script src="js/pages/governance-overview.js"></script>

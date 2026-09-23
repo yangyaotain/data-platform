@@ -1,0 +1,26 @@
+/* 数据开发公共画布：基于数据开发页原有 dd-canvas / dd-node 体系。 */
+.development-canvas-panel { min-height: 0; }
+.development-canvas { min-height: 0; }
+.development-canvas-readonly .development-canvas { height: 100%; }
+.development-canvas-readonly .dd-node { cursor: pointer; }
+.development-canvas-readonly .dd-node:active { cursor: pointer; }
+.development-canvas-readonly .dd-node-task { box-sizing: border-box; }
+.development-canvas-readonly .dd-node-start,
+.development-canvas-readonly .dd-node-end { box-sizing: border-box; }
+.development-canvas-node-schedule { position: absolute; left: 50%; bottom: calc(100% + 8px); color: #697b8e; font-size: 12px; white-space: nowrap; transform: translateX(-50%); }
+.development-canvas-node-status { position: absolute; left: 50%; top: calc(100% + 8px); display: inline-flex; align-items: center; gap: 5px; color: #28a36a; font-size: 12px; white-space: nowrap; transform: translateX(-50%); }
+.development-canvas-node-status.warning { color: #e99a24; }
+.development-canvas-node-status.danger { color: #e65b65; }
+.development-canvas-node-status.running { color: var(--primary); }
+.development-canvas-node-check { width: 14px; height: 14px; margin: 0 0 0 10px; accent-color: var(--primary); cursor: pointer; flex: 0 0 auto; }
+.development-canvas-node-record { width: 24px; height: 26px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; padding: 0; border: 0; background: transparent; color: var(--primary); cursor: pointer; }
+.development-canvas-node-record:hover { color: #0b6fd4; }
+.development-canvas-readonly .dd-node.selected > div { border-color: #efb52f; box-shadow: 0 0 0 5px rgba(255,194,47,.2),0 6px 16px rgba(84,65,22,.14); }
+.development-canvas-readonly .dd-node.is-search-match > div { border-color: #7eb9f7; box-shadow: 0 0 0 4px rgba(22,131,248,.12),0 6px 16px rgba(45,82,121,.12); }
+.development-canvas-readonly .dd-node.is-search-current > div { border-color: #efb52f; box-shadow: 0 0 0 5px rgba(255,194,47,.22),0 6px 16px rgba(84,65,22,.14); }
+.development-canvas-search .dd-search-mini { display: flex; align-items: center; gap: 8px; }
+.development-canvas-search .dd-search-mini > span:first-child { flex: 0 0 auto; color: #607187; }
+.development-canvas-search .dd-search-mini input { width: 150px; }
+.development-canvas-search .dd-search-nav { display: inline-flex; align-items: center; }
+.development-canvas-search .dd-search-nav button { width: 24px; height: 24px; padding: 0; border: 0; background: transparent; color: #74869b; cursor: pointer; }
+.development-canvas-search .dd-search-nav button:hover { color: var(--primary); }

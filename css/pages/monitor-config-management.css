@@ -1,0 +1,89 @@
+/* 运维监控 / 系统管理 / 配置管理 */
+.page-monitor-config-management { height: 100%; min-height: 0; overflow: auto; padding: 10px; background: var(--content-bg); color: #526275; font-size: 13px; }
+.page-monitor-config-management::-webkit-scrollbar, .mcm-table-wrap::-webkit-scrollbar, .mcm-modal-body::-webkit-scrollbar { width: 6px; height: 6px; }
+.page-monitor-config-management::-webkit-scrollbar-thumb, .mcm-table-wrap::-webkit-scrollbar-thumb, .mcm-modal-body::-webkit-scrollbar-thumb { border-radius: 6px; background: #c7d0dc; }
+.mcm-layout { min-width: 1120px; min-height: 100%; display: grid; grid-template-columns: 260px minmax(0,1fr); gap: 10px; }
+.mcm-category, .mcm-panel { border: 1px solid #e3e8ef; border-radius: 5px; background: #fff; box-shadow: 0 2px 8px rgba(28,55,85,.035); overflow: hidden; }
+.mcm-category { padding: 10px; }
+.mcm-category button { width: 100%; height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 0; border-radius: 4px; background: transparent; color: #526275; cursor: pointer; font: inherit; text-align: left; }
+.mcm-category button:hover { background: #f3f7fb; color: var(--primary); }
+.mcm-category button.active { background: #eaf4ff; color: var(--primary); font-weight: 600; }
+.mcm-panel { min-height: 560px; display: flex; flex-direction: column; }
+.mcm-toolbar { min-height: 56px; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #e8edf3; }
+.mcm-toolbar .btn, .mcm-modal-foot .btn, .mcm-add-option { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 32px; }
+.mcm-toolbar form { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.mcm-keyword { position: relative; display: block; }
+.mcm-keyword i { position: absolute; left: 10px; top: 50%; color: #97a5b5; transform: translateY(-50%); }
+.mcm-keyword input { width: 240px; height: 32px; padding: 0 10px 0 32px; border: 1px solid #d9e0e8; border-radius: 4px; background: #fff; color: #526275; font: inherit; outline: none; }
+.mcm-keyword input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(22,131,255,.08); }
+
+.mcm-table-wrap { flex: 1; min-height: 0; overflow: auto; }
+.mcm-table { width: 100%; min-width: 860px; table-layout: fixed; }
+.mcm-table th, .mcm-table td { height: 42px; padding: 8px 12px; border-right: 1px solid #e8edf3; border-bottom: 1px solid #e8edf3; overflow: hidden; color: #53657a; font-size: 12px; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.mcm-table th { background: #f7f9fc; color: #44566c; font-weight: 600; }
+.mcm-table th:last-child, .mcm-table td:last-child { border-right: 0; text-align: center; }
+.mcm-table th:nth-child(1) { width: 23%; }
+.mcm-table th:nth-child(2) { width: 20%; }
+.mcm-table th:nth-child(3) { width: 15%; }
+.mcm-table th:nth-child(4) { width: 30%; }
+.mcm-table th:nth-child(5) { width: 150px; }
+.mcm-built-in { color: #a2aebb; }
+.mcm-row-actions { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.mcm-row-actions button { display: inline-flex; align-items: center; gap: 4px; padding: 4px 7px; border: 0; border-radius: 3px; background: transparent; color: var(--primary); cursor: pointer; font-size: 11px; }
+.mcm-row-actions button:hover { background: #edf6ff; }
+.mcm-row-actions button:last-child { color: #d84a4a; }
+.mcm-row-actions button:last-child:hover { background: #fff1f0; }
+.mcm-empty { height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #98a7b8; }
+.mcm-empty i { font-size: 24px; color: #bdc8d4; }
+
+.mcm-pagination { min-height: 56px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 8px 14px; border-top: 1px solid #e8edf3; color: #65758a; }
+.mcm-pagination > span:first-child { margin-right: auto; }
+.mcm-page-nav { display: flex; align-items: center; gap: 5px; }
+.mcm-page-nav button { min-width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 0 8px; border: 1px solid #d9e0e8; border-radius: 4px; background: #fff; color: #65758a; cursor: pointer; font-size: 12px; }
+.mcm-page-nav button:hover:not(:disabled), .mcm-page-nav button.active { border-color: var(--primary); color: var(--primary); }
+.mcm-page-nav button:disabled { cursor: not-allowed; opacity: .45; }
+.mcm-pagination select, .mcm-pagination input { height: 32px; padding: 0 10px; border: 1px solid #d9e0e8; border-radius: 4px; background: #fff; color: #526275; font: inherit; outline: none; }
+.mcm-pagination select { width: 92px; }
+.mcm-pagination input { width: 56px; margin: 0 5px; }
+.mcm-pagination label { white-space: nowrap; }
+
+.mcm-modal[hidden] { display: none; }
+.mcm-modal { position: fixed; z-index: 1800; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.mcm-modal-mask { position: absolute; inset: 0; background: rgba(20,34,50,.44); }
+.mcm-modal-dialog { position: relative; width: min(560px,calc(100vw - 48px)); max-height: calc(100vh - 72px); display: flex; flex-direction: column; border-radius: 5px; background: #fff; box-shadow: 0 14px 38px rgba(18,38,61,.24); overflow: hidden; }
+.mcm-modal-head { min-height: 52px; display: flex; align-items: center; padding: 0 16px; border-bottom: 1px solid #e6ebf1; }
+.mcm-modal-head h3 { color: #26384d; font-size: 16px; font-weight: 700; }
+.mcm-modal-x { width: 32px; height: 32px; margin-left: auto; border: 0; border-radius: 3px; background: transparent; color: #7b8fa8; cursor: pointer; }
+.mcm-modal-x:hover { background: #f1f4f8; color: #26384d; }
+.mcm-modal-body { min-height: 0; padding: 18px; overflow: auto; }
+.mcm-modal-foot { min-height: 56px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 16px; border-top: 1px solid #e6ebf1; background: #fafbfd; }
+.mcm-form { display: grid; gap: 14px; }
+.mcm-form > label { display: grid; grid-template-columns: 96px minmax(0,1fr); align-items: center; }
+.mcm-form > label > span { padding-right: 12px; color: #65758a; text-align: right; }
+.mcm-form em { color: #ef4e4e; font-style: normal; }
+.mcm-form input, .mcm-form select, .mcm-form textarea { width: 100%; border: 1px solid #d9e0e8; border-radius: 4px; background: #fff; color: #526275; font: inherit; outline: none; }
+.mcm-form input, .mcm-form select { height: 32px; padding: 0 10px; }
+.mcm-form textarea { min-height: 72px; padding: 8px 10px; resize: vertical; }
+.mcm-form input:focus, .mcm-form select:focus, .mcm-form textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(22,131,255,.08); }
+.mcm-form input:disabled { background: #f5f7fa; color: #8996a6; cursor: not-allowed; }
+.mcm-options { display: grid; grid-template-columns: 96px minmax(0,1fr); gap: 10px 0; }
+.mcm-options[hidden] { display: none; }
+.mcm-options [data-mcm-option-list] { grid-column: 2; display: grid; gap: 8px; }
+.mcm-option-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) 30px; gap: 8px; }
+.mcm-option-row button { width: 30px; height: 32px; border: 0; border-radius: 3px; background: #fff1f0; color: #d84a4a; cursor: pointer; }
+.mcm-add-option { grid-column: 2; width: max-content; }
+.mcm-form-error { min-height: 18px; padding-left: 96px; color: #d84a4a; font-size: 12px; }
+.mcm-delete-confirm { min-height: 76px; display: flex; align-items: center; gap: 12px; color: #34465c; }
+.mcm-delete-confirm i { color: #faad14; font-size: 25px; }
+.mcm-toast { position: fixed; z-index: 1900; left: 50%; top: 82px; display: flex; align-items: center; gap: 7px; padding: 10px 15px; border: 1px solid #b7eb8f; border-radius: 4px; background: #f6ffed; color: #389e0d; box-shadow: 0 6px 18px rgba(20,54,86,.16); opacity: 0; pointer-events: none; transform: translate(-50%,-10px); transition: .18s ease; }
+.mcm-toast.show { opacity: 1; transform: translate(-50%,0); }
+
+@media (max-width: 760px) {
+  .page-monitor-config-management { padding: 8px; }
+  .mcm-layout { min-width: 0; grid-template-columns: minmax(0,1fr); }
+  .mcm-category { min-height: 60px; }
+  .mcm-toolbar { align-items: flex-start; flex-direction: column; }
+  .mcm-toolbar form { width: 100%; margin-left: 0; }
+  .mcm-keyword { flex: 1; }
+  .mcm-keyword input { width: 100%; }
+}

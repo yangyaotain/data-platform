@@ -135,6 +135,24 @@ DP.showPage = function (menuKey, opts) {
   } else if (menuKey === 'monitor-center' || menuKey === '监控中心') {
     c.innerHTML = DP.pages.monitorCenter.html;
     DP.pages.monitorCenter.init();
+  } else if (menuKey === 'platform-overview' || menuKey === '平台概况') {
+    c.innerHTML = DP.pages.platformOverview.html;
+    DP.pages.platformOverview.init();
+  } else if (menuKey === 'monitor-overview' || menuKey === '监控概览') {
+    c.innerHTML = DP.pages.monitorOverview.html;
+    DP.pages.monitorOverview.init();
+  } else if (menuKey === 'api-overview' || menuKey === 'API概览') {
+    c.innerHTML = DP.pages.apiOverview.html;
+    DP.pages.apiOverview.init();
+  } else if (menuKey === 'collection-monitor' || menuKey === '采集监控') {
+    c.innerHTML = DP.pages.collectionMonitor.html;
+    DP.pages.collectionMonitor.init();
+  } else if (menuKey === 'batch-processing' || menuKey === '批量处理') {
+    c.innerHTML = DP.pages.batchProcessing.html;
+    DP.pages.batchProcessing.init();
+  } else if (menuKey === 'monitor-config-management') {
+    c.innerHTML = DP.pages.monitorConfigManagement.html;
+    DP.pages.monitorConfigManagement.init();
   } else if (menuKey === '数据开发') {
     c.innerHTML = DP.pages.dataDevelop.html;
     DP.pages.dataDevelop.init(opts || {});

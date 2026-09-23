@@ -1,0 +1,367 @@
+/* 运维监控 / 运维概况 / 平台概况 */
+.page-platform-overview {
+  height: 100%;
+  overflow: auto;
+  padding: 12px;
+  background: var(--content-bg);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.page-platform-overview button,
+.page-platform-overview input,
+.page-platform-overview select { font: inherit; }
+
+.pso-overview,
+.pso-detail-card {
+  border: 1px solid #e4e9f0;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(28, 55, 85, .04);
+}
+
+.pso-overview-scroll { overflow-x: auto; }
+
+.pso-overview-grid {
+  min-width: 1180px;
+  display: grid;
+  grid-template-columns: 210px repeat(3, minmax(310px, 1fr));
+}
+
+.pso-overview-group {
+  position: relative;
+  min-width: 0;
+  padding-right: 10px;
+  background: #f8fafc;
+}
+
+.pso-overview-group:last-child { padding-right: 0; }
+
+.pso-overview-group::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 92px;
+  height: 3px;
+  background: var(--primary);
+  border-radius: 0 0 10px 0;
+}
+
+.pso-group-title {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  color: #53667c;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.pso-group-title i { color: var(--primary); font-size: 14px; }
+
+.pso-metric-list {
+  height: 102px;
+  display: flex;
+  padding: 10px 8px 10px 14px;
+  background: #fff;
+}
+
+.pso-metric {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 10px;
+  border-right: 1px solid #edf1f5;
+}
+
+.pso-metric:first-child { padding-left: 0; }
+.pso-metric:last-child { border-right: 0; }
+
+.pso-metric-name {
+  overflow: hidden;
+  color: #52657a;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pso-metric-name::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  margin: 0 6px 2px 0;
+  background: #7b8fa8;
+}
+
+.pso-metric-value {
+  margin-top: 6px;
+  color: #25374c;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.pso-metric-trend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: #9aa8b7;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.pso-metric-trend b { color: #20a875; font-weight: 500; }
+.pso-metric-trend b.is-down { color: #e05252; }
+
+.pso-detail-card {
+  margin-top: 12px;
+  overflow: hidden;
+}
+
+.pso-detail-card > h2 {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-bottom: 1px solid #e7ebf0;
+  background: #f4f7fb;
+  color: #26384d;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.pso-detail-card > h2 i { color: var(--primary); }
+
+.pso-tabs {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 14px;
+  border-bottom: 1px solid #e7ebf0;
+  background: #fff;
+}
+
+.pso-tab {
+  position: relative;
+  min-width: 96px;
+  height: 42px;
+  padding: 0 18px;
+  border: 0;
+  background: transparent;
+  color: #7a8999;
+  cursor: pointer;
+}
+
+.pso-tab:hover,
+.pso-tab.active { color: var(--primary); }
+
+.pso-tab.active::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: -1px;
+  height: 2px;
+  background: var(--primary);
+}
+
+.pso-tab-panel {
+  min-height: 390px;
+  padding: 16px 20px 20px;
+  background: #fff;
+}
+
+.pso-detail-head {
+  min-height: 42px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.pso-detail-head h3 {
+  margin: 1px 0 0;
+  color: #26384d;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 32px;
+}
+
+.pso-detail-head p {
+  max-width: 690px;
+  margin-top: 3px;
+  color: #8998a8;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.pso-query,
+.pso-field,
+.pso-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pso-query { justify-content: flex-end; flex-wrap: wrap; }
+.pso-field > span { color: #68798c; white-space: nowrap; }
+
+.pso-control {
+  width: 210px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #d9e0e8;
+  border-radius: 4px;
+  background: #fff;
+  color: #3d4f5f;
+  outline: none;
+}
+
+.pso-control:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(0, 120, 255, .08); }
+.pso-control::placeholder { color: #b4bec9; }
+.pso-field .pso-control { width: 120px; }
+.pso-search .btn { height: 32px; font-size: 13px; }
+
+.pso-table-wrap {
+  width: 100%;
+  overflow: auto;
+  border: 1px solid #e4e8ee;
+  border-bottom: 0;
+}
+
+.pso-table { min-width: 760px; table-layout: auto; }
+
+.pso-table th,
+.pso-table td {
+  height: 40px;
+  padding: 9px 12px;
+  border-right: 1px solid #e8ecf1;
+  border-bottom: 1px solid #e8ecf1;
+  font-size: 13px;
+}
+
+.pso-table th {
+  background: #f7f9fc;
+  color: #5c6e82;
+  font-weight: 600;
+}
+
+.pso-table th:last-child,
+.pso-table td:last-child { border-right: 0; }
+
+.pso-table td { max-width: none; color: #526275; }
+.pso-table .tag { font-size: 11px; }
+
+.pso-role,
+.pso-project-name {
+  color: #30445a;
+  font-weight: 600;
+}
+
+.pso-role { display: inline-flex; align-items: center; gap: 7px; }
+.pso-role i { color: var(--primary); }
+.pso-source-name { min-width: 260px; color: #30445a !important; font-weight: 600; }
+.pso-register-stat { color: #7b8998; white-space: nowrap; }
+.pso-register-stat b { color: #526275; font-weight: 600; }
+.pso-register-stat .is-ok { color: #20a875; }
+.pso-register-stat .is-warn { color: #d88a19; }
+
+.pso-total-row td {
+  background: #f7f9fc;
+  color: #30445a;
+  font-weight: 650;
+}
+
+.pso-empty {
+  min-height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #9ba8b6;
+}
+
+.pso-empty i { font-size: 18px; }
+
+.pso-source-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.pso-summary-item {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 14px;
+  border: 1px solid #e8edf3;
+  border-radius: 5px;
+  background: #fafcff;
+}
+
+.pso-summary-item > i {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 7px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 16px;
+}
+
+.pso-summary-item div { min-width: 0; }
+.pso-summary-item span { display: block; margin-bottom: 3px; color: #7b8998; font-size: 12px; }
+.pso-summary-item strong { color: #26384d; font-size: 18px; line-height: 1; }
+.pso-summary-item small { margin-left: 4px; color: #8b99a8; font-size: 11px; }
+.pso-governance-head { align-items: center; }
+
+.pso-project-table { min-width: 1520px; }
+.pso-project-table th,
+.pso-project-table td { text-align: center; }
+.pso-project-table th:first-child,
+.pso-project-table td:first-child { min-width: 150px; text-align: left; }
+.pso-project-table th:last-child,
+.pso-project-table td:last-child { min-width: 170px; }
+
+.pso-service-table { min-width: 1050px; }
+.pso-service-table th:not(:first-child),
+.pso-service-table td:not(:first-child) { text-align: center; }
+.pso-service-table th:first-child,
+.pso-service-table td:first-child { min-width: 170px; text-align: left; }
+
+.pso-run-result { color: #20a875; font-weight: 600; }
+.pso-run-result.has-failed,
+.pso-error-count { color: #d75a55; font-weight: 600; }
+
+.pso-pagination { border: 1px solid #e4e8ee; border-top: 0; }
+.pso-pagination .page-nav { gap: 6px; }
+.pso-pagination .page-btn { display: inline-flex; align-items: center; gap: 4px; height: 30px; }
+.pso-page-size { height: 30px; padding: 0 8px; border: 1px solid #d9d9d9; border-radius: 3px; background: #fff; color: #657184; }
+
+@media (max-width: 1050px) {
+  .pso-detail-head { align-items: stretch; flex-direction: column; }
+  .pso-query { justify-content: flex-start; }
+  .pso-source-summary { grid-template-columns: repeat(2, minmax(150px, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .page-platform-overview { padding: 8px; }
+  .pso-tabs { overflow-x: auto; }
+  .pso-tab { min-width: 84px; padding: 0 10px; }
+  .pso-tab-panel { padding: 14px; }
+  .pso-source-summary { grid-template-columns: minmax(0, 1fr); }
+  .pso-query,
+  .pso-search { width: 100%; }
+  .pso-search .pso-control { flex: 1; width: auto; }
+  .pso-pagination { align-items: flex-start; flex-direction: column; }
+}

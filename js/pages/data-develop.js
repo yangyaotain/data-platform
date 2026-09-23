@@ -45,26 +45,7 @@ DP.pages.dataDevelop = {
             '</div>' +
           '</div>' +
           '<div class="dd-flow-body">' +
-            '<div class="dd-canvas-panel">' +
-              '<div class="dd-canvas-search">' +
-                '<div class="dd-search-mini">' +
-                  '<span>关键词搜索</span>' +
-                  '<input type="text" placeholder="">' +
-                  '<span>1/12</span>' +
-                  '<div class="dd-search-nav">' +
-                    '<i class="bi bi-chevron-up"></i>' +
-                    '<i class="bi bi-chevron-down"></i>' +
-                  '</div>' +
-                '</div>' +
-              '</div>' +
-              '<div class="dd-canvas" id="ddCanvas" aria-label="流程编排画布"></div>' +
-              '<div class="dd-canvas-zoom" aria-label="画布缩放工具栏">' +
-                '<button type="button" data-dd-zoom="out" title="缩小画布"><i class="bi bi-dash-lg"></i><span>缩小</span></button>' +
-                '<button type="button" class="dd-canvas-zoom-value" data-dd-zoom="reset" title="恢复 100%"><i class="bi bi-aspect-ratio"></i><span data-dd-zoom-label>100%</span></button>' +
-                '<button type="button" data-dd-zoom="in" title="放大画布"><i class="bi bi-plus-lg"></i><span>放大</span></button>' +
-                '<button type="button" data-dd-zoom="fit" title="适应当前画布"><i class="bi bi-arrows-fullscreen"></i><span>适应</span></button>' +
-              '</div>' +
-            '</div>' +
+            DP.developmentCanvas.shell({ id:'ddCanvas', label:'流程编排画布', managed:false, controlPrefix:'dd', searchCount:'1/12' }) +
             '<div class="dd-resize-col dd-resize-props" id="ddResizeProps"></div>' +
             '<div class="dd-props-panel">' +
               '<div class="dd-props-body">' +
