@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (currentNav) params.set('nav', currentNav);
     params.set('page', menuKey);
 
-    var routeOptionKeys = ['project', 'environment', 'flowId', 'subflowId', 'recordId', 'keyword', 'line'];
+    var routeOptionKeys = ['project', 'environment', 'flowId', 'subflowId', 'recordId', 'keyword', 'line', 'dmView', 'dmResource', 'dmDetailTab', 'dmOrigin', 'dmAuditTab', 'dmMessageTab', 'dmHomeTab', 'dmMonitorId', 'dmMonitorOrigin', 'dmManagementId', 'dmManagementTab', 'dmSystemAuditId', 'dmSystemAuditTab'];
     routeOptionKeys.forEach(function (key) {
       if (opts && opts[key] != null && opts[key] !== '') params.set(key, String(opts[key]));
     });
@@ -173,6 +173,9 @@ document.addEventListener('DOMContentLoaded', function () {
       // 原生链接在新标签页打开需求说明，当前页保留表单与导航状态。
       if (page === 'requirements') return;
 
+      // 全景视图使用独立导航和大屏布局，在新标签页中打开。
+      if (page === 'panorama') return;
+
       if (page === 'datamap') {
         var baseUrl = location.href.replace(/#.*$/, '');
         var params = new URLSearchParams();
@@ -219,6 +222,20 @@ document.addEventListener('DOMContentLoaded', function () {
         var serviceApiDevLink = document.querySelector('[data-menu="svc-api-dev"]');
         if (serviceApiDevLink) serviceApiDevLink.classList.add('active');
         DP.showPage('svc-api-dev');
+      } else if (page === 'monitor') {
+        // 运维监控 → 默认进入“运维概况 / 平台概况”
+        var platformOverviewLink = document.querySelector('#menuMonitor [data-menu="platform-overview"]');
+        if (platformOverviewLink) {
+          var monitorOverviewGroup = platformOverviewLink.closest('.menu-item.has-sub');
+          if (monitorOverviewGroup) monitorOverviewGroup.classList.add('open');
+          platformOverviewLink.classList.add('active');
+        }
+        DP.showPage('platform-overview');
+      } else if (page === 'permission') {
+        // 权限管理 → 默认进入“角色管理”
+        var permissionRoleLink = document.querySelector('#menuPermission [data-menu="perm-role"]');
+        if (permissionRoleLink) permissionRoleLink.classList.add('active');
+        DP.showPage('perm-role');
       } else if (page === 'analysis') {
         var dimLink = Array.prototype.find.call(document.querySelectorAll('#menuAnalysis .sub-menu li a'), function (link) {
           return link.textContent.trim() === '维度管理';

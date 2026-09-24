@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>全景视图 - 数据中台</title>
+  <link rel="stylesheet" href="css/pages/panorama.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+  <div class="panorama-app">
+    <header class="pano-topbar">
+      <a class="pano-brand" href="index.html" title="返回数据中台">
+        <span class="pano-brand-logo"><img src="img/logo.png" alt="数据中台"></span>
+        <span>全景视图</span>
+      </a>
+      <nav class="pano-nav" aria-label="全景视图导航">
+        <button class="pano-nav-item active" type="button" data-view="warehouse">数仓全景</button>
+        <button class="pano-nav-item" type="button" data-view="develop">项目开发</button>
+        <button class="pano-nav-item" type="button" data-view="standard">标准与元数据</button>
+        <button class="pano-nav-item" type="button" data-view="quality">数据质量</button>
+        <button class="pano-nav-item" type="button" data-view="security">数据安全</button>
+        <button class="pano-nav-item" type="button" data-view="service">数据服务</button>
+      </nav>
+      <div class="pano-user">
+        <i class="bi bi-person-circle" aria-hidden="true"></i>
+        <span>专用账户</span>
+        <i class="bi bi-chevron-down" aria-hidden="true"></i>
+      </div>
+    </header>
+
+    <main id="panoramaContent" class="pano-content" aria-live="polite"></main>
+  </div>
+
+  <div id="panoToast" class="pano-toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+  <script src="js/pages/panorama.js"></script>
+</body>
+</html>

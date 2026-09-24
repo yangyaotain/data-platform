@@ -49,6 +49,15 @@ DP.showPage = function (menuKey, opts) {
   } else if (menuKey === 'data-permission-domain' || menuKey === '分权分域') {
     c.innerHTML = DP.pages.dataPermission.html;
     DP.pages.dataPermission.init('domain');
+  } else if (menuKey === 'perm-role' || menuKey === '角色管理') {
+    c.innerHTML = DP.pages.permissionManagement.html;
+    DP.pages.permissionManagement.init('role');
+  } else if (menuKey === 'perm-user' || menuKey === '用户管理') {
+    c.innerHTML = DP.pages.permissionManagement.html;
+    DP.pages.permissionManagement.init('user');
+  } else if (menuKey === 'perm-system' || menuKey === '系统管理') {
+    c.innerHTML = DP.pages.permissionManagement.html;
+    DP.pages.permissionManagement.init('system');
   } else if (menuKey === 'class-management' || menuKey === '分类管理') {
     c.innerHTML = DP.pages.dataClassGrade.html;
     DP.pages.dataClassGrade.init('class');
@@ -75,7 +84,7 @@ DP.showPage = function (menuKey, opts) {
     DP.pages.systemManagement.init('recycle-bin');
   } else if (menuKey === 'datamap-home' || menuKey === '数据地图') {
     c.innerHTML = DP.pages.dataMapHome.html;
-    DP.pages.dataMapHome.init();
+    DP.pages.dataMapHome.init(opts);
   } else if (menuKey === '技术元数据') {
     c.innerHTML = DP.pages.technicalMetadata.html;
     DP.pages.technicalMetadata.init();
